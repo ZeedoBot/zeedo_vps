@@ -1,0 +1,9 @@
+# Bot principal (já usados pelo bot atual)
+numpy
+pandas
+python-dotenv
+eth-account
+requests
+
+# Persistência online (modo supabase)
+supabase>=2.0.0

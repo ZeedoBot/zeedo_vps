@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtualenv
+venv/
+.venv/
+
+# Env (segredos)
+.env
+
+# Logs / runtime
+*.log
+*.pid
+
+# Databases locais (JSON gerados em produção)
+*.json
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
