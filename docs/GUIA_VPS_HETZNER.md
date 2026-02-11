@@ -536,12 +536,12 @@ sudo systemctl restart nginx
 
 ## ✅ Checklist Final
 
-- [ ] VPS criado e acessível via SSH
-- [ ] Sistema atualizado
-- [ ] Python e dependências instaladas
-- [ ] Projeto transferido para o VPS
-- [ ] Arquivo .env configurado com suas credenciais
-- [ ] Ambiente virtual criado e dependências instaladas
+- [✅] VPS criado e acessível via SSH
+- [✅] Sistema atualizado
+- [✅] Python e dependências instaladas
+- [✅] Projeto transferido para o VPS
+- [✅] Arquivo .env configurado com suas credenciais
+- [✅] Ambiente virtual criado e dependências instaladas
 - [ ] Bot rodando e funcionando
 - [ ] Dashboard acessível
 - [ ] Serviços systemd configurados (opcional mas recomendado)

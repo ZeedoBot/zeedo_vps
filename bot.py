@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import json
+import re
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -21,6 +22,8 @@ load_dotenv()
 #TELEGRAM 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_BOT_TOKEN_SENDER = os.getenv("TELEGRAM_BOT_TOKEN_SENDER", "")
+TELEGRAM_CHAT_ID_SENDER = os.getenv("TELEGRAM_CHAT_ID_SENDER", "")
 
 #CONFIGURAÇÕES DE LOGS
 log_formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -79,8 +82,8 @@ FIB_LEVELS = [
     (1.0, 0.60),   #Alvo 2 (1.0)
     (1.618, 0.30)   #Alvo 3 (1.618)
 ]
-FIB_STOP_LEVEL = 1.9
-FIB_ENTRY2_LEVEL = 1.414
+FIB_STOP_LEVEL = 2.0
+FIB_ENTRY2_LEVEL = 1.6
 
 # CONEXÃO
 def setup_client():
@@ -109,6 +112,27 @@ def tg_send(msg):
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {"chat_id": TELEGRAM_CHAT_ID, "text": msg}
         requests.post(url, json=payload, timeout=3)
+        if TELEGRAM_BOT_TOKEN_SENDER and TELEGRAM_CHAT_ID_SENDER:
+            try:
+                price_keywords = ['entrada:', '1ª entrada:', '2ª entrada:', '3ª entrada:', 'stop:', 'novo stop:', 'stop atual:', 'trigger:', 'preço:']
+                value_keywords = ['tamanho:', 'total:', 'qty:', 'size:', 'valor:', 'pnl:', 'investido:']
+                def mult_val(m):  # Multiplica apenas valores monetários e quantidades
+                    start = max(0, m.start() - 30)
+                    context = msg[start:m.start()].lower()
+                    has_dollar = m.group(2) == '$'
+                    is_value = any(kw in context for kw in value_keywords)
+                    is_price = any(kw in context for kw in price_keywords)
+                    if (has_dollar or is_value) and not is_price:
+                        n = float(m.group(3))
+                        d = len(m.group(3).split('.')[1]) if '.' in m.group(3) else 0
+                        f = f"{n * 5:.{d}f}".rstrip('0').rstrip('.') if d else f"{n * 5:.0f}"
+                        return (m.group(1) or '') + (m.group(2) or '') + f
+                    return m.group(0)  # Mantém original se não deve multiplicar
+                multiplied_msg = re.sub(r'(\+|\-)?\s*(\$)?\s*(\d+\.?\d*)', mult_val, msg)
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN_SENDER}/sendMessage",
+                    json={"chat_id": TELEGRAM_CHAT_ID_SENDER, "text": multiplied_msg}, timeout=3)
+            except Exception:
+                pass
     except Exception as e:
         logging.error(f"Erro Telegram: {e}")
 
@@ -536,7 +560,7 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         logging.error(f"Erro Entry LIMIT: {e}")
         return None, None
 
-def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None):
+def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, tp3_at_zero=False):
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
@@ -549,20 +573,21 @@ def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, 
         qty_tp = round_sz(total_qty * pct, sz_dec)
         if qty_tp <= 0:
             continue
-
+        # Após confirmação da entrada 2: TP3 vai para nível 0 (setup high/low)
+        use_mult = 0.0 if (idx == 3 and tp3_at_zero) else fib_mult
         if side == "long":
-            target_px = start_px + (fib_base_dist * fib_mult)
+            target_px = start_px + (fib_base_dist * use_mult)
         else:
-            target_px = start_px - (fib_base_dist * fib_mult)
+            target_px = start_px - (fib_base_dist * use_mult)
 
         target_px = round_px(target_px)
-        client_oid = f"TP{idx}_{fib_mult}"
+        client_oid = f"TP{idx}_{use_mult}"
 
         try:
             exchange.order(symbol, is_buy_tp, qty_tp, target_px, {"limit": {"tif": "Gtc"}, "clientOrderId": client_oid}, reduce_only=True)
-            logging.info(f"🎯 TP{idx} ({fib_mult}) @ {target_px}")
+            logging.info(f"🎯 TP{idx} ({use_mult}) @ {target_px}")
         except Exception as e:
-            logging.error(f"Erro TP {fib_mult}: {e}")
+            logging.error(f"Erro TP {use_mult}: {e}")
     logging.info(f"⚠️ 1% Runner mantido.")
 
 def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
@@ -1033,6 +1058,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             mem_data = entry_tracker.get(sym, {})
             entry = float(pos["entryPx"])
             side = "long" if raw_size > 0 else "short"
+            new_stop = None  # evita UnboundLocalError quando 3ª entrada é confirmada sem ter passado pelo bloco do candle favorável
             
             # Só aplica detecção de entrada 1/2/3 para trades do bot (não manuais)
             is_bot_trade = mem_data.get('tf') is not None and mem_data.get('origin') != 'MANUAL'
@@ -1088,22 +1114,24 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                             logging.error(f"Erro ao cancelar SL/TP {sym}: {e}")
                 
                 entry_tracker[sym]["last_size"] = size
+                entry_tracker[sym]["tp3_at_zero"] = True  # TP3 passa a nível 0 (setup high/low) após entrada 2
                 storage.save_entry_tracker(entry_tracker)
             
             # Entrada 3 confirmada (apenas para trade do bot; só dispara uma vez ao atingir qty_entry_3)
             elif is_bot_trade and qty_entry_3 and qty_matches(qty_entry_3, size) and size_changed and (not qty_matches(qty_entry_2, size) if qty_entry_2 else True) and (not qty_matches(qty_entry_3, last_size) if last_size > 0 else True):
                 usd_value = size * entry
+                planned_stop_current = mem_data.get('planned_stop', entry)
                 logging.info(f"🚀 ENTRADA 3 CONFIRMADA: {side.upper()} {sym} | Qty:{size:.2f} | Preço:{entry:.4f} | Valor: ${usd_value:.2f}")
                 tg_send(
                     f"🚀 ENTRADA 3 CONFIRMADA\n"
                     f"{side.upper()} {sym} {mem_data.get('tf')}\n"
                     f"Entrada: {entry:.4f}\n"
-                    f"Nova Stop: {new_stop:.4f}\n"
+                    f"Stop Atual: {planned_stop_current:.4f}\n"
                     f"Total: {size:.2f}\n"
                     f"Valor: ${usd_value:.2f}"
                 )
                 
-                # Cancela SL/TP para recalcular
+                # Cancela SL/TP (igual à entrada 2)
                 for o in all_open_orders:
                     if o["coin"] == sym and o.get("reduceOnly", False):
                         try:
@@ -1112,6 +1140,24 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                             logging.error(f"Erro ao cancelar SL/TP {sym}: {e}")
                 
                 entry_tracker[sym]["last_size"] = size
+                # Stop: low (long) ou high (short) do candle que rompeu o setup até o último candle fechado
+                tf = mem_data.get('tf')
+                setup_break_ts = mem_data.get('setup_break_candle_ts')
+                if tf and setup_break_ts is not None:
+                    try:
+                        raw_hl = fetch_candles_hyperliquid(info, sym, tf)
+                        if raw_hl:
+                            data_hl = [[c["t"], float(c["o"]), float(c["h"]), float(c["l"]), float(c["c"]), float(c["v"])] for c in raw_hl]
+                            df_hl = pd.DataFrame(data_hl, columns=["timestamp", "open", "high", "low", "close", "volume"]).sort_values("timestamp").reset_index(drop=True)
+                            tf_sec = get_tf_seconds(tf)
+                            now_ms = int(time.time() * 1000)
+                            df_range = df_hl[(df_hl["timestamp"] >= setup_break_ts) & (df_hl["timestamp"] + tf_sec * 1000 <= now_ms)]
+                            if not df_range.empty:
+                                new_stop = round_px(df_range["low"].min() if side == "long" else df_range["high"].max())
+                                entry_tracker[sym]['planned_stop'] = new_stop
+                                logging.info(f"🛡️ Stop após entrada 3 (setup_break→último fechado): {sym} | {side} | {new_stop:.4f}")
+                    except Exception as e:
+                        logging.error(f"Erro stop após entrada 3 {sym}: {e}")
                 storage.save_entry_tracker(entry_tracker)
             curr_price = float(all_mids.get(sym, entry))
 
@@ -1156,7 +1202,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     anchor = entry
                     logging.warning(f"⚠️ Fallback Fib para {sym}")
 
-                place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor)
+                place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor, tp3_at_zero=mem_data.get('tp3_at_zero', False))
 
             # Marca o candle que perde o low do setup (long) ou high do setup (short) — referência para 3ª entrada
             if not is_manual and not mem_data.get('setup_break_candle_ts') and setup_high is not None and setup_low is not None and abs(size) > 0:
@@ -1225,7 +1271,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                                             
                                             is_favoravel = (side == "long" and candle["close"] > candle["open"]) or (side == "short" and candle["close"] < candle["open"])
                                             if is_favoravel:
-                                                # Cria 3ª entrada STOP MARKET e ajusta stop no mesmo candle
+                                                # Cria 3ª entrada STOP MARKET (stop NÃO é movido aqui; só após confirmação da entrada 3)
                                                 if side == "long":
                                                     third_entry_trigger = round_px(candle["high"])
                                                     new_stop = round_px(candle["low"])
@@ -1233,25 +1279,14 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                                                     third_entry_trigger = round_px(candle["low"])
                                                     new_stop = round_px(candle["high"])
                                                 
-                                                # Verifica se novo stop é melhor que o atual
+                                                # Verifica se novo stop seria melhor que o atual (só para decidir se coloca a ordem)
                                                 if planned_stop:
                                                     if side == "long" and new_stop <= planned_stop:
                                                         continue
                                                     if side == "short" and new_stop >= planned_stop:
                                                         continue
                                                 
-                                                # Ajusta stop da posição
-                                                sl_order = next((o for o in my_orders if is_stop_order(o)), None)
-                                                if sl_order:
-                                                    try:
-                                                        exchange.cancel(sym, sl_order["oid"])
-                                                        exchange.order(sym, False if side == "long" else True, abs(size), new_stop, {"trigger": {"triggerPx": new_stop, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
-                                                        entry_tracker[sym]['planned_stop'] = new_stop
-                                                        logging.info(f"🛡️ Stop ajustado para low/high do candle favorável: {sym} | {side} | Novo stop: {new_stop:.4f}")
-                                                    except Exception as e:
-                                                        logging.error(f"Erro ao ajustar stop {sym}: {e}")
-                                                
-                                                # Cria 3ª entrada STOP MARKET
+                                                # Cria 3ª entrada STOP MARKET (stop permanece onde está)
                                                 try:
                                                     is_buy = (side == "long")
                                                     trade_id = mem_data.get('trade_id', sym)
@@ -1260,7 +1295,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                                                     entry_tracker[sym]['third_entry_placed'] = True
                                                     entry_tracker[sym]['third_entry_px'] = third_entry_trigger
                                                     storage.save_entry_tracker(entry_tracker)
-                                                    logging.info(f"🚀 3ª ENTRADA (STOP MARKET): {sym} | {side} | Qty:{entry2_qty} | Trigger:{third_entry_trigger:.4f} | Stop ajustado:{new_stop:.4f}")
+                                                    logging.info(f"🚀 3ª ENTRADA (STOP MARKET): {sym} | {side} | Qty:{entry2_qty} | Trigger:{third_entry_trigger:.4f}")
                                                     break
                                                 except Exception as e:
                                                     logging.error(f"Erro ao criar 3ª entrada {sym}: {e}")

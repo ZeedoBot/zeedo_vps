@@ -15,6 +15,21 @@ from hyperliquid.utils import constants
 #Para rodar o dashboard: streamlit run dashboard.py
 
 load_dotenv()
+
+def _get_tracker_and_trades():
+    """Usa o mesmo storage do bot (local ou Supabase) quando disponível."""
+    try:
+        from storage import get_storage
+        storage = get_storage()
+        tracker = storage.get_entry_tracker()
+        trades = storage.get_trades_db()
+        if isinstance(tracker, dict) and isinstance(trades, list):
+            return tracker, trades
+    except Exception:
+        pass
+    t = load_json(TRADES_DB)
+    return load_json(TRACKER_FILE) or {}, t if isinstance(t, list) else []
+
 st.set_page_config(page_title="Zeedo Bot", page_icon="📈", layout="wide", initial_sidebar_state="expanded")
 st.markdown("""
     <style>
@@ -237,9 +252,8 @@ with st.sidebar:
         get_hyperliquid_state_cached.clear()
         st.rerun()
 
-# MAIN
-tracker_data = load_json(TRACKER_FILE)
-history_trades_data_raw = load_json(TRADES_DB)
+# MAIN (usa mesmo storage do bot quando BOT_STORAGE=supabase)
+tracker_data, history_trades_data_raw = _get_tracker_and_trades()
 history_trades_data = migrate_and_clean_db(history_trades_data_raw)
 logs = load_logs()
 
@@ -353,8 +367,9 @@ if filtered_history:
     df_grouped_trades = df_temp.groupby('group_key')['pnl_usd'].sum()
     
     f_total = len(df_grouped_trades)
-    f_wins = (df_grouped_trades > -0.5).sum()
-    f_winrate = (f_wins / f_total * 100) if f_total > 0 else 0.0
+    f_wins = (df_grouped_trades > 0).sum()
+    f_losses = (df_grouped_trades < -1).sum()
+    f_winrate = (f_wins / (f_wins + f_losses) * 100) if (f_wins + f_losses) > 0 else 0.0
 else:
     f_total = 0
     f_wins = 0
@@ -395,8 +410,8 @@ if filtered_history:
     df_analytics['group_key'] = df_analytics['trade_id'].replace('-', pd.NA).fillna(df_analytics['oid'])
     grouped_stats = df_analytics.groupby('group_key')['pnl_usd'].sum()
     
-    wins = grouped_stats[grouped_stats > -0.5]
-    losses = grouped_stats[grouped_stats <= -0.5]
+    wins = grouped_stats[grouped_stats > 0]
+    losses = grouped_stats[grouped_stats < -1]
     
     avg_win = wins.mean() if not wins.empty else 0
     avg_loss = losses.mean() if not losses.empty else 0
@@ -426,10 +441,12 @@ if filtered_history:
         res = df_trades.groupby(group_col).agg(
             PnL=('pnl_usd', 'sum'),
             Qtd=('pnl_usd', 'count'), # Conta Trades únicos
-            Wins=('pnl_usd', lambda x: (x > 0.5).sum()),
-            Losses=('pnl_usd', lambda x: (x <= -0.5).sum()) # <--- NOVA LINHA
+            Wins=('pnl_usd', lambda x: (x > 0).sum()),
+            Losses=('pnl_usd', lambda x: (x < -1).sum())
         )
-        res['Win Rate'] = (res['Wins'] / res['Qtd'] * 100).fillna(0)
+        # Win rate = wins / (wins + losses); trades com pnl entre -1 e 0 não entram
+        denom = res['Wins'] + res['Losses']
+        res['Win Rate'] = (res['Wins'] / denom * 100).where(denom > 0, 0).fillna(0)
         return res
 
     # 3. RAIO-X (COM QUANTIDADE E PORCENTAGEM)
@@ -498,8 +515,8 @@ with c_table:
         for k in sorted_keys:
             v = grouped_display[k]
             pnl = v["PnL ($)"]
-            inv = v["Investido"]
-            pnl_pct = (pnl / inv * 100) if inv > 0 else 0.0
+            # PnL % calculado sobre a banca atual
+            pnl_pct = (pnl / real_balance * 100) if real_balance > 0 else 0.0
             
             display_data.append({
                 "Data": datetime.fromtimestamp(v['Data']/1000).strftime('%d/%m %H:%M'),
