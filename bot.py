@@ -36,6 +36,12 @@ console = logging.StreamHandler()
 console.setFormatter(log_formatter)
 logger.addHandler(console)
 
+# Desabilita logs HTTP das bibliotecas (Supabase, requests, httpx, etc.)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
+
 #CONFIGURAÇÕES GERAIS
 PRIVATE_KEY = os.getenv("HYPER_PRIVATE_KEY") 
 ACCOUNT_ADDRESS = os.getenv("HYPER_ACCOUNT_ADDRESS") 
@@ -107,20 +113,13 @@ def cleanup_process():
             os.remove(PID_FILE)
         except: pass
 
-def should_send_notification(timestamp_ms):
-    """
-    Verifica se deve enviar notificação baseado no timestamp do trade.
-    Retorna True apenas se o trade ocorreu nas últimas 24 horas.
-    """
+def tg_time(timestamp_ms):
     if not timestamp_ms or timestamp_ms == 0:
         return False
-    
     try:
-        trade_time = int(timestamp_ms) / 1000  # Converte ms para segundos
+        trade_time = int(timestamp_ms) / 1000
         now = time.time()
-        hours_ago = (now - trade_time) / 3600  # Diferença em horas
-        
-        # Retorna True apenas se o trade ocorreu nas últimas 24 horas
+        hours_ago = (now - trade_time) / 3600
         return hours_ago <= 24
     except Exception:
         return False
@@ -709,11 +708,8 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             new_trades.append(fill_safe)
             processed_oids.add(oid)
 
-            # Obtém timestamp do fill para verificação
             fill_timestamp = base_fill.get('time') or base_fill.get('t') or base_fill.get('timestamp') or 0
-            
-            # Verifica se deve enviar notificação (apenas trades das últimas 24h)
-            if total_pnl != 0 and should_send_notification(fill_timestamp):
+            if total_pnl != 0 and tg_time(fill_timestamp):
                 emoji = "🤑 PARCIAL REALIZADA" if pnl_net >= 0 else "❌ STOP"
                 sign = "+" if pnl_net >= 0 else ""                
                 if trade and trade.get("tf"):
@@ -730,7 +726,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                     )
             
             position_still_open = positions_by_coin.get(coin, 0) != 0
-            if not position_still_open and should_send_notification(fill_timestamp):
+            if not position_still_open and tg_time(fill_timestamp):
                 trade = entry_tracker.get(coin)
                 if trade:
                     total_pnl = trade.get("pnl_realized", 0.0)

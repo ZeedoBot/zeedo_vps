@@ -1,13 +1,13 @@
-"""
-Implementação de persistência em Supabase usando tabelas normalizadas.
-Usa: bot_tracker, bot_history, trades_database, bot_config
-Requer variáveis de ambiente: SUPABASE_URL, SUPABASE_SERVICE_KEY (ou SUPABASE_ANON_KEY).
-"""
 import datetime
 import logging
 import os
 from typing import Any
 from .base import StorageBase
+
+# Desabilita logs HTTP das bibliotecas usadas pelo Supabase
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 # Tabelas normalizadas
 TABLE_TRACKER = "bot_tracker"
