@@ -107,6 +107,24 @@ def cleanup_process():
             os.remove(PID_FILE)
         except: pass
 
+def should_send_notification(timestamp_ms):
+    """
+    Verifica se deve enviar notificação baseado no timestamp do trade.
+    Retorna True apenas se o trade ocorreu nas últimas 24 horas.
+    """
+    if not timestamp_ms or timestamp_ms == 0:
+        return False
+    
+    try:
+        trade_time = int(timestamp_ms) / 1000  # Converte ms para segundos
+        now = time.time()
+        hours_ago = (now - trade_time) / 3600  # Diferença em horas
+        
+        # Retorna True apenas se o trade ocorreu nas últimas 24 horas
+        return hours_ago <= 24
+    except Exception:
+        return False
+
 def tg_send(msg):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -691,7 +709,11 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             new_trades.append(fill_safe)
             processed_oids.add(oid)
 
-            if total_pnl != 0:
+            # Obtém timestamp do fill para verificação
+            fill_timestamp = base_fill.get('time') or base_fill.get('t') or base_fill.get('timestamp') or 0
+            
+            # Verifica se deve enviar notificação (apenas trades das últimas 24h)
+            if total_pnl != 0 and should_send_notification(fill_timestamp):
                 emoji = "🤑 PARCIAL REALIZADA" if pnl_net >= 0 else "❌ STOP"
                 sign = "+" if pnl_net >= 0 else ""                
                 if trade and trade.get("tf"):
@@ -708,7 +730,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                     )
             
             position_still_open = positions_by_coin.get(coin, 0) != 0
-            if not position_still_open:
+            if not position_still_open and should_send_notification(fill_timestamp):
                 trade = entry_tracker.get(coin)
                 if trade:
                     total_pnl = trade.get("pnl_realized", 0.0)
