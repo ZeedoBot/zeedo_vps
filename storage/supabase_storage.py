@@ -18,9 +18,10 @@ TABLE_CONFIG = "bot_config"
 class SupabaseStorage(StorageBase):
     """Persistência no Supabase usando tabelas normalizadas; mesma semântica que LocalStorage."""
 
-    def __init__(self, url: str = None, key: str = None):
+    def __init__(self, url: str = None, key: str = None, user_id: str = None):
         self._url = url or os.environ.get("SUPABASE_URL")
         self._key = key or os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_ANON_KEY") or os.environ.get("SUPABASE_KEY")
+        self._user_id = user_id  # user_id opcional para multiusuário
         self._client = None
         if self._url and self._key:
             try:
@@ -29,13 +30,24 @@ class SupabaseStorage(StorageBase):
             except Exception as e:
                 logging.error(f"Erro ao criar cliente Supabase: {e}")
                 raise
+    
+    def set_user_id(self, user_id: str):
+        """Define user_id para operações multiusuário."""
+        self._user_id = user_id
 
-    def get_entry_tracker(self) -> dict:
+    def get_entry_tracker(self, user_id: str = None) -> dict:
         """Retorna entry_tracker carregando de bot_tracker."""
         if not self._client:
             return {}
         try:
-            r = self._client.table(TABLE_TRACKER).select("symbol, data").execute()
+            user_id = user_id or self._user_id
+            query = self._client.table(TABLE_TRACKER).select("symbol, data")
+            
+            # Filtra por user_id se disponível
+            if user_id:
+                query = query.eq("user_id", user_id)
+            
+            r = query.execute()
             if not r.data:
                 return {}
             # Converte lista de {symbol, data} para dict {symbol: data}
@@ -50,27 +62,40 @@ class SupabaseStorage(StorageBase):
             logging.error(f"Supabase get_entry_tracker: {e}")
             return {}
 
-    def save_entry_tracker(self, data: dict) -> None:
+    def save_entry_tracker(self, data: dict, user_id: str = None) -> None:
         """Salva entry_tracker em bot_tracker (upsert por symbol)."""
         if not self._client or not isinstance(data, dict):
             return
         try:
+            user_id = user_id or self._user_id
             # Upsert cada symbol individualmente
             for symbol, symbol_data in data.items():
                 if symbol and isinstance(symbol_data, dict):
-                    self._client.table(TABLE_TRACKER).upsert({
+                    record = {
                         "symbol": symbol,
                         "data": symbol_data
-                    }, on_conflict="symbol").execute()
+                    }
+                    if user_id:
+                        record["user_id"] = user_id
+                    self._client.table(TABLE_TRACKER).upsert(
+                        record,
+                        on_conflict="symbol" if not user_id else "user_id,symbol"
+                    ).execute()
         except Exception as e:
             logging.error(f"Supabase save_entry_tracker: {e}")
 
-    def get_history_tracker(self) -> dict:
+    def get_history_tracker(self, user_id: str = None) -> dict:
         """Retorna history_tracker carregando de bot_history."""
         if not self._client:
             return {}
         try:
-            r = self._client.table(TABLE_HISTORY).select("symbol, timeframe, last_signal_ts").execute()
+            user_id = user_id or self._user_id
+            query = self._client.table(TABLE_HISTORY).select("symbol, timeframe, last_signal_ts")
+            
+            if user_id:
+                query = query.eq("user_id", user_id)
+            
+            r = query.execute()
             if not r.data:
                 return {}
             # Converte lista para dict {symbol: {timeframe: timestamp}}
@@ -88,31 +113,44 @@ class SupabaseStorage(StorageBase):
             logging.error(f"Supabase get_history_tracker: {e}")
             return {}
 
-    def save_history_tracker(self, data: dict) -> None:
+    def save_history_tracker(self, data: dict, user_id: str = None) -> None:
         """Salva history_tracker em bot_history (upsert por symbol+timeframe)."""
         if not self._client or not isinstance(data, dict):
             return
         try:
+            user_id = user_id or self._user_id
             # Upsert cada combinação symbol+timeframe
             for symbol, timeframes in data.items():
                 if symbol and isinstance(timeframes, dict):
                     for timeframe, timestamp in timeframes.items():
                         if timeframe:
-                            self._client.table(TABLE_HISTORY).upsert({
+                            record = {
                                 "symbol": symbol,
                                 "timeframe": timeframe,
                                 "last_signal_ts": timestamp
-                            }, on_conflict="symbol,timeframe").execute()
+                            }
+                            if user_id:
+                                record["user_id"] = user_id
+                            self._client.table(TABLE_HISTORY).upsert(
+                                record,
+                                on_conflict="symbol,timeframe" if not user_id else "user_id,symbol,timeframe"
+                            ).execute()
         except Exception as e:
             logging.error(f"Supabase save_history_tracker: {e}")
 
-    def get_trades_db(self) -> list:
+    def get_trades_db(self, user_id: str = None) -> list:
         """Retorna trades_db carregando de trades_database."""
         if not self._client:
             return []
         try:
+            user_id = user_id or self._user_id
             # Ordena por closed_at DESC para manter ordem cronológica
-            r = self._client.table(TABLE_TRADES).select("*").order("closed_at", desc=False).execute()
+            query = self._client.table(TABLE_TRADES).select("*").order("closed_at", desc=False)
+            
+            if user_id:
+                query = query.eq("user_id", user_id)
+            
+            r = query.execute()
             if not r.data:
                 return []
             # Converte registros da tabela para formato esperado pelo código
@@ -142,13 +180,17 @@ class SupabaseStorage(StorageBase):
             logging.error(f"Supabase get_trades_db: {e}")
             return []
 
-    def save_trades_db(self, data: list) -> None:
+    def save_trades_db(self, data: list, user_id: str = None) -> None:
         """Salva novos trades em trades_database (apenas novos, não sobrescreve)."""
         if not self._client or not isinstance(data, list):
             return
         try:
-            # Busca OIDs já processados
-            existing_r = self._client.table(TABLE_TRADES).select("oid").execute()
+            user_id = user_id or self._user_id
+            # Busca OIDs já processados (filtrado por user_id se disponível)
+            query = self._client.table(TABLE_TRADES).select("oid")
+            if user_id:
+                query = query.eq("user_id", user_id)
+            existing_r = query.execute()
             existing_oids = {str(row.get("oid")) for row in (existing_r.data or []) if row.get("oid")}
             
             # Insere apenas trades novos
@@ -179,6 +221,8 @@ class SupabaseStorage(StorageBase):
                         "num_fills": trade.get("num_fills", 1),
                         "closed_at": closed_at.isoformat(),  # Supabase aceita ISO string
                     }
+                    if user_id:
+                        record["user_id"] = user_id
                     new_trades.append(record)
                     existing_oids.add(oid)  # Evita duplicatas na mesma execução
             
@@ -188,12 +232,18 @@ class SupabaseStorage(StorageBase):
         except Exception as e:
             logging.error(f"Supabase save_trades_db: {e}")
 
-    def get_config(self) -> dict:
+    def get_config(self, user_id: str = None) -> dict:
         """Retorna config carregando de bot_config."""
         if not self._client:
             return {}
         try:
-            r = self._client.table(TABLE_CONFIG).select("symbols, timeframes, trade_mode").limit(1).execute()
+            user_id = user_id or self._user_id
+            query = self._client.table(TABLE_CONFIG).select("symbols, timeframes, trade_mode")
+            
+            if user_id:
+                query = query.eq("user_id", user_id)
+            
+            r = query.limit(1).execute()
             if not r.data or len(r.data) == 0:
                 return {}
             row = r.data[0]

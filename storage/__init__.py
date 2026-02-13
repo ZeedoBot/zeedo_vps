@@ -7,6 +7,7 @@ import os
 from .base import StorageBase
 from .local_storage import LocalStorage
 from .supabase_storage import SupabaseStorage
+from .user_storage import UserStorage
 
 
 def get_storage() -> StorageBase:
@@ -17,4 +18,4 @@ def get_storage() -> StorageBase:
     return LocalStorage()
 
 
-__all__ = ["StorageBase", "LocalStorage", "SupabaseStorage", "get_storage"]
+__all__ = ["StorageBase", "LocalStorage", "SupabaseStorage", "UserStorage", "get_storage"]

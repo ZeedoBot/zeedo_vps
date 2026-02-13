@@ -7,3 +7,6 @@ requests
 
 # Persistência online (modo supabase)
 supabase>=2.0.0
+
+# Criptografia (para SaaS multiusuário)
+cryptography>=41.0.0
