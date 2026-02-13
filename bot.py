@@ -35,12 +35,9 @@ logger.addHandler(log_handler)
 console = logging.StreamHandler()
 console.setFormatter(log_formatter)
 logger.addHandler(console)
-
-# Desabilita logs HTTP das bibliotecas (Supabase, requests, httpx, etc.)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("requests").setLevel(logging.WARNING)
 
 #CONFIGURAÇÕES GERAIS
 PRIVATE_KEY = os.getenv("HYPER_PRIVATE_KEY") 
@@ -943,7 +940,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     qty_second = total_size / 2
                 sz_dec = get_precision(meta, sym)
                 final_qty = round_sz(qty_first, sz_dec)
-                second_qty = round_sz(qty_second, sz_dec)
+                second_qty = round_sz(final_qty * 1.05, sz_dec)  # 2ª entrada = 1ª + 5%
                 if final_qty * entry_px < 10: 
                     analyzed_candles[candle_id] = True
                     continue
@@ -961,10 +958,11 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 res, trade_id = place_trade_entry(exchange, sym, sig["side"], final_qty, entry_px)
                 signal_ts_sec = sig["signal_ts"] / 1000
                 if res:
-                    # Calcula quantidades esperadas para cada entrada
-                    qty_entry_1 = final_qty  # Apenas 1ª entrada
-                    qty_entry_2 = final_qty + second_qty  # 1ª + 2ª entrada
-                    qty_entry_3 = final_qty + second_qty + second_qty  # 1ª + 2ª + 3ª entrada (3ª usa mesma qty da 2ª)
+                    # Calcula quantidades esperadas: 2ª = 1ª+5%, 3ª = 1ª (permite diferenciar 1ª+3ª de 1ª+2ª)
+                    qty_entry_1 = final_qty  # 1ª entrada
+                    qty_entry_2 = final_qty + second_qty  # 1ª + 2ª
+                    qty_entry_3 = final_qty + second_qty + final_qty  # 1ª + 2ª + 3ª
+                    qty_entry_3_alt = final_qty + final_qty  # 1ª + 3ª (quando 3ª executa antes da 2ª)
                     
                     entry_tracker[sym] = {
                         'side': sig["side"],
@@ -983,6 +981,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                         'qty_entry_1': qty_entry_1,
                         'qty_entry_2': qty_entry_2,
                         'qty_entry_3': qty_entry_3,
+                        'qty_entry_3_alt': qty_entry_3_alt,
                         'trade_id': trade_id,
                         'pnl_realized': 0.0,
                         'last_size': 0.0
@@ -1085,6 +1084,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             qty_entry_1 = mem_data.get('qty_entry_1')
             qty_entry_2 = mem_data.get('qty_entry_2')
             qty_entry_3 = mem_data.get('qty_entry_3')
+            qty_entry_3_alt = mem_data.get('qty_entry_3_alt')
             
             # Tolerância para arredondamentos de precisão (0.1% ou mínimo 0.01)
             def qty_matches(expected, actual):
@@ -1135,8 +1135,8 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 entry_tracker[sym]["tp3_at_zero"] = True  # TP3 passa a nível 0 (setup high/low) após entrada 2
                 storage.save_entry_tracker(entry_tracker)
             
-            # Entrada 3 confirmada (apenas para trade do bot; só dispara uma vez ao atingir qty_entry_3)
-            elif is_bot_trade and qty_entry_3 and qty_matches(qty_entry_3, size) and size_changed and (not qty_matches(qty_entry_2, size) if qty_entry_2 else True) and (not qty_matches(qty_entry_3, last_size) if last_size > 0 else True):
+            # Entrada 3 confirmada (1ª+2ª+3ª ou 1ª+3ª quando 3ª executa antes da 2ª)
+            elif is_bot_trade and (qty_entry_3 or qty_entry_3_alt) and (qty_matches(qty_entry_3, size) or (qty_entry_3_alt and qty_matches(qty_entry_3_alt, size))) and size_changed and (not qty_matches(qty_entry_2, size) if qty_entry_2 else True) and (not qty_matches(qty_entry_3, last_size) and (not qty_entry_3_alt or not qty_matches(qty_entry_3_alt, last_size)) if last_size > 0 else True):
                 usd_value = size * entry
                 planned_stop_current = mem_data.get('planned_stop', entry)
                 logging.info(f"🚀 ENTRADA 3 CONFIRMADA: {side.upper()} {sym} | Qty:{size:.2f} | Preço:{entry:.4f} | Valor: ${usd_value:.2f}")
@@ -1304,16 +1304,17 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                                                     if side == "short" and new_stop >= planned_stop:
                                                         continue
                                                 
-                                                # Cria 3ª entrada STOP MARKET (stop permanece onde está)
+                                                # Cria 3ª entrada STOP MARKET (tamanho = 1ª entrada = final_qty)
                                                 try:
                                                     is_buy = (side == "long")
                                                     trade_id = mem_data.get('trade_id', sym)
+                                                    third_qty = mem_data.get('qty', entry2_qty)  # 3ª = final_qty (igual 1ª)
                                                     client_oid = f"{trade_id}_3rd_{int(time.time()*1000)}".replace(" ", "_").replace("-", "_")
-                                                    exchange.order(sym, is_buy, entry2_qty, third_entry_trigger, {"trigger": {"triggerPx": third_entry_trigger, "isMarket": True, "tpsl": "sl"}}, reduce_only=False)
+                                                    exchange.order(sym, is_buy, third_qty, third_entry_trigger, {"trigger": {"triggerPx": third_entry_trigger, "isMarket": True, "tpsl": "sl"}}, reduce_only=False)
                                                     entry_tracker[sym]['third_entry_placed'] = True
                                                     entry_tracker[sym]['third_entry_px'] = third_entry_trigger
                                                     storage.save_entry_tracker(entry_tracker)
-                                                    logging.info(f"🚀 3ª ENTRADA (STOP MARKET): {sym} | {side} | Qty:{entry2_qty} | Trigger:{third_entry_trigger:.4f}")
+                                                    logging.info(f"🚀 3ª ENTRADA (STOP MARKET): {sym} | {side} | Qty:{third_qty} | Trigger:{third_entry_trigger:.4f}")
                                                     break
                                                 except Exception as e:
                                                     logging.error(f"Erro ao criar 3ª entrada {sym}: {e}")
