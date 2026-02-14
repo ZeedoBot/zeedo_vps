@@ -16,8 +16,12 @@ venv/
 *.log
 *.pid
 
-# Databases locais (JSON gerados em produção)
-*.json
+# Databases locais (JSON gerados em produção) — não ignorar package.json
+bot_tracker.json
+bot_history.json
+trades_database.json
+bot_config.json
+zeedo_pro/trades_database_telegram.json
 
 # IDE / Editor
 .vscode/
