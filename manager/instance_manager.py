@@ -88,7 +88,7 @@ class InstanceManager:
         try:
             if hasattr(self.storage, '_client') and self.storage._client:
                 # Busca usuários com bot_enabled = true
-                r = self.storage._client.table("bot_configs").select("user_id").eq("bot_enabled", True).execute()
+                r = self.storage._client.table("bot_config").select("user_id").eq("bot_enabled", True).execute()
                 return [row.get('user_id') for row in (r.data or []) if row.get('user_id')]
             
             # Fallback: retorna lista vazia
@@ -101,7 +101,7 @@ class InstanceManager:
         """Busca configuração do usuário."""
         try:
             if hasattr(self.storage, '_client') and self.storage._client:
-                r = self.storage._client.table("bot_configs").select("*").eq("user_id", user_id).limit(1).execute()
+                r = self.storage._client.table("bot_config").select("*").eq("user_id", user_id).limit(1).execute()
                 if r.data:
                     return r.data[0]
             return None
