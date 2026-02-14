@@ -12,6 +12,7 @@ app = FastAPI(
     title="Zeedo Dashboard API",
     description="API para o dashboard SaaS do bot Zeedo",
     version="1.0.0",
+    root_path="/api",
 )
 
 app.add_middleware(
