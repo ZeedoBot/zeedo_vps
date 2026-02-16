@@ -6,7 +6,7 @@ Ou de backend/: PYTHONPATH=.. uvicorn app.main:app --reload --port 8000
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.routes import auth, wallet, telegram, bot
+from backend.app.routes import auth, wallet, telegram, bot, plans
 
 app = FastAPI(
     title="Zeedo Dashboard API",
@@ -15,9 +15,17 @@ app = FastAPI(
     root_path="/api",
 )
 
+# Origens permitidas: dev + produção (zeedo.ia.br)
+_cors_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://zeedo.ia.br",
+    "https://www.zeedo.ia.br",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +35,7 @@ app.include_router(auth.router)
 app.include_router(wallet.router)
 app.include_router(telegram.router)
 app.include_router(bot.router)
+app.include_router(plans.router)
 
 
 @app.get("/")

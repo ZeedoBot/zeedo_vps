@@ -23,7 +23,7 @@ export default function LoginPage() {
         setError(err.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : err.message);
         return;
       }
-      router.push("/dashboard");
+      router.push("/choose-plan");
       router.refresh();
     } finally {
       setLoading(false);
