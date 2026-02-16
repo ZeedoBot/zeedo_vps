@@ -9,6 +9,7 @@ from hyperliquid.info import Info
 from hyperliquid.exchange import Exchange
 
 from engine.config import BotConfig
+from engine.bot_engine import BotEngine
 from storage import get_storage
 from storage.user_storage import UserStorage
 from utils.telegram import TelegramClient
@@ -77,19 +78,12 @@ class BotInstance:
             
             # 6. Inicializa conexão Hyperliquid
             self._setup_client()
-            
-            # 7. Importa e roda engine (por enquanto usa bot.py original)
-            # TODO: Migrar para engine/bot_engine.py quando estiver pronto
-            import bot as bot_module
-            
-            # Substitui variáveis globais temporariamente
-            self._patch_globals(bot_module)
-            
+
+            # 7. Cria e executa BotEngine (sem patches globais)
+            engine = BotEngine(self.config, self.storage, lambda msg: self.telegram.send(msg))
             self.running = True
             self.logger.info(f"Bot iniciado para usuário {self.user_id}")
-            
-            # Roda loop principal (chama função main do bot.py)
-            bot_module.main()
+            engine.run(self.info, self.exchange, self.wallet_address)
             
         except Exception as e:
             self.logger.error(f"Erro ao iniciar bot: {e}", exc_info=True)
@@ -166,24 +160,3 @@ class BotInstance:
         self.logger.info(f"Bot Conectado: {self.wallet_address} (Rede: {'MAINNET' if self.config.is_mainnet else 'TESTNET'})")
         self.telegram.send(f"🟢 Zeedo Conectado: Notificações Ativas")
     
-    def _patch_globals(self, bot_module):
-        """Patches temporários para compatibilidade com bot.py original."""
-        # TODO: Remover quando engine estiver completamente refatorado
-        
-        # Injeta config no módulo bot
-        bot_module.PRIVATE_KEY = self.config.private_key
-        bot_module.ACCOUNT_ADDRESS = self.config.wallet_address
-        bot_module.IS_MAINNET = self.config.is_mainnet
-        bot_module.SYMBOLS = self.config.symbols
-        bot_module.TIMEFRAMES = self.config.timeframes
-        bot_module.TRADE_MODE = self.config.trade_mode
-        
-        # Injeta storage e telegram
-        bot_module._storage_instance = self.storage
-        bot_module._telegram_instance = self.telegram
-        
-        # Substitui função tg_send para usar instância do usuário
-        original_tg_send = bot_module.tg_send
-        def patched_tg_send(msg):
-            self.telegram.send(msg)
-        bot_module.tg_send = patched_tg_send

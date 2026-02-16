@@ -1527,25 +1527,25 @@ def lsr_allows_trade(symbol, side):
         return True
     return False
 
-def main():
-    try:
-        storage = get_storage()
-        info, exchange, wallet = setup_client()
-        register_process()
-        load_config(storage)
-        logging.info("BOT FINAL V62 (Zeedo)")
-        exchange_meta = info.meta()
-        entry_tracker = storage.get_entry_tracker()
-        history_tracker = storage.get_history_tracker()
-        logging.info(f"Memória carregada: {len(entry_tracker)} ordens.")
-        analyzed_candles = {}
-        last_history_sync = 0 
-        last_lsr_global_update = 0
+def run_main_loop(info, exchange, wallet, storage, config_overrides=None):
+    """
+    Loop principal do bot. Chamado por main() (modo local/online) ou por BotEngine (SaaS).
+    Se config_overrides for dict, injeta valores nas variáveis globais do módulo.
+    """
+    if config_overrides:
+        g = globals()
+        for k, v in config_overrides.items():
+            if k in g:
+                g[k] = v
 
-    except Exception as e:
-        logging.error(f"Erro Setup: {e}")
-        return
-    
+    exchange_meta = info.meta()
+    entry_tracker = storage.get_entry_tracker()
+    history_tracker = storage.get_history_tracker()
+    logging.info(f"Memória carregada: {len(entry_tracker)} ordens.")
+    analyzed_candles = {}
+    last_history_sync = 0
+    last_lsr_global_update = 0
+
     try:
         while True:
             loop_start = time.time()
@@ -1614,8 +1614,22 @@ def main():
         logging.info("Parado.")
     except Exception as e:
         logging.error(f"Erro Crítico: {e}")
+
+
+def main():
+    """Entrypoint modo local/online: usa .env e storage (JSON ou Supabase)."""
+    try:
+        storage = get_storage()
+        info, exchange, wallet = setup_client()
+        register_process()
+        load_config(storage)
+        logging.info("BOT FINAL V62 (Zeedo)")
+        run_main_loop(info, exchange, wallet, storage)
+    except Exception as e:
+        logging.error(f"Erro Setup: {e}")
+        return
     finally:
-        cleanup_process() #Limpeza final
+        cleanup_process()
 
 if __name__ == "__main__":
     main()

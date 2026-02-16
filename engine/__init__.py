@@ -1,7 +1,7 @@
 """
-Engine do bot - lógica pura da estratégia.
+Engine do bot - lógica de trading com injeção de dependências.
 """
-from .bot_engine import BotEngine
 from .config import BotConfig
+from .bot_engine import BotEngine
 
-__all__ = ["BotEngine", "BotConfig"]
+__all__ = ["BotConfig", "BotEngine"]

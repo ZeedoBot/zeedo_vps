@@ -4,22 +4,53 @@ Documento único de referência: estado atual, estrutura, como rodar e serviços
 
 ---
 
+## Análise de conectividade (após alterações recentes)
+
+### Fluxo SaaS (Dashboard Web + Manager)
+
+| Etapa | Componente | Conexão |
+|-------|------------|---------|
+| 1 | Usuário acessa zeedo.ia.br | Frontend Next.js (proxy nginx) |
+| 2 | Login → Supabase Auth | JWT gerado |
+| 3 | Dashboard: Carteira | API `POST /wallet/connect` → `trading_accounts` (chave criptografada com ENCRYPTION_MASTER_KEY) |
+| 4 | Dashboard: Telegram | Link "Conectar" → Telegram /start com payload → Webhook `POST /webhooks/telegram` salva `chat_id` em `telegram_configs` e envia mensagem Zeedo ON + links |
+| 5 | Dashboard: Ligar Bot | API `PUT /bot/config` → `bot_config.bot_enabled = true` |
+| 6 | Manager (zeedo-manager) | A cada 30s, lê `bot_config` onde `bot_enabled = true` |
+| 7 | Manager inicia BotInstance | Processo por `user_id` |
+| 8 | BotInstance | Carrega config + credenciais (Supabase) → BotConfig → BotEngine |
+| 9 | BotEngine | Injeta config em `bot.run_main_loop()` e executa loop de trading |
+| 10 | instance_status | Manager atualiza `status = running` e heartbeats |
+
+### Fluxo Local / Online (single-user)
+
+- `run_local.py` / `run_online.py` → `bot.main()` → `run_main_loop()` (usa .env + JSON ou Supabase sem `user_id`)
+
+### Fluxo Telegram
+
+- **Webhook**: `https://zeedo.ia.br/api/webhooks/telegram` (registrar com `python scripts/set_telegram_webhook.py` ou curl)
+- Comandos do bot (Zeedo ON, links) vêm do webhook; não existe mais `telegram_bot.py` standalone.
+
+**Resultado**: Tudo conectado e funcionando após as alterações.
+
+---
+
 ## Checklist do que já foi feito
 
 - [x] Storage abstraído (local JSON e Supabase)
 - [x] Entrypoints: `run_local.py`, `run_online.py`, `manager.py`
 - [x] Estrutura SaaS multiusuário: `auth/`, `engine/`, `instance/`, `manager/`, `utils/`
-- [x] Criptografia de chaves privadas (`auth/encryption.py`)
+- [x] Criptografia de chaves privadas (`auth/encryption.py`) — ENCRYPTION_MASTER_KEY no .env
 - [x] Storage multiusuário com `user_id` (`UserStorage`, Supabase com `user_id`)
 - [x] InstanceManager: inicia/para/reinicia instâncias por usuário
-- [x] Migrations SQL: `users`, `trading_accounts`, `telegram_configs`, `instance_status`, alterações em `bot_config`, `bot_tracker`, `bot_history`, `trades_database`
+- [x] Migrations SQL: `users`, `trading_accounts`, `telegram_configs`, `instance_status`, `bot_config`, `bot_tracker`, `bot_history`, `trades_database`, `plan_limits`
 - [x] Script de migração: `scripts/migrate_to_multiuser.py`
 - [x] Logging por usuário: `logs/user_{user_id}.log`
 - [x] Telegram por usuário (`utils/telegram.py`)
-- [x] MCP e validação Supabase: `mcp/`, `scripts/validate_supabase.py`, `scripts/run_checks.py`
-- [ ] BotEngine totalmente extraído de `bot.py` (hoje usa patches globais)
-- [x] **Dashboard Web SaaS**: frontend Next.js + API FastAPI (login, carteira, Telegram, controle do bot)
-- [ ] Dashboard Streamlit em modo online (hoje só JSON local)
+- [x] Webhook Telegram: `backend/app/routes/webhooks.py` — /start salva chat_id e envia Zeedo ON + links (Comunidade, TikTok)
+- [x] BotEngine extraído: `engine/bot_engine.py` — config/storage/tg_send por injeção; `instance` usa BotEngine (sem patches globais); `run_local`/`run_online` usam `bot.main()`
+- [x] Dashboard Web SaaS: frontend Next.js + API FastAPI (login, carteira, Telegram, controle do bot)
+- [x] Carteira: conexão Web3 (Rabby/MetaMask) + manual; link "Não tem carteira? Crie agora" → Rabby
+- [x] PM2: `zeedo-backend` (API) + `zeedo-manager` (InstanceManager)
 
 ---
 
@@ -27,38 +58,39 @@ Documento único de referência: estado atual, estrutura, como rodar e serviços
 
 ```
 Bot - Mainnet (V1)/
-├── bot.py                    # Core: lógica de trading + loop principal
+├── bot.py                    # Core: lógica de trading + run_main_loop (chamado por main ou BotEngine)
 ├── run_local.py              # Entrypoint: bot local (JSON)
 ├── run_online.py             # Entrypoint: bot online (Supabase, single-user)
 ├── manager.py                # Entrypoint: SaaS multiusuário (InstanceManager)
 ├── dashboard.py              # Dashboard Streamlit (lê JSONs locais)
-├── telegram_bot.py           # Bot Telegram (comandos /start, links)
+├── ecosystem.config.js       # PM2: zeedo-backend + zeedo-manager
 │
 ├── backend/                  # API do dashboard SaaS (FastAPI)
 │   ├── app/
-│   │   ├── main.py
+│   │   ├── main.py           # Inclui routes: auth, wallet, telegram, bot, plans, webhooks
 │   │   ├── config.py
 │   │   ├── dependencies.py   # JWT → user_id
-│   │   ├── routes/          # auth, wallet, telegram, bot
+│   │   ├── routes/           # auth, wallet, telegram, bot, plans, webhooks
 │   │   └── services/
 │   └── requirements.txt
 ├── frontend/                 # Dashboard Web (Next.js 14)
-│   ├── app/                  # login, signup, dashboard/* (wallet, telegram, bot)
+│   ├── app/                  # login, signup, choose-plan, dashboard/* (wallet, telegram, bot)
 │   ├── lib/                  # supabase, api
 │   └── package.json
 │
-├── auth/                     # Criptografia (SaaS)
+├── auth/
 │   ├── __init__.py
-│   └── encryption.py
+│   └── encryption.py         # Criptografia de chaves (ENCRYPTION_MASTER_KEY)
 ├── engine/
-│   ├── __init__.py
-│   └── config.py             # BotConfig dataclass
+│   ├── __init__.py           # BotConfig, BotEngine
+│   ├── config.py             # BotConfig dataclass
+│   └── bot_engine.py         # BotEngine: injeção de dependências, chama bot.run_main_loop
 ├── instance/
 │   ├── __init__.py
-│   └── bot_instance.py       # Uma instância do bot por user_id
+│   └── bot_instance.py       # Uma instância do bot por user_id → BotEngine
 ├── manager/
 │   ├── __init__.py
-│   └── instance_manager.py   # Gerencia processos por usuário
+│   └── instance_manager.py   # Gerencia processos por usuário (BotInstance)
 ├── storage/
 │   ├── __init__.py           # get_storage(), LocalStorage, SupabaseStorage
 │   ├── base.py
@@ -67,17 +99,18 @@ Bot - Mainnet (V1)/
 │   └── user_storage.py       # Wrapper com user_id
 ├── utils/
 │   ├── __init__.py
-│   ├── telegram.py           # Telegram por usuário
+│   ├── telegram.py           # TelegramClient por usuário
 │   └── logging.py            # Logs por user_id
 ├── mcp/
 │   ├── __init__.py
 │   ├── supabase_reader.py
-│   └── validator.py          # Servidor MCP (Cursor)
+│   └── validator.py
 ├── migrations/
 │   ├── 001_create_multiuser_tables.sql
 │   ├── 002_enable_rls_policies.sql
-│   └── 003_dashboard_auth_and_plans.sql   # Sync auth.users, subscriptions, plan_limits
+│   └── 003_dashboard_auth_and_plans.sql
 ├── scripts/
+│   ├── set_telegram_webhook.py  # Registrar webhook no Telegram
 │   ├── migrate_to_multiuser.py
 │   ├── validate_supabase.py
 │   ├── run_checks.py
@@ -87,7 +120,7 @@ Bot - Mainnet (V1)/
 │   └── dashboard_pro.py
 ├── docs/
 │   ├── README.md
-│   └── DASHBOARD_SAAS.md     # Fluxos e segurança do dashboard web
+│   └── DASHBOARD_SAAS.md
 │
 ├── requirements.txt
 ├── .env                       # Não versionar
@@ -98,105 +131,73 @@ Bot - Mainnet (V1)/
 └── logs/                      # user_{user_id}.log quando roda manager
 ```
 
+**Nota**: `telegram_bot.py` foi removido. O Telegram é tratado via webhook em `backend/app/routes/webhooks.py`.
+
 ---
 
 ## Como rodar
 
 ### Local (persistência em JSON)
 
-- Na raiz do projeto:
-  - `python run_local.py`  
-  ou  
-  - `BOT_STORAGE=local python bot.py`
+- Na raiz: `python run_local.py` ou `BOT_STORAGE=local python bot.py`
 - Estado em: `bot_tracker.json`, `bot_history.json`, `trades_database.json`, `bot_config.json`.
 
 ### Online – single user (Supabase, sem manager)
 
-- `.env`: `BOT_STORAGE=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (ou `SUPABASE_KEY`).
-- Na raiz: `python run_online.py` (ou `BOT_STORAGE=supabase python bot.py`).
-- Estado no Supabase (tabelas usadas pelo storage atual).
+- `.env`: `BOT_STORAGE=supabase`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+- Na raiz: `python run_online.py`
 
 ### Online – multiusuário (SaaS no VPS)
 
-1. **Supabase**: executar migrations em ordem (`001_...`, depois `002_...` se usar RLS).
-2. **Variáveis de ambiente** (ex.: no VPS, no `.env`):
+1. **Supabase**: executar migrations em ordem.
+2. **Variáveis de ambiente** (`.env` no VPS):
    - `BOT_STORAGE=supabase`
    - `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
-   - `ENCRYPTION_MASTER_KEY` (gerar com `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`)
-3. **Migração** (uma vez): `python scripts/migrate_to_multiuser.py` (opcional `--email seu@email.com`).
-4. **Configurar usuário** (ex.: no SQL Editor do Supabase):
-   - Tabela: `bot_config` (não `bot_configs`).
-   - Exemplo: definir `symbols`, `timeframes`, `trade_mode`, `bot_enabled = true` para o `user_id` desejado.
-5. **Subir o manager**: na raiz do projeto, `python manager.py`.
-   - O manager consulta a cada 30s quem tem `bot_enabled = true` e inicia/para/reinicia processos por usuário.
+   - `ENCRYPTION_MASTER_KEY`
+   - `TELEGRAM_BOT_TOKEN` (para webhook e notificações)
+3. **Webhook Telegram**: `python scripts/set_telegram_webhook.py`
+4. **PM2** (recomendado): `pm2 start ecosystem.config.js`
+   - `zeedo-backend`: API FastAPI (porta 8000)
+   - `zeedo-manager`: InstanceManager (inicia BotInstance por usuário com `bot_enabled = true`)
 
 Comandos úteis:
 
 - Bot local: `python run_local.py`
 - Bot online single: `python run_online.py`
-- SaaS (multiusuário): `python manager.py`
-- **API do dashboard**: `uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000` (na raiz)
-- **Dashboard Web**: `cd frontend && npm run dev` (requer backend rodando e Supabase Auth)
-- Sanity checks: `python scripts/run_checks.py`
-- Validação Supabase: `python scripts/validate_supabase.py`
-- Dashboard Streamlit: `streamlit run dashboard.py`
-
-Detalhes do dashboard web (auth, carteira, Telegram, segurança): **docs/DASHBOARD_SAAS.md**.
+- SaaS: `pm2 start ecosystem.config.js` (ou `python manager.py`)
+- API: `uvicorn backend.app.main:app --host 127.0.0.1 --port 8000`
+- Frontend: `cd frontend && npm run dev`
+- Webhook Telegram: `python scripts/set_telegram_webhook.py`
+- Sanity: `python scripts/run_checks.py`
 
 ---
 
-## Reinício automático por usuário após mudança de config
+## Reinício automático por usuário
 
-- O **InstanceManager** (`manager/instance_manager.py`) roda em loop a cada `check_interval` (30s).
-- A cada ciclo:
-  - Lê usuários com `bot_enabled = true` na tabela `bot_config`.
-  - Para cada usuário:
-    - Se `bot_enabled` e ainda não há processo → inicia instância.
-    - Se já há processo e a config mudou (ex.: `symbols`, `timeframes`, `trade_mode`, `bot_enabled`) → **reinicia** a instância desse usuário.
-    - Se `bot_enabled = false` e há processo → para a instância.
-- Reinício = parar processo do usuário + pequeno delay + iniciar novo processo.
-- Não é necessário reiniciar o manager manualmente: basta alterar `bot_config` no Supabase; em até ~30s a instância daquele usuário será reiniciada com a nova config.
+- O InstanceManager roda em loop a cada 30s.
+- Lê `bot_config` onde `bot_enabled = true`.
+- Inicia/para/reinicia processos (BotInstance) conforme mudanças.
+- Não é necessário reiniciar o manager manualmente.
 
 ---
 
-## Dependências
+## Serviços no VPS (PM2)
 
-- **requirements.txt** (principais):  
-  `numpy`, `pandas`, `python-dotenv`, `eth-account`, `requests`, `supabase>=2.0.0`, `cryptography>=41.0.0`
+O arquivo `ecosystem.config.js` define:
 
-Para dashboard e ambiente completo no VPS costumam ser usados também:  
-`streamlit`, `hyperliquid-python-sdk`, `psutil` (instalar se o script/setup do VPS exigir).
-
-Instalação:
+| App | Descrição |
+|-----|-----------|
+| zeedo-backend | API FastAPI (uvicorn) |
+| zeedo-manager | InstanceManager (inicia instâncias do bot) |
 
 ```bash
-pip install -r requirements.txt
+pm2 start ecosystem.config.js
+pm2 status
+pm2 logs zeedo-manager
+pm2 restart zeedo-backend
 ```
 
----
-
-## Serviços ativos (VPS)
-
-No VPS, o projeto pode ser rodado com systemd. O script `scripts/setup_vps.sh` cria serviços a partir do **diretório atual** (recomendado: clonar/colocar o projeto num path fixo, ex.: `~/Bot-Mainnet-V1` ou `~/zeedo-bot`).
-
-- **zeedo-bot.service**: bot (single-user) ou, em modo SaaS, pode ser substituído pelo manager (veja abaixo).
-- **zeedo-dashboard.service**: Streamlit (`streamlit run dashboard.py`).
-
-Para **SaaS**, o serviço do bot deve iniciar o manager, não o `bot.py` direto:
-
-- `ExecStart=.../venv/bin/python .../manager.py`  
-e `WorkingDirectory` = raiz do projeto.
-
-Comandos típicos:
-
-```bash
-sudo systemctl start zeedo-bot.service
-sudo systemctl start zeedo-dashboard.service
-sudo systemctl status zeedo-bot.service
-sudo journalctl -u zeedo-bot.service -f
-```
-
-Se o `setup_vps.sh` tiver sido feito para `bot.py`, editar o unit do bot para usar `manager.py` quando for modo multiusuário.
+Ajuste `cwd` em `ecosystem.config.js` conforme o path do projeto no VPS (ex.: `/home/zeedo/zeedo_vps`).
 
 ---
 
@@ -206,26 +207,25 @@ Se o `setup_vps.sh` tiver sido feito para `bot.py`, editar o unit do bot para us
 |----------|-----|
 | `BOT_STORAGE` | `local` ou `supabase` |
 | `SUPABASE_URL` | URL do projeto Supabase |
-| `SUPABASE_SERVICE_KEY` ou `SUPABASE_KEY` | Chave service (backend) |
-| `ENCRYPTION_MASTER_KEY` | SaaS: criptografia de chaves privadas (gerar e guardar em seguro) |
-| `SUPABASE_JWT_SECRET` | Backend dashboard: validar JWT (Supabase → Settings → API → JWT Secret) |
-| `HYPER_PRIVATE_KEY` / `HYPER_ACCOUNT_ADDRESS` | Migração / single-user |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Migração / single-user |
+| `SUPABASE_SERVICE_KEY` / `SUPABASE_KEY` | Chave service |
+| `SUPABASE_JWT_SECRET` | Validação JWT (backend) |
+| `ENCRYPTION_MASTER_KEY` | Criptografia de chaves privadas (sem colchetes) |
+| `TELEGRAM_BOT_TOKEN` | Bot e webhook do Telegram |
+| `HYPER_PRIVATE_KEY` / `HYPER_ACCOUNT_ADDRESS` | Modo local/single-user |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Modo local/single-user |
 
 **Frontend** (`.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`.
 
-Não versionar `.env` nem `.env.local`.
-
 ---
 
-## Tabelas Supabase (multiusuário)
+## Tabelas Supabase
 
-- **users** – usuários do sistema (sincronizado com auth.users pela migration 003)  
-- **trading_accounts** – wallets e chave privada criptografada por usuário  
-- **bot_config** – configuração do bot por usuário (symbols, timeframes, trade_mode, bot_enabled, etc.)  
-- **telegram_configs** – Telegram por usuário (view **telegram_connections** em 003)  
-- **instance_status** – status do processo por usuário (heartbeat, PID)  
-- **subscriptions** / **plan_limits** – faturamento e limites por plano (003)  
-- **bot_tracker**, **bot_history**, **trades_database** – com coluna `user_id` (preenchida pela migração e pelo bot).
+- **users** – usuários (sync com auth.users)
+- **trading_accounts** – carteiras e chave criptografada
+- **bot_config** – symbols, timeframes, trade_mode, bot_enabled
+- **telegram_configs** – chat_id por usuário
+- **instance_status** – status (running/stopped), heartbeat
+- **subscriptions** / **plan_limits** – planos e limites
+- **bot_tracker**, **bot_history**, **trades_database** – com `user_id`
 
-Toda a documentação antiga fragmentada foi consolidada neste arquivo. Para **dashboard web** (login, carteira, Telegram, segurança): **docs/DASHBOARD_SAAS.md**.
+Detalhes do dashboard web: **docs/DASHBOARD_SAAS.md**.
