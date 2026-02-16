@@ -31,7 +31,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-surface-50">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
       <div className="card w-full max-w-md">
         <h1 className="text-xl font-semibold text-gray-900 mb-1">Entrar</h1>
         <p className="text-gray-600 text-sm mb-6">Use seu e-mail e senha para acessar o dashboard.</p>

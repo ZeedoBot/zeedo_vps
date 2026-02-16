@@ -19,10 +19,10 @@ def _get_jwks_client():
     return PyJWKClient(url)
 
 
-def get_current_user_id(
+def get_token_payload(
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
-) -> str:
-    """Valida JWT do Supabase e retorna o user_id (sub)."""
+) -> dict:
+    """Valida o JWT e retorna o payload."""
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -33,7 +33,6 @@ def get_current_user_id(
     settings = get_settings()
     alg = jwt.get_unverified_header(token).get("alg", "HS256")
 
-    # ES256 ou RS256: valida via JWKS (Supabase com chaves assimétricas)
     if alg in ("ES256", "RS256"):
         if not settings.supabase_url:
             raise HTTPException(
@@ -44,8 +43,7 @@ def get_current_user_id(
             jwks_client = _get_jwks_client()
             signing_key = jwks_client.get_signing_key_from_jwt(token)
             payload = jwt.decode(
-                token,
-                signing_key.key,
+                token, signing_key.key,
                 algorithms=["ES256", "RS256"],
                 audience="authenticated",
             )
@@ -54,7 +52,6 @@ def get_current_user_id(
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Token inválido")
     else:
-        # HS256: Legacy JWT Secret
         if not settings.supabase_jwt_secret:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -72,7 +69,11 @@ def get_current_user_id(
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Token inválido")
 
-    user_id = payload.get("sub")
-    if not user_id:
+    if not payload.get("sub"):
         raise HTTPException(status_code=401, detail="Token inválido")
-    return user_id
+    return payload
+
+
+def get_current_user_id(payload: dict = Depends(get_token_payload)) -> str:
+    """Retorna o user_id (sub) do token validado."""
+    return payload["sub"]

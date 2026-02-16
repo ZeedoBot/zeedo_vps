@@ -10,8 +10,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: { 500: "#3b82f6", 600: "#2563eb", 700: "#1d4ed8" },
-        surface: { 50: "#f8fafc", 100: "#f1f5f9" },
+        primary: {
+          400: "#fb923c",
+          500: "#f97316",
+          600: "#ea580c",
+          700: "#c2410c",
+        },
+        zeedo: {
+          black: "#0a0a0a",
+          white: "#fafafa",
+          orange: "#f97316",
+        },
+        surface: { 50: "#fafafa", 100: "#f4f4f5" },
       },
     },
   },

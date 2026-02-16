@@ -64,7 +64,7 @@ export default function ChoosePlanPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-surface-50 dark:bg-gray-900 relative">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black relative">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>

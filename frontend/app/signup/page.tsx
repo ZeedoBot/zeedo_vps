@@ -42,7 +42,7 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-surface-50">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
         <div className="card w-full max-w-md text-center">
           <p className="text-green-700 font-medium">Conta criada com sucesso.</p>
           <p className="text-gray-600 text-sm mt-2">Redirecionando para o login…</p>
@@ -52,7 +52,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-surface-50">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
       <div className="card w-full max-w-md">
         <h1 className="text-xl font-semibold text-gray-900 mb-1">Criar conta</h1>
         <p className="text-gray-600 text-sm mb-6">Preencha seus dados para começar.</p>

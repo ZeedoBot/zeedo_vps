@@ -4,7 +4,10 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
   title: "Zeedo – Dashboard",
-  description: "Controle seu bot de trading",
+  description: "Bot de trading automatizado para Hyperliquid",
+  icons: {
+    icon: "/zeedo-logo.png",
+  },
 };
 
 export default function RootLayout({
