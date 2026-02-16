@@ -26,29 +26,42 @@ def connect_wallet(
     Recebe wallet address e chave privada, criptografa a chave e salva em trading_accounts.
     Nunca retorna a chave privada.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     wallet_address = body.wallet_address.strip()
     private_key = body.private_key.strip()
     if not wallet_address or not private_key:
         raise HTTPException(status_code=400, detail="Endereço e chave são obrigatórios")
 
-    encrypted_key, salt = encrypt_and_save_private_key(private_key, user_id)
+    try:
+        encrypted_key, salt = encrypt_and_save_private_key(private_key, user_id)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.exception("Erro ao criptografar chave privada")
+        raise HTTPException(status_code=500, detail="Erro ao processar chave privada. Verifique ENCRYPTION_MASTER_KEY no servidor.")
 
-    supabase = get_supabase()
-    # Desativa outras contas do mesmo usuário (uma carteira ativa por usuário)
-    supabase.table("trading_accounts").update({"is_active": False}).eq("user_id", user_id).execute()
-    # Insere ou atualiza esta carteira como ativa
-    data = {
-        "user_id": user_id,
-        "wallet_address": wallet_address,
-        "encrypted_private_key": encrypted_key,
-        "encryption_salt": salt,
-        "network": body.network,
-        "is_active": True,
-    }
-    supabase.table("trading_accounts").upsert(
-        data,
-        on_conflict="user_id,wallet_address",
-    ).execute()
+    try:
+        supabase = get_supabase()
+        # Desativa outras contas do mesmo usuário (uma carteira ativa por usuário)
+        supabase.table("trading_accounts").update({"is_active": False}).eq("user_id", user_id).execute()
+        # Insere ou atualiza esta carteira como ativa
+        data = {
+            "user_id": user_id,
+            "wallet_address": wallet_address,
+            "encrypted_private_key": encrypted_key,
+            "encryption_salt": salt,
+            "network": body.network,
+            "is_active": True,
+        }
+        supabase.table("trading_accounts").upsert(
+            data,
+            on_conflict="user_id,wallet_address",
+        ).execute()
+    except Exception as e:
+        logger.exception("Erro ao salvar carteira no banco")
+        raise HTTPException(status_code=500, detail="Erro ao salvar carteira. Tente novamente.")
 
     return {
         "success": True,

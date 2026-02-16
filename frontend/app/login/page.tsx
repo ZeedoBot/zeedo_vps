@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+import { apiGet } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,12 +19,24 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
       if (err) {
         setError(err.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : err.message);
         return;
       }
-      router.push("/choose-plan");
+      const session = data?.session;
+      if (!session?.access_token) {
+        router.push("/choose-plan");
+        router.refresh();
+        return;
+      }
+      try {
+        const me = await apiGet<{ subscription_tier?: string }>("/auth/me", session.access_token);
+        const hasPlan = me.subscription_tier && ["basic", "pro", "enterprise"].includes(me.subscription_tier);
+        router.push(hasPlan ? "/dashboard" : "/choose-plan");
+      } catch {
+        router.push("/choose-plan");
+      }
       router.refresh();
     } finally {
       setLoading(false);
@@ -33,7 +46,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
       <div className="card w-full max-w-md">
-        <h1 className="text-xl font-semibold text-gray-900 mb-1">Entrar</h1>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Entrar</h1>
         <p className="text-gray-600 text-sm mb-6">Use seu e-mail e senha para acessar o dashboard.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

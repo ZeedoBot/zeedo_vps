@@ -21,7 +21,8 @@ class EncryptionManager:
         Args:
             master_key: Chave mestra (se None, lê de ENCRYPTION_MASTER_KEY)
         """
-        self.master_key = master_key or os.getenv("ENCRYPTION_MASTER_KEY")
+        raw = master_key or os.getenv("ENCRYPTION_MASTER_KEY") or ""
+        self.master_key = raw.strip().strip("[]")
         if not self.master_key:
             raise ValueError(
                 "ENCRYPTION_MASTER_KEY não configurada. "
