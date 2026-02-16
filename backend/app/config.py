@@ -1,7 +1,11 @@
 """Configuração do backend (variáveis de ambiente)."""
-import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+# .env na raiz do projeto (independente do CWD ao iniciar)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_ENV_FILE = _PROJECT_ROOT / ".env"
 
 
 class Settings(BaseSettings):
@@ -13,7 +17,7 @@ class Settings(BaseSettings):
     api_port: int = 8000
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE) if _ENV_FILE.exists() else ".env"
         env_file_encoding = "utf-8"
         extra = "ignore"
 

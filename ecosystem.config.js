@@ -10,7 +10,6 @@ module.exports = {
       script: "venv/bin/python",
       args: "-m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000",
       cwd: "/home/zeedo/zeedo_vps",
-      env_file: ".env",
     },
   ],
 };
