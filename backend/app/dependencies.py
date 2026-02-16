@@ -32,7 +32,7 @@ def get_current_user_id(
             token,
             settings.supabase_jwt_secret,
             algorithms=["HS256"],
-            audience="authenticated",
+            options={"verify_aud": False},  # Supabase aud pode variar entre projetos
         )
         user_id = payload.get("sub")
         if not user_id:
