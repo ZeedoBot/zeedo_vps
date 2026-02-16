@@ -37,7 +37,7 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
         "target_loss_max": float(row.get("target_loss_max", 20)),
         "allowed_symbols": allowed if allowed else ALL_SYMBOLS,
         "allowed_timeframes": row.get("allowed_timeframes") or ["15m"],
-        "allowed_trade_modes": row.get("allowed_trade_modes") or ["LONG_ONLY", "SHORT_ONLY"],
+        "allowed_trade_modes": row.get("allowed_trade_modes") or ["BOTH"],
     }
 
 

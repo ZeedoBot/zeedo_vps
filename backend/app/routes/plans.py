@@ -42,7 +42,7 @@ def get_plan_limits(user_id: str = Depends(get_current_user_id)):
         "target_loss_max": float(row.get("target_loss_max", 20)),
         "allowed_symbols": row.get("allowed_symbols") or [],
         "allowed_timeframes": row.get("allowed_timeframes") or ["15m"],
-        "allowed_trade_modes": row.get("allowed_trade_modes") or ["LONG_ONLY", "SHORT_ONLY"],
+        "allowed_trade_modes": row.get("allowed_trade_modes") or ["BOTH"],
     }
 
 
@@ -52,6 +52,11 @@ def choose_plan(
     user_id: str = Depends(get_current_user_id),
 ):
     """Salva plano escolhido no perfil do usuário (sem pagamento)."""
-    supabase = get_supabase()
-    supabase.table("users").update({"subscription_tier": body.plan}).eq("id", user_id).execute()
-    return {"success": True, "plan": body.plan}
+    try:
+        supabase = get_supabase()
+        result = supabase.table("users").update({"subscription_tier": body.plan}).eq("id", user_id).execute()
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        return {"success": True, "plan": body.plan}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar plano: {str(e)}")

@@ -49,11 +49,15 @@ export default function ChoosePlanPage() {
     setLoading(true);
     setError("");
     try {
-      await apiPost("/plans/choose", { plan: planId }, session.access_token);
-      router.push("/dashboard");
-      router.refresh();
+      const result = await apiPost("/plans/choose", { plan: planId }, session.access_token);
+      if (result) {
+        router.push("/dashboard");
+        router.refresh();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar plano.");
+      console.error("Erro ao selecionar plano:", err);
+      const errorMessage = err instanceof Error ? err.message : "Erro ao salvar plano.";
+      setError(errorMessage.includes("fetch") ? "Erro de conexão. Verifique se a API está rodando." : errorMessage);
     } finally {
       setLoading(false);
     }
@@ -95,13 +99,68 @@ export default function ChoosePlanPage() {
               <span className="mt-2 text-2xl font-bold text-primary-600 dark:text-primary-400">
                 R${plan.price}
               </span>
-              <span className="mt-1 text-sm text-gray-500 dark:text-gray-400">/mês</span>
-              <span className="mt-4 text-sm text-gray-600 dark:text-gray-300 text-center">
-                {plan.id === "basic" && "BTC, ETH • 15m • Até 2 trades simultâneos"}
-                {plan.id === "pro" && "Todos os tokens • 15m–4h • Long/Short • Até 5 trades"}
-                {plan.id === "enterprise" && "Ilimitado • Todos timeframes • Long/Short"}
-              </span>
-              <span className="mt-4 inline-block rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white">
+              <span className="mt-1 text-sm text-gray-500 dark:text-gray-400 mb-4">/mês</span>
+              
+              <div className="w-full mt-4 space-y-2 text-left">
+                {plan.id === "basic" && (
+                  <>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">BTC e ETH</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">15m</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">Máx. 2</span>
+                    </div>
+                  </>
+                )}
+                {plan.id === "pro" && (
+                  <>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">Todos disponíveis</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 30m, 1h e 4h</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">Máx. 5</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">+</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">Função Only Short ou Only Long</span>
+                    </div>
+                  </>
+                )}
+                {plan.id === "enterprise" && (
+                  <>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">Todos disponíveis</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">5m, 15m, 30m, 1h, 4h e 1d</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">Ilimitado</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">+</span>
+                      <span className="ml-2 text-gray-600 dark:text-gray-400">Função Only Short ou Only Long</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              
+              <span className="mt-6 inline-block rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 transition-colors">
                 Selecionar
               </span>
             </button>
