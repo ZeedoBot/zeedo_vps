@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     encryption_master_key: str = ""
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    telegram_bot_token: str = ""  # Token do bot (do .env)
 
     class Config:
         env_file = str(_ENV_FILE) if _ENV_FILE.exists() else ".env"

@@ -70,7 +70,7 @@ export default function WalletPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 mb-6">Carteira Hyperliquid</h1>
+      <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Carteira Hyperliquid</h1>
       <div className="card max-w-xl">
         <p className="text-sm text-gray-600 mb-4">
           Conecte a carteira que o bot usará para operar na Hyperliquid. A chave privada é criptografada e nunca é exibida novamente.

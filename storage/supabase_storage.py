@@ -255,3 +255,29 @@ class SupabaseStorage(StorageBase):
         except Exception as e:
             logging.error(f"Supabase get_config: {e}")
             return {}
+
+    def get_telegram_config(self, user_id: str = None) -> dict | None:
+        """Retorna config do Telegram (bot_token, chat_id) do usuário."""
+        if not self._client:
+            return None
+        try:
+            user_id = user_id or self._user_id
+            if not user_id:
+                return None
+            r = self._client.table("telegram_configs").select("bot_token, chat_id, bot_token_sender, chat_id_sender").eq("user_id", user_id).limit(1).execute()
+            if not r.data or len(r.data) == 0:
+                return None
+            row = r.data[0]
+            token = row.get("bot_token") or ""
+            chat = row.get("chat_id") or ""
+            if not token or not chat:
+                return None
+            return {
+                "bot_token": token,
+                "chat_id": chat,
+                "bot_token_sender": row.get("bot_token_sender") or "",
+                "chat_id_sender": row.get("chat_id_sender") or "",
+            }
+        except Exception as e:
+            logging.error(f"Supabase get_telegram_config: {e}")
+            return None

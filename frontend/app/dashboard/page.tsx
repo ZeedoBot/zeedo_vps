@@ -49,7 +49,7 @@ export default function DashboardPage() {
       </p>
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="card dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Carteira Hyperliquid</h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-white mb-1">Carteira Hyperliquid</h2>
           <p className="text-lg font-medium text-gray-900 dark:text-white">
             {walletStatus?.connected ? walletStatus.wallet_address ?? "Conectada" : "Não conectada"}
           </p>
@@ -58,7 +58,7 @@ export default function DashboardPage() {
           </a>
         </div>
         <div className="card dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Telegram</h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-white mb-1">Telegram</h2>
           <p className="text-lg font-medium text-gray-900 dark:text-white">
             {telegramStatus?.connected ? "Conectado" : "Não conectado"}
           </p>
@@ -67,7 +67,7 @@ export default function DashboardPage() {
           </a>
         </div>
         <div className="card dark:bg-gray-800 dark:border-gray-700">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Bot</h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-white mb-1">Bot</h2>
           <p className="text-lg font-medium text-gray-900 dark:text-white capitalize">
             {botStatus?.status === "running" ? "Rodando" : "Parado"}
           </p>

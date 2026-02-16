@@ -72,3 +72,9 @@ class UserStorage(StorageBase):
         if hasattr(self.backend, 'get_config'):
             return self.backend.get_config(user_id=self.user_id)
         return self.backend.get_config()
+
+    def get_telegram_config(self) -> dict | None:
+        """Retorna config do Telegram do usuário."""
+        if hasattr(self.backend, 'get_telegram_config'):
+            return self.backend.get_telegram_config(user_id=self.user_id)
+        return None

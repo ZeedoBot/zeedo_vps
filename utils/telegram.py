@@ -26,27 +26,20 @@ class TelegramClient:
         self._load_config()
     
     def _load_config(self):
-        """Carrega configuração do Telegram do banco de dados."""
-        if not self.storage:
-            # Fallback: tenta carregar de variáveis de ambiente (modo compatibilidade)
-            import os
-            self.config = {
-                "bot_token": os.getenv("TELEGRAM_BOT_TOKEN"),
-                "chat_id": os.getenv("TELEGRAM_CHAT_ID"),
-                "bot_token_sender": os.getenv("TELEGRAM_BOT_TOKEN_SENDER", ""),
-                "chat_id_sender": os.getenv("TELEGRAM_CHAT_ID_SENDER", ""),
-            }
-            return
-        
-        # Carrega do banco (implementação futura quando storage tiver get_telegram_config)
-        # Por enquanto, usa variáveis de ambiente
+        """Carrega configuração do Telegram do banco ou .env."""
         import os
-        self.config = {
+        fallback = {
             "bot_token": os.getenv("TELEGRAM_BOT_TOKEN"),
             "chat_id": os.getenv("TELEGRAM_CHAT_ID"),
             "bot_token_sender": os.getenv("TELEGRAM_BOT_TOKEN_SENDER", ""),
             "chat_id_sender": os.getenv("TELEGRAM_CHAT_ID_SENDER", ""),
         }
+        if self.storage and hasattr(self.storage, "get_telegram_config"):
+            cfg = self.storage.get_telegram_config()
+            if cfg and cfg.get("bot_token") and cfg.get("chat_id"):
+                self.config = cfg
+                return
+        self.config = fallback
     
     def send(self, msg: str):
         """
