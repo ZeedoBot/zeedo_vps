@@ -31,16 +31,34 @@ def load_trades():
         return []
 
 
+def parse_data_field(data_str):
+    """
+    Converte campo 'data' do JSON em timestamp (ms).
+    Aceita: YYYY-MM-DD, YYYY-DD-MM
+    """
+    if not data_str or not isinstance(data_str, str):
+        return 0
+    s = data_str.strip()[:10]
+    for fmt in ("%Y-%m-%d", "%Y-%d-%m"):
+        try:
+            dt = datetime.strptime(s, fmt)
+            return int(dt.timestamp() * 1000)
+        except ValueError:
+            continue
+    return 0
+
+
 def group_trades_by_id(trades_list):
     """
     Junta trades com o mesmo id: soma o PnL e mantém um registro por id.
-    Para coin, side, tf e data usa o primeiro do grupo; time é o mais recente do grupo.
+    Para coin, side, tf e data usa o primeiro do grupo; time/data é o mais recente do grupo.
     """
     if not trades_list:
         return []
     by_id = {}
     for t in trades_list:
         tid = str(t.get("id", ""))
+        t_time = t.get("time", 0) or parse_data_field(t.get("data", ""))
         if tid not in by_id:
             by_id[tid] = {
                 "id": tid,
@@ -48,12 +66,12 @@ def group_trades_by_id(trades_list):
                 "side": t.get("side", ""),
                 "tf": t.get("tf", "-"),
                 "data": t.get("data", ""),
-                "time": t.get("time", 0),
+                "time": t_time,
                 "pnl": 0.0,
             }
         by_id[tid]["pnl"] += float(t.get("pnl", 0))
-        if t.get("time", 0) > by_id[tid]["time"]:
-            by_id[tid]["time"] = t["time"]
+        if t_time > by_id[tid]["time"]:
+            by_id[tid]["time"] = t_time
             by_id[tid]["data"] = t.get("data", by_id[tid]["data"])
     return list(by_id.values())
 
@@ -72,15 +90,12 @@ st.title("🚀 Zeedo Pro")
 # Carrega dados apenas do JSON
 trades_raw = load_trades()
 
-# Normaliza campos: id, coin, side, pnl, data, tf
+# Normaliza campos: id, coin, side, pnl, data, tf (time vem do campo data)
 trades = []
 for t in trades_raw:
     pnl = float(t.get("pnl", 0))
     data_str = t.get("data", "")
-    try:
-        ts = datetime.strptime(data_str[:10], "%Y-%m-%d").timestamp() * 1000 if data_str else 0
-    except ValueError:
-        ts = 0
+    ts = parse_data_field(data_str)
     trades.append({
         "id": str(t.get("id", "")),
         "coin": str(t.get("coin", "")).upper(),
@@ -113,12 +128,13 @@ with c3:
 
 hide_zeros = st.checkbox("Ocultar PnL Zero", value=True)
 
-# Aplica filtros
+# Aplica filtros (período baseado nas datas reais dos trades)
+max_ts = max((t["time"] for t in trades), default=0)
 filter_start_ts = 0
-if selected_period != "All Time":
+if selected_period != "All Time" and max_ts > 0:
     days_map = {"24 Horas": 1, "1 Semana": 7, "1 Mês": 30, "3 meses": 90, "6 meses": 180, "1 ano": 360}
     if selected_period in days_map:
-        filter_start_ts = (datetime.now().timestamp() - (days_map[selected_period] * 86400)) * 1000
+        filter_start_ts = max_ts - (days_map[selected_period] * 86400 * 1000)
 
 filtered = []
 for t in trades:

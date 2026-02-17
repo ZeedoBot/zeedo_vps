@@ -60,7 +60,7 @@ export default function DashboardLayout({
       <header className="border-b border-zeedo-black/10 bg-white dark:bg-zeedo-black dark:border-zeedo-white/10">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-zeedo-black dark:text-zeedo-white">
-            <img src="/zeedo-logo.png" alt="Zeedo" className="h-8 w-8 object-contain" />
+            <img src="/zeedo-logo.png?v=2" alt="Zeedo" className="h-8 w-8 object-contain" />
             Zeedo
           </Link>
           <nav className="flex gap-6">

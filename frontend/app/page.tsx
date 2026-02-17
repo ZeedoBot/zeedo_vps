@@ -6,7 +6,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
       <div className="text-center max-w-md">
         <Image
-          src="/zeedo-logo.png"
+          src="/zeedo-logo.png?v=2"
           alt="Zeedo Bot"
           width={240}
           height={240}
