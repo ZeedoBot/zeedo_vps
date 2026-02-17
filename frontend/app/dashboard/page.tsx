@@ -112,7 +112,8 @@ function computeMetrics(trades: Trade[], balance: number) {
   };
 }
 
-function groupBy<K extends string>(arr: { id: string; pnl: number } & Record<K, string>[], key: K) {
+type GroupedTrade = { id: string; pnl: number; side: string; tf: string; token: string };
+function groupBy(arr: GroupedTrade[], key: keyof GroupedTrade) {
   const map = new Map<string, { pnl: number; qty: number }>();
   for (const t of arr) {
     const k = String(t[key] ?? "-");
@@ -164,7 +165,7 @@ export default function DashboardPage() {
   const balance = overview?.balance ?? 0;
   const trades = overview?.trades ?? [];
   const metrics = computeMetrics(trades, balance);
-  const groupedWithKeys = metrics.grouped as { id: string; pnl: number; side: string; tf: string; token: string }[];
+  const groupedWithKeys = metrics.grouped as GroupedTrade[];
   const bySide = groupBy(groupedWithKeys, "side");
   const byTf = groupBy(groupedWithKeys, "tf");
   const byToken = groupBy(groupedWithKeys, "token");
@@ -260,7 +261,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `$${v.toFixed(0)}`} />
                 <Tooltip
-                  formatter={(v: number) => [`$${v.toFixed(2)}`, "PnL Acum."]}
+                  formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL Acum."]}
                   contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
                 />
                 <Line type="monotone" dataKey="balance" stroke="#10b981" strokeWidth={2} dot={false} />
@@ -286,7 +287,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" tickFormatter={(v) => `$${v}`} />
                       <YAxis type="category" dataKey="name" width={60} />
-                      <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, "PnL"]} />
+                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
                       <Bar dataKey="pnl" fill="#10b981" name="PnL" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -322,7 +323,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" tickFormatter={(v) => `$${v}`} />
                       <YAxis type="category" dataKey="name" width={50} />
-                      <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, "PnL"]} />
+                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
                       <Bar dataKey="pnl" fill="#6366f1" name="PnL" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -358,7 +359,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" tickFormatter={(v) => `$${v}`} />
                       <YAxis type="category" dataKey="name" width={50} />
-                      <Tooltip formatter={(v: number) => [`$${v.toFixed(2)}`, "PnL"]} />
+                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
                       <Bar dataKey="pnl" fill="#f59e0b" name="PnL" />
                     </BarChart>
                   </ResponsiveContainer>
