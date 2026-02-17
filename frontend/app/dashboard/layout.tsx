@@ -57,19 +57,19 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-zeedo-white dark:bg-zeedo-black">
-      <header className="border-b border-zeedo-black/10 bg-white dark:bg-zeedo-black dark:border-zeedo-white/10">
+      <header className="border-b border-zeedo-orange/20 bg-zeedo-white dark:bg-zeedo-black dark:border-zeedo-orange/20">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-zeedo-black dark:text-zeedo-white">
-            <img src="/zeedo-logo.png?v=2" alt="Zeedo" className="h-8 w-8 object-contain" />
-            Zeedo
+            <img src="/zeedo-logo.png?v=3" alt="Zeedo" className="h-8 w-8 object-contain mix-blend-multiply dark:mix-blend-screen" />
+            <span className="text-zeedo-black dark:text-zeedo-white">Zeedo</span>
           </Link>
           <nav className="flex gap-6">
             {nav.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
-                className={`text-sm font-medium ${
-                  pathname === href ? "text-primary-600" : "text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                className={`text-sm font-medium transition-colors ${
+                  pathname === href ? "text-zeedo-orange" : "text-zeedo-black/70 hover:text-zeedo-orange dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
                 }`}
               >
                 {label}
@@ -78,11 +78,11 @@ export default function DashboardLayout({
           </nav>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <span className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[180px]">{user?.email}</span>
+            <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 truncate max-w-[180px]">{user?.email}</span>
             <button
               type="button"
               onClick={handleLogout}
-              className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              className="text-sm font-medium text-zeedo-black/70 hover:text-zeedo-orange dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
             >
               Sair
             </button>

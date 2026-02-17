@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Zeedo – Dashboard",
   description: "Bot de trading automatizado para Hyperliquid",
   icons: {
-    icon: "/zeedo-logo.png?v=2",
+    icon: "/zeedo-logo.png?v=3",
   },
 };
 

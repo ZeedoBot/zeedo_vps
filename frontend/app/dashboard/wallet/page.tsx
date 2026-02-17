@@ -109,7 +109,7 @@ export default function WalletPage() {
   return (
     <div>
       <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Carteira Hyperliquid</h1>
-      <div className="card max-w-xl dark:bg-zeedo-black/80 dark:border-zeedo-white/10">
+      <div className="card max-w-xl">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           Conecte a carteira que o bot usará para operar na Hyperliquid. A chave privada é criptografada e nunca é exibida novamente.
         </p>
@@ -135,7 +135,7 @@ export default function WalletPage() {
                   <div className="w-full border-t border-gray-200 dark:border-gray-600" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="bg-white dark:bg-zeedo-black/80 px-2 text-gray-500 dark:text-gray-400">ou</span>
+                  <span className="bg-zeedo-white dark:bg-zeedo-black px-2 text-zeedo-orange">ou</span>
                 </div>
               </div>
               <button
@@ -173,7 +173,7 @@ export default function WalletPage() {
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 readOnly={!!walletAddress && connectMode === "web3"}
-                className="input-field bg-gray-50 dark:bg-gray-800/50 dark:border-zeedo-white/10"
+                className="input-field"
                 placeholder="0x..."
                 required
               />
@@ -187,7 +187,7 @@ export default function WalletPage() {
                 type="password"
                 value={privateKey}
                 onChange={(e) => setPrivateKey(e.target.value)}
-                className="input-field font-mono dark:bg-gray-800/50 dark:border-zeedo-white/10"
+                className="input-field font-mono"
                 placeholder="Mantenha em segredo. Será criptografada no servidor."
                 required={!status?.connected}
                 autoComplete="off"
@@ -212,11 +212,11 @@ export default function WalletPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">Para trocar de carteira, conecte novamente ou use o formulário abaixo.</p>
             <div>
               <label htmlFor="wallet-update" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço da carteira</label>
-              <input id="wallet-update" type="text" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className="input-field dark:bg-gray-800/50 dark:border-zeedo-white/10" placeholder="0x..." required />
+              <input id="wallet-update" type="text" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className="input-field" placeholder="0x..." required />
             </div>
             <div>
               <label htmlFor="key-update" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chave privada</label>
-              <input id="key-update" type="password" value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} className="input-field font-mono dark:bg-gray-800/50 dark:border-zeedo-white/10" placeholder="Chave privada" required autoComplete="off" />
+              <input id="key-update" type="password" value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} className="input-field font-mono" placeholder="Chave privada" required autoComplete="off" />
             </div>
             {message && <p className={`text-sm ${message.type === "ok" ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>{message.text}</p>}
             <button type="submit" disabled={submitting} className="btn-primary">{submitting ? "Salvando…" : "Atualizar carteira"}</button>

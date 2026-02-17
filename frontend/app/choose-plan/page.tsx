@@ -69,10 +69,10 @@ export default function ChoosePlanPage() {
         <ThemeToggle />
       </div>
       <div className="w-full max-w-3xl">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2 text-center">
+        <h1 className="text-2xl font-semibold text-zeedo-black dark:text-zeedo-white mb-2 text-center">
           Escolha seu plano
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mb-8 text-center">
+        <p className="text-zeedo-black/60 dark:text-zeedo-white/60 mb-8 text-center">
           Selecione o plano que melhor atende às suas necessidades. Você pode alterar depois.
         </p>
         {error && (
@@ -85,18 +85,10 @@ export default function ChoosePlanPage() {
               type="button"
               onClick={() => handleSelect(plan.id)}
               disabled={loading}
-              className={`
-                card flex flex-col items-center p-6 transition-all
-                hover:ring-2 hover:ring-primary-500 hover:shadow-lg
-                focus:outline-none focus:ring-2 focus:ring-primary-500
-                disabled:opacity-50 disabled:cursor-not-allowed
-                ${plan.color === "green" ? "border-green-200 dark:border-green-800" : ""}
-                ${plan.color === "blue" ? "border-blue-200 dark:border-blue-800" : ""}
-                ${plan.color === "purple" ? "border-purple-200 dark:border-purple-800" : ""}
-              `}
+              className="card flex flex-col items-center p-6 transition-all hover:ring-2 hover:ring-zeedo-orange focus:outline-none focus:ring-2 focus:ring-zeedo-orange disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="text-lg font-medium text-gray-900 dark:text-white">{plan.name}</span>
-              <span className="mt-2 text-2xl font-bold text-primary-600 dark:text-primary-400">
+              <span className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">{plan.name}</span>
+              <span className="mt-2 text-2xl font-bold text-zeedo-orange">
                 R${plan.price}
               </span>
               <span className="mt-1 text-sm text-gray-500 dark:text-gray-400 mb-4">/mês</span>

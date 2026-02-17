@@ -46,11 +46,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
       <div className="card w-full max-w-md">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Entrar</h1>
-        <p className="text-gray-600 text-sm mb-6">Use seu e-mail e senha para acessar o dashboard.</p>
+        <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white mb-1">Entrar</h1>
+        <p className="text-zeedo-black/60 dark:text-zeedo-white/60 text-sm mb-6">Use seu e-mail e senha para acessar o dashboard.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-zeedo-orange mb-1">
               E-mail
             </label>
             <input
@@ -65,7 +65,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-zeedo-orange mb-1">
               Senha
             </label>
             <input
@@ -80,15 +80,15 @@ export default function LoginPage() {
             />
           </div>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-sm text-red-500 border border-red-500/30 rounded-lg px-3 py-2">{error}</p>
           )}
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? "Entrando…" : "Entrar"}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
           Não tem conta?{" "}
-          <Link href="/signup" className="font-medium text-primary-600 hover:text-primary-700">
+          <Link href="/signup" className="font-medium text-zeedo-orange hover:underline">
             Criar conta
           </Link>
         </p>

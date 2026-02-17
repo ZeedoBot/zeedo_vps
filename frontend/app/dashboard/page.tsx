@@ -38,14 +38,11 @@ type Position = {
   size?: number;
 };
 
-type Log = { level: string; event: string; details: string; created_at: string };
-
 type OverviewData = {
   balance: number;
   trades: Trade[];
   open_positions: Position[];
   pending_positions: Position[];
-  logs: Log[];
 };
 
 type BotStatus = { status: string };
@@ -132,7 +129,6 @@ export default function DashboardPage() {
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [logFilter, setLogFilter] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -159,8 +155,8 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  if (loading) return <p className="text-gray-500 dark:text-gray-400">Carregando…</p>;
-  if (error) return <p className="text-red-600 dark:text-red-400">{error}</p>;
+  if (loading) return <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   const balance = overview?.balance ?? 0;
   const trades = overview?.trades ?? [];
@@ -169,62 +165,56 @@ export default function DashboardPage() {
   const bySide = groupBy(groupedWithKeys, "side");
   const byTf = groupBy(groupedWithKeys, "tf");
   const byToken = groupBy(groupedWithKeys, "token");
-  const filteredLogs =
-    overview?.logs?.filter(
-      (l) =>
-        !logFilter ||
-        (l.details?.toLowerCase().includes(logFilter.toLowerCase()) ?? false)
-    ) ?? [];
 
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+      <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white">
         Visão geral
       </h1>
-      <p className="text-gray-600 dark:text-gray-400 -mt-4">
+      <p className="text-zeedo-black/60 dark:text-zeedo-white/60 -mt-4">
         Acompanhe o status do seu bot, carteira e performance em um só lugar.
       </p>
 
       {/* Cards de status */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+        <div className="rounded-lg border border-zeedo-orange/20 p-4">
+          <h2 className="text-sm font-medium text-zeedo-orange mb-1">
             Carteira Hyperliquid
           </h2>
-          <p className="text-lg font-medium text-gray-900 dark:text-white">
+          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">
             {walletStatus?.connected ? walletStatus.wallet_address ?? "Conectada" : "Não conectada"}
           </p>
           <a
             href="/dashboard/wallet"
-            className="text-sm text-primary-600 hover:underline mt-2 inline-block dark:text-primary-400"
+            className="text-sm text-zeedo-orange hover:underline mt-2 inline-block"
           >
             {walletStatus?.connected ? "Alterar" : "Conectar"}
           </a>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+        <div className="rounded-lg border border-zeedo-orange/20 p-4">
+          <h2 className="text-sm font-medium text-zeedo-orange mb-1">
             Telegram
           </h2>
-          <p className="text-lg font-medium text-gray-900 dark:text-white">
+          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">
             {telegramStatus?.connected ? "Conectado" : "Não conectado"}
           </p>
           <a
             href="/dashboard/telegram"
-            className="text-sm text-primary-600 hover:underline mt-2 inline-block dark:text-primary-400"
+            className="text-sm text-zeedo-orange hover:underline mt-2 inline-block"
           >
             {telegramStatus?.connected ? "Alterar" : "Conectar"}
           </a>
         </div>
-        <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+        <div className="rounded-lg border border-zeedo-orange/20 p-4">
+          <h2 className="text-sm font-medium text-zeedo-orange mb-1">
             Bot
           </h2>
-          <p className="text-lg font-medium text-gray-900 dark:text-white capitalize">
+          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white capitalize">
             {botStatus?.status === "running" ? "Rodando" : "Parado"}
           </p>
           <a
             href="/dashboard/bot"
-            className="text-sm text-primary-600 hover:underline mt-2 inline-block dark:text-primary-400"
+            className="text-sm text-zeedo-orange hover:underline mt-2 inline-block"
           >
             Configurar
           </a>
@@ -233,7 +223,7 @@ export default function DashboardPage() {
 
       {/* Painel de Performance */}
       <section>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
           📊 Painel de Lucros e Performance
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -251,20 +241,20 @@ export default function DashboardPage() {
       {/* Gráfico de Crescimento */}
       {metrics.growthData.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
             Curva de Crescimento
           </h2>
-          <div className="h-64 rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="h-64 rounded-lg border border-zeedo-orange/20 p-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={metrics.growthData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-600" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `$${v.toFixed(0)}`} />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-zeedo-orange/20" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#f97316" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#f97316" tickFormatter={(v) => `$${v.toFixed(0)}`} />
                 <Tooltip
                   formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL Acum."]}
-                  contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
+                  contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid #f97316" }}
                 />
-                <Line type="monotone" dataKey="balance" stroke="#10b981" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="balance" stroke="#f97316" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -274,13 +264,13 @@ export default function DashboardPage() {
       {/* Performance por Lado, TF e Token */}
       {(bySide.length > 0 || byTf.length > 0 || byToken.length > 0) && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
             Analytics
           </h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {bySide.length > 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Performance por Lado</h3>
+              <div className="rounded-lg border border-zeedo-orange/20 p-4">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-2">Performance por Lado</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={bySide} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
@@ -288,13 +278,13 @@ export default function DashboardPage() {
                       <XAxis type="number" tickFormatter={(v) => `$${v}`} />
                       <YAxis type="category" dataKey="name" width={60} />
                       <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
-                      <Bar dataKey="pnl" fill="#10b981" name="PnL" />
+                      <Bar dataKey="pnl" fill="#f97316" name="PnL" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <table className="mt-2 w-full text-sm">
                   <thead>
-                    <tr className="text-gray-500 dark:text-gray-400">
+                    <tr className="text-zeedo-orange">
                       <th className="text-left">Lado</th>
                       <th className="text-right">Qtd</th>
                       <th className="text-right">PnL</th>
@@ -302,7 +292,7 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {bySide.map((r) => (
-                      <tr key={r.name} className="border-t border-gray-100 dark:border-gray-700">
+                      <tr key={r.name} className="border-t border-zeedo-orange/20">
                         <td>{r.name}</td>
                         <td className="text-right">{r.qty}</td>
                         <td className={`text-right ${r.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
@@ -315,8 +305,8 @@ export default function DashboardPage() {
               </div>
             )}
             {byTf.length > 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Performance por Timeframe</h3>
+              <div className="rounded-lg border border-zeedo-orange/20 p-4">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-2">Performance por Timeframe</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={byTf} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
@@ -324,13 +314,13 @@ export default function DashboardPage() {
                       <XAxis type="number" tickFormatter={(v) => `$${v}`} />
                       <YAxis type="category" dataKey="name" width={50} />
                       <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
-                      <Bar dataKey="pnl" fill="#6366f1" name="PnL" />
+                      <Bar dataKey="pnl" fill="#f97316" name="PnL" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <table className="mt-2 w-full text-sm">
                   <thead>
-                    <tr className="text-gray-500 dark:text-gray-400">
+                    <tr className="text-zeedo-orange">
                       <th className="text-left">TF</th>
                       <th className="text-right">Qtd</th>
                       <th className="text-right">PnL</th>
@@ -338,7 +328,7 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {byTf.map((r) => (
-                      <tr key={r.name} className="border-t border-gray-100 dark:border-gray-700">
+                      <tr key={r.name} className="border-t border-zeedo-orange/20">
                         <td>{r.name}</td>
                         <td className="text-right">{r.qty}</td>
                         <td className={`text-right ${r.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
@@ -351,8 +341,8 @@ export default function DashboardPage() {
               </div>
             )}
             {byToken.length > 0 && (
-              <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">Performance por Token</h3>
+              <div className="rounded-lg border border-zeedo-orange/20 p-4">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-2">Performance por Token</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={byToken} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
@@ -360,13 +350,13 @@ export default function DashboardPage() {
                       <XAxis type="number" tickFormatter={(v) => `$${v}`} />
                       <YAxis type="category" dataKey="name" width={50} />
                       <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
-                      <Bar dataKey="pnl" fill="#f59e0b" name="PnL" />
+                      <Bar dataKey="pnl" fill="#f97316" name="PnL" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <table className="mt-2 w-full text-sm">
                   <thead>
-                    <tr className="text-gray-500 dark:text-gray-400">
+                    <tr className="text-zeedo-orange">
                       <th className="text-left">Token</th>
                       <th className="text-right">Qtd</th>
                       <th className="text-right">PnL</th>
@@ -374,7 +364,7 @@ export default function DashboardPage() {
                   </thead>
                   <tbody>
                     {byToken.map((r) => (
-                      <tr key={r.name} className="border-t border-gray-100 dark:border-gray-700">
+                      <tr key={r.name} className="border-t border-zeedo-orange/20">
                         <td>{r.name}</td>
                         <td className="text-right">{r.qty}</td>
                         <td className={`text-right ${r.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
@@ -393,44 +383,44 @@ export default function DashboardPage() {
       {/* Detalhamento agrupado por Trade ID */}
       {metrics.grouped.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
             📋 Detalhamento (Agrupado por Trade ID)
           </h2>
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+          <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
+            <table className="min-w-full divide-y divide-zeedo-orange/20">
+              <thead>
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
                     Data
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
                     ID
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
                     Token
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
                     TF
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
                     Side
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">
                     PnL ($)
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">
                     PnL (%)
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-zeedo-orange/20">
                 {[...metrics.grouped]
                   .sort((a, b) => b.time - a.time)
                   .map((t) => {
                     const pnlPct = balance > 0 ? (t.pnl / balance) * 100 : 0;
                     return (
                       <tr key={t.id}>
-                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">
+                        <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">
                           {new Date(t.time).toLocaleString("pt-BR", {
                             day: "2-digit",
                             month: "2-digit",
@@ -457,27 +447,26 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* Posições em aberto e pendentes + Logs */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+      {/* Posições em aberto e pendentes */}
+      <div className="space-y-6">
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
               🟢 Posições em Aberto
             </h2>
             {overview?.open_positions && overview.open_positions.length > 0 ? (
-              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
+              <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
+                <table className="min-w-full divide-y divide-zeedo-orange/20">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ticker</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">TF</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lado</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Entrada</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Stop</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Ticker</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">TF</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Entrada</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Valor</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="divide-y divide-zeedo-orange/20">
                     {overview.open_positions.map((p) => (
                       <tr key={p.symbol}>
                         <td className="px-4 py-2 text-sm">{p.symbol}</td>
@@ -492,27 +481,27 @@ export default function DashboardPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Nenhuma posição ativa.</p>
+              <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 py-4">Nenhuma posição ativa.</p>
             )}
           </section>
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
               ⏳ Posições Pendentes
             </h2>
             {overview?.pending_positions && overview.pending_positions.length > 0 ? (
-              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
+              <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
+                <table className="min-w-full divide-y divide-zeedo-orange/20">
+                  <thead>
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ticker</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">TF</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Lado</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Entrada</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Valor</th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Stop</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Ticker</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">TF</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Entrada</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Valor</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="divide-y divide-zeedo-orange/20">
                     {overview.pending_positions.map((p) => (
                       <tr key={p.symbol}>
                         <td className="px-4 py-2 text-sm">{p.symbol}</td>
@@ -527,43 +516,9 @@ export default function DashboardPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Nenhuma ordem pendente.</p>
+              <p className="text-sm text-zeedo-white/60 py-4">Nenhuma ordem pendente.</p>
             )}
           </section>
-        </div>
-        <div>
-          <section>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">📜 Logs</h2>
-              <input
-                type="text"
-                placeholder="Filtrar..."
-                value={logFilter}
-                onChange={(e) => setLogFilter(e.target.value)}
-                className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-32"
-              />
-            </div>
-            <div className="h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3 font-mono text-xs">
-              {filteredLogs.length > 0 ? (
-                filteredLogs.map((l, i) => (
-                  <div
-                    key={i}
-                    className={`py-1 border-b border-gray-200 dark:border-gray-700 last:border-0 ${
-                      l.level === "ERROR" ? "text-red-600" : l.level === "WARN" ? "text-amber-600" : "text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    <span className="text-gray-500 dark:text-gray-500">
-                      {l.created_at ? new Date(l.created_at).toLocaleTimeString("pt-BR") : ""}
-                    </span>{" "}
-                    {l.event && <span className="font-medium">{l.event}:</span>} {l.details}
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400">Nenhum log.</p>
-              )}
-            </div>
-          </section>
-        </div>
       </div>
     </div>
   );
@@ -571,9 +526,9 @@ export default function DashboardPage() {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">{label}</p>
-      <p className="text-lg font-semibold text-gray-900 dark:text-white truncate">{value}</p>
+    <div className="rounded-lg border border-zeedo-orange/20 p-3">
+      <p className="text-xs font-medium text-zeedo-orange truncate">{label}</p>
+      <p className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white truncate">{value}</p>
     </div>
   );
 }
