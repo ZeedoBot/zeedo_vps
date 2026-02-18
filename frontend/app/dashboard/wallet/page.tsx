@@ -91,6 +91,31 @@ export default function WalletPage() {
 
       const prep = await apiPost<PrepareAgentResponse>("/wallet/prepare-agent", {}, session.access_token);
 
+      // Hyperliquid usa chainId 421614 (0x66eee) na assinatura. A carteira precisa estar nessa rede.
+      const HYPERLIQUID_CHAIN_ID = "0x66eee";
+      try {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: HYPERLIQUID_CHAIN_ID }],
+        });
+      } catch (switchErr: unknown) {
+        const err = switchErr as { code?: number };
+        if (err?.code === 4902) {
+          await window.ethereum!.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: HYPERLIQUID_CHAIN_ID,
+              chainName: "Arbitrum Sepolia",
+              nativeCurrency: { name: "ETH", decimals: 18, symbol: "ETH" },
+              rpcUrls: ["https://sepolia-rollup.arbitrum.io/rpc"],
+              blockExplorerUrls: ["https://sepolia.arbiscan.io/"],
+            }],
+          });
+        } else {
+          throw switchErr;
+        }
+      }
+
       const typedData = prep.typed_data;
       // MetaMask/Rabby: segundo parâmetro pode ser objeto ou string
       let sig: string;
