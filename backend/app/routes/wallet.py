@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
+from backend.app.services.telegram_service import send_telegram_to_user
 from backend.app.services.wallet_service import encrypt_and_save_private_key
 
 logger = logging.getLogger(__name__)
@@ -266,4 +267,5 @@ def disconnect_wallet(user_id: str = Depends(get_current_user_id)):
     supabase.table("trading_accounts").update({"is_active": False}).eq("user_id", user_id).execute()
     # Desliga o bot ao desconectar carteira – evita bot “ligado” sem carteira
     supabase.table("bot_config").update({"bot_enabled": False}).eq("user_id", user_id).execute()
+    send_telegram_to_user(supabase, user_id, "😴 Zeedo Desligado")
     return {"success": True, "message": "Carteira desconectada."}

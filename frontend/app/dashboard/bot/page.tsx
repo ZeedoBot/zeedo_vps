@@ -155,6 +155,13 @@ export default function BotPage() {
           {" "}
           <Link href="/choose-plan" className="text-xs text-zeedo-orange hover:underline">Upgrade</Link>
         </p>
+        <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 mb-4">
+          Clique nas opções que você deseja que o Zeedo opere.
+          <br />
+          Símbolos e timeframes em laranja significam ativos.
+          <br />
+          Não esqueça de sempre clicar em Salvar Configurações.
+        </p>
         <form onSubmit={handleSaveSettings} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-zeedo-orange mb-2">Símbolos</label>

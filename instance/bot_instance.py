@@ -159,5 +159,5 @@ class BotInstance:
         self.exchange = Exchange(account, base_url, account_address=self.wallet_address)
         
         self.logger.info(f"Bot Conectado: {self.wallet_address} (Rede: {'MAINNET' if self.config.is_mainnet else 'TESTNET'})")
-        self.telegram.send(f"🟢 Zeedo Conectado: Notificações Ativas")
+        self.telegram.send("🟢 Zeedo Conectado")
     

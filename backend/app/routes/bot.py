@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
+from backend.app.services.telegram_service import send_telegram_to_user
 
 ALL_SYMBOLS = ["BTC", "ETH", "SOL", "AVAX", "LINK", "SUI", "HYPE", "XRP", "AAVE", "DOGE", "BNB", "ADA", "UNI"]
 
@@ -138,6 +139,13 @@ def update_config(
         if trading_account_id:
             payload["trading_account_id"] = trading_account_id
         supabase.table("bot_config").insert(payload).execute()
+
+    # Notifica no Telegram quando bot liga/desliga
+    if body.bot_enabled is not None:
+        if body.bot_enabled:
+            send_telegram_to_user(supabase, user_id, "🟢 Zeedo Conectado")
+        else:
+            send_telegram_to_user(supabase, user_id, "😴 Zeedo Desligado")
 
     return {"success": True, "message": "Configuração atualizada. O bot será reiniciado em até 30 segundos se estiver ligado."}
 
