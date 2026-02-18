@@ -10,7 +10,7 @@ const nav = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/wallet", label: "Carteira" },
   { href: "/dashboard/telegram", label: "Telegram" },
-  { href: "/dashboard/bot", label: "Bot" },
+  { href: "/dashboard/bot", label: "Configurações do Bot" },
   { href: "/choose-plan", label: "Alterar Plano" },
   { href: "/dashboard/profile", label: "Perfil" },
 ];

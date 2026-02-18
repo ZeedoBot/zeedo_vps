@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { apiGet, apiPut } from "@/lib/api";
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -13,7 +11,41 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Cell,
+  AreaChart,
+  Area,
 } from "recharts";
+
+const PERIOD_OPTIONS = [
+  { value: "24h", label: "24 horas" },
+  { value: "7d", label: "7 dias" },
+  { value: "30d", label: "1 mês" },
+  { value: "180d", label: "6 meses" },
+  { value: "365d", label: "1 ano" },
+  { value: "all", label: "Todo período" },
+  { value: "custom", label: "Por data" },
+] as const;
+
+function filterTradesByPeriod(
+  trades: { time: number }[],
+  period: string,
+  dateFrom: string | null,
+  dateTo: string | null
+): { time: number }[] {
+  const now = Date.now();
+  let startMs = 0;
+  let endMs = Infinity;
+  if (period === "custom" && dateFrom && dateTo) {
+    const d1 = new Date(dateFrom);
+    const d2 = new Date(dateTo);
+    startMs = d1.setHours(0, 0, 0, 0);
+    endMs = d2.setHours(23, 59, 59, 999);
+  } else if (period !== "all") {
+    const days = period === "24h" ? 1 : period === "7d" ? 7 : period === "30d" ? 30 : period === "180d" ? 180 : 365;
+    startMs = now - days * 24 * 60 * 60 * 1000;
+  }
+  return trades.filter((t) => t.time >= startMs && t.time <= endMs);
+}
 
 type Trade = {
   trade_id: string;
@@ -46,6 +78,7 @@ type OverviewData = {
 };
 
 type BotStatus = { status: string };
+type BotConfig = { symbols: string[]; timeframes: string[] };
 type WalletStatus = { connected: boolean; wallet_address: string | null };
 type TelegramStatus = { connected: boolean };
 
@@ -130,11 +163,15 @@ function groupBy(arr: GroupedTrade[], key: keyof GroupedTrade) {
 export default function DashboardPage() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
+  const [botConfig, setBotConfig] = useState<BotConfig | null>(null);
   const [walletStatus, setWalletStatus] = useState<WalletStatus | null>(null);
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [botToggling, setBotToggling] = useState(false);
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
 
   async function toggleBot() {
     const supabase = createClient();
@@ -158,14 +195,16 @@ export default function DashboardPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) return;
       try {
-        const [ov, bot, wallet, telegram] = await Promise.all([
+        const [ov, bot, config, wallet, telegram] = await Promise.all([
           apiGet<OverviewData>("/dashboard/overview", session.access_token),
           apiGet<BotStatus>("/bot/status", session.access_token),
+          apiGet<BotConfig>("/bot/config", session.access_token),
           apiGet<WalletStatus>("/wallet/status", session.access_token),
           apiGet<TelegramStatus>("/telegram/status", session.access_token),
         ]);
         setOverview(ov);
         setBotStatus(bot);
+        setBotConfig(config);
         setWalletStatus(wallet);
         setTelegramStatus(telegram);
       } catch (e) {
@@ -182,11 +221,21 @@ export default function DashboardPage() {
 
   const balance = overview?.balance ?? 0;
   const trades = overview?.trades ?? [];
-  const metrics = computeMetrics(trades, balance);
+  const filteredTrades = filterTradesByPeriod(
+    trades,
+    periodFilter,
+    dateFrom || null,
+    dateTo || null
+  );
+  const metrics = computeMetrics(filteredTrades, balance);
   const groupedWithKeys = metrics.grouped as GroupedTrade[];
   const bySide = groupBy(groupedWithKeys, "side");
   const byTf = groupBy(groupedWithKeys, "tf");
   const byToken = groupBy(groupedWithKeys, "token");
+
+  const emptySymbolsOrTimeframes =
+    botStatus?.status === "running" &&
+    (!(botConfig?.symbols?.length ?? 0) || !(botConfig?.timeframes?.length ?? 0));
 
   return (
     <div className="space-y-8">
@@ -196,6 +245,17 @@ export default function DashboardPage() {
       <p className="text-zeedo-black/60 dark:text-zeedo-white/60 -mt-4">
         Acompanhe o status do seu bot, carteira e performance em um só lugar.
       </p>
+
+      {emptySymbolsOrTimeframes && (
+        <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-400">
+          <p className="font-medium">
+            Símbolos (ou Timeframes) vazios! Zeedo ativo, mas não retornará nenhum trade. Escolha pelo menos uma opção na aba Configurações do Bot!
+          </p>
+          <a href="/dashboard/bot" className="text-sm underline mt-1 inline-block hover:text-amber-600 dark:hover:text-amber-300">
+            Ir para Configurações do Bot →
+          </a>
+        </div>
+      )}
 
       {/* Cards de status */}
       <div className="grid gap-4 sm:grid-cols-3">
@@ -268,9 +328,41 @@ export default function DashboardPage() {
 
       {/* Painel de Performance */}
       <section>
-        <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
-          📊 Painel de Lucros e Performance
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">
+            📊 Painel de Lucros e Performance
+          </h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={periodFilter}
+              onChange={(e) => setPeriodFilter(e.target.value)}
+              className="rounded-lg border border-zeedo-orange/40 bg-transparent px-3 py-2 text-sm text-zeedo-black dark:text-zeedo-white focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange"
+            >
+              {PERIOD_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value} className="bg-zeedo-black text-zeedo-white">
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            {periodFilter === "custom" && (
+              <>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="rounded-lg border border-zeedo-orange/40 bg-transparent px-3 py-2 text-sm text-zeedo-black dark:text-zeedo-white focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange"
+                />
+                <span className="text-zeedo-black/60 dark:text-zeedo-white/60">até</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="rounded-lg border border-zeedo-orange/40 bg-transparent px-3 py-2 text-sm text-zeedo-black dark:text-zeedo-white focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange"
+                />
+              </>
+            )}
+          </div>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           <MetricCard label="Saldo Hyperliquid" value={`$${balance.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
           <MetricCard label="Total Trades" value={String(metrics.totalTrades)} />
@@ -289,18 +381,25 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
             Curva de Crescimento
           </h2>
-          <div className="h-64 rounded-lg border border-zeedo-orange/20 p-4">
+          <div className="h-64 rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={metrics.growthData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-zeedo-orange/20" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#f97316" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#f97316" tickFormatter={(v) => `$${v.toFixed(0)}`} />
+              <AreaChart data={metrics.growthData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.3)" />
+                <YAxis tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.3)" tickFormatter={(v) => `$${v.toFixed(0)}`} />
                 <Tooltip
                   formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL Acum."]}
-                  contentStyle={{ backgroundColor: "#0a0a0a", border: "1px solid #f97316" }}
+                  contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
+                  labelStyle={{ color: "#f97316" }}
                 />
-                <Line type="monotone" dataKey="balance" stroke="#f97316" strokeWidth={2} dot={false} />
-              </LineChart>
+                <Area type="monotone" dataKey="balance" stroke="#f97316" strokeWidth={2} fill="url(#growthGradient)" />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </section>
@@ -314,16 +413,30 @@ export default function DashboardPage() {
           </h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {bySide.length > 0 && (
-              <div className="rounded-lg border border-zeedo-orange/20 p-4">
-                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-2">Performance por Lado</h3>
+              <div className="rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-3">Performance por Lado</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={bySide} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" tickFormatter={(v) => `$${v}`} />
-                      <YAxis type="category" dataKey="name" width={60} />
-                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
-                      <Bar dataKey="pnl" fill="#f97316" name="PnL" />
+                      <defs>
+                        <linearGradient id="barGradPosSide" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity={0.6} />
+                        </linearGradient>
+                        <linearGradient id="barGradNegSide" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
+                          <stop offset="100%" stopColor="#ef4444" stopOpacity={0.9} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" horizontal={false} />
+                      <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
+                      <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
+                      <Bar dataKey="pnl" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                        {bySide.map((entry, i) => (
+                          <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosSide)" : "url(#barGradNegSide)"} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -350,16 +463,30 @@ export default function DashboardPage() {
               </div>
             )}
             {byTf.length > 0 && (
-              <div className="rounded-lg border border-zeedo-orange/20 p-4">
-                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-2">Performance por Timeframe</h3>
+              <div className="rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-3">Performance por Timeframe</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={byTf} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" tickFormatter={(v) => `$${v}`} />
-                      <YAxis type="category" dataKey="name" width={50} />
-                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
-                      <Bar dataKey="pnl" fill="#f97316" name="PnL" />
+                      <defs>
+                        <linearGradient id="barGradPosTf" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity={0.6} />
+                        </linearGradient>
+                        <linearGradient id="barGradNegTf" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
+                          <stop offset="100%" stopColor="#ef4444" stopOpacity={0.9} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" horizontal={false} />
+                      <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
+                      <YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
+                      <Bar dataKey="pnl" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                        {byTf.map((entry, i) => (
+                          <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosTf)" : "url(#barGradNegTf)"} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -386,16 +513,30 @@ export default function DashboardPage() {
               </div>
             )}
             {byToken.length > 0 && (
-              <div className="rounded-lg border border-zeedo-orange/20 p-4">
-                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-2">Performance por Token</h3>
+              <div className="rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-3">Performance por Token</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={byToken} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" tickFormatter={(v) => `$${v}`} />
-                      <YAxis type="category" dataKey="name" width={50} />
-                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} />
-                      <Bar dataKey="pnl" fill="#f97316" name="PnL" />
+                      <defs>
+                        <linearGradient id="barGradPosToken" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity={0.6} />
+                        </linearGradient>
+                        <linearGradient id="barGradNegToken" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
+                          <stop offset="100%" stopColor="#ef4444" stopOpacity={0.9} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" horizontal={false} />
+                      <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
+                      <YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
+                      <Bar dataKey="pnl" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                        {byToken.map((entry, i) => (
+                          <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosToken)" : "url(#barGradNegToken)"} />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

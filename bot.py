@@ -676,14 +676,14 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                                 trade_id = candidate_tid
                                 break
 
-            # Órfãos (tf="-", trade_id="-"): agrupa por coin + janela de 4h
-            WINDOW_4H_MS = 4 * 3600 * 1000
+            # Órfãos (tf="-", trade_id="-"): agrupa por coin + janela de 12h
+            WINDOW_12H_MS = 12 * 3600 * 1000
             if tf == "-" and trade_id == "-" and coin:
                 fill_ts = int(base_fill.get('time') or base_fill.get('t') or base_fill.get('timestamp') or 0)
                 for t in all_known_trades + new_trades:
                     tc = t.get('coin') or t.get('token')
                     tt = int(t.get('time', 0) or 0)
-                    if tc == coin and tt and abs(fill_ts - tt) <= WINDOW_4H_MS:
+                    if tc == coin and tt and abs(fill_ts - tt) <= WINDOW_12H_MS:
                         tid = t.get('trade_id', '-')
                         if tid and tid != "-" and str(tid).startswith("MANUAL_"):
                             trade_id = tid
