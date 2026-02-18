@@ -92,10 +92,25 @@ export default function WalletPage() {
       const prep = await apiPost<PrepareAgentResponse>("/wallet/prepare-agent", {}, session.access_token);
 
       const typedData = prep.typed_data;
-      const sig = await window.ethereum.request({
-        method: "eth_signTypedData_v4",
-        params: [masterAddress, JSON.stringify(typedData)],
-      }) as string;
+      // MetaMask/Rabby: segundo parâmetro pode ser objeto ou string
+      let sig: string;
+      try {
+        sig = await window.ethereum.request({
+          method: "eth_signTypedData_v4",
+          params: [masterAddress, JSON.stringify(typedData)],
+        }) as string;
+      } catch (e: unknown) {
+        // Algumas carteiras preferem objeto
+        const err = e as { message?: string };
+        if (err?.message?.includes("invalid") || err?.message?.includes("params")) {
+          sig = await window.ethereum.request({
+            method: "eth_signTypedData_v4",
+            params: [masterAddress, typedData],
+          }) as string;
+        } else {
+          throw e;
+        }
+      }
 
       const { r, s, v } = parseSignature(sig);
 
@@ -183,6 +198,9 @@ export default function WalletPage() {
             </button>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
               Você assinará uma mensagem para autorizar o Zeedo. Não é necessário gas. O sistema não pode realizar saques.
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+              É necessário ter depósito na Hyperliquid antes de conectar. Se aparecer erro, verifique se sua conta tem saldo.
             </p>
             <a
               href={RABBY_DOWNLOAD_URL}

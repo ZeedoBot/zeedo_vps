@@ -22,8 +22,21 @@ export async function apiFetch(
 
 export async function apiGet<T = unknown>(path: string, token: string): Promise<T> {
   const res = await apiFetch(path, { method: "GET", token });
-  if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
+}
+
+async function parseErrorResponse(res: Response): Promise<string> {
+  const text = await res.text().catch(() => res.statusText);
+  try {
+    const json = JSON.parse(text);
+    const d = json.detail;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d) && d.length > 0 && d[0]?.msg) return d[0].msg;
+    return text;
+  } catch {
+    return text;
+  }
 }
 
 export async function apiPost<T = unknown>(
@@ -32,7 +45,7 @@ export async function apiPost<T = unknown>(
   token?: string
 ): Promise<T> {
   const res = await apiFetch(path, { method: "POST", body: JSON.stringify(body), token: token ?? undefined });
-  if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
@@ -42,6 +55,6 @@ export async function apiPut<T = unknown>(
   token: string
 ): Promise<T> {
   const res = await apiFetch(path, { method: "PUT", body: JSON.stringify(body), token });
-  if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }

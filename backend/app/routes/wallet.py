@@ -65,11 +65,13 @@ def prepare_agent(user_id: str = Depends(get_current_user_id)):
     }
 
     # EIP-712 typed data para o frontend assinar (chainId 0x66eee = 421614)
+    # Addresses em lowercase para compatibilidade com Hyperliquid
+    agent_addr_lower = account.address.lower()
     typed_data = {
         "domain": {
             "name": "HyperliquidSignTransaction",
             "version": "1",
-            "chainId": 0x66EEE,  # 421614
+            "chainId": 421614,  # 0x66eee
             "verifyingContract": "0x0000000000000000000000000000000000000000",
         },
         "types": {
@@ -89,7 +91,7 @@ def prepare_agent(user_id: str = Depends(get_current_user_id)):
         "primaryType": "HyperliquidTransaction:ApproveAgent",
         "message": {
             "hyperliquidChain": action["hyperliquidChain"],
-            "agentAddress": action["agentAddress"],
+            "agentAddress": agent_addr_lower,
             "agentName": action["agentName"],
             "nonce": action["nonce"],
         },
@@ -132,11 +134,12 @@ def connect_agent(
     r = body.signature_r if body.signature_r.startswith("0x") else "0x" + body.signature_r
     s = body.signature_s if body.signature_s.startswith("0x") else "0x" + body.signature_s
 
+    # Hyperliquid recomenda addresses em lowercase
     action = {
         "type": "approveAgent",
         "hyperliquidChain": "Mainnet" if body.network == "mainnet" else "Testnet",
         "signatureChainId": "0x66eee",
-        "agentAddress": body.agent_address,
+        "agentAddress": body.agent_address.lower(),
         "agentName": "Zeedo",
         "nonce": body.nonce,
     }
@@ -151,11 +154,16 @@ def connect_agent(
     try:
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
         data = resp.json()
+        logger.info("Hyperliquid response: status=%s body=%s", resp.status_code, data)
         if resp.status_code != 200:
             raise HTTPException(status_code=502, detail="Hyperliquid não respondeu. Tente novamente.")
         if data.get("status") != "ok":
             resp_obj = data.get("response", {})
             err = resp_obj.get("error") if isinstance(resp_obj, dict) else str(resp_obj)
+            # Hyperliquid às vezes retorna erro em response.data ou aninhado
+            if not err and isinstance(resp_obj, dict):
+                inner = resp_obj.get("data") or resp_obj.get("response", {})
+                err = inner.get("error") if isinstance(inner, dict) else str(inner) or str(resp_obj)
             raise HTTPException(status_code=400, detail=f"Hyperliquid rejeitou: {err or data}")
     except requests.RequestException as e:
         logger.exception("Erro ao conectar à Hyperliquid")
