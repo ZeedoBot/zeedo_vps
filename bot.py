@@ -161,7 +161,10 @@ def load_config(storage):
         TRADE_MODE = config.get("trade_mode", "BOTH")
 
 def get_precision(meta, coin):
-    for universe in meta["universe"]:
+    if not meta:
+        return 2
+    universes = meta.get("universe") or []
+    for universe in universes:
         if universe["name"] == coin: return universe["szDecimals"]
     return 2
 
@@ -638,7 +641,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             new_fills_by_oid[oid].append(fill)
         
         new_trades = []
-        user_state = info.user_state(wallet)
+        user_state = info.user_state(wallet) or {}
         positions_by_coin = {p["position"]["coin"]: float(p["position"]["szi"]) for p in user_state.get("assetPositions", [])}
         
         for oid, fills in new_fills_by_oid.items():
@@ -1545,8 +1548,13 @@ def run_main_loop(info, exchange, wallet, storage, config_overrides=None):
         for k, v in config_overrides.items():
             if k in g:
                 g[k] = v
+        # Garante que SYMBOLS e TIMEFRAMES nunca são None
+        if g.get("SYMBOLS") is None:
+            g["SYMBOLS"] = []
+        if g.get("TIMEFRAMES") is None:
+            g["TIMEFRAMES"] = []
 
-    exchange_meta = info.meta()
+    exchange_meta = info.meta() or {}
     entry_tracker = storage.get_entry_tracker()
     history_tracker = storage.get_history_tracker()
     logging.info(f"Memória carregada: {len(entry_tracker)} ordens.")
@@ -1621,7 +1629,7 @@ def run_main_loop(info, exchange, wallet, storage, config_overrides=None):
     except KeyboardInterrupt:
         logging.info("Parado.")
     except Exception as e:
-        logging.error(f"Erro Crítico: {e}")
+        logging.error(f"Erro Crítico: {e}", exc_info=True)
 
 
 def main():
