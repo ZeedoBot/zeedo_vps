@@ -116,6 +116,17 @@ def update_config(
         if body.trade_mode not in limits["allowed_trade_modes"]:
             raise HTTPException(400, f"Modo {body.trade_mode} não permitido no plano {limits['plan']}")
 
+    # Só permite ligar o bot se carteira E telegram estiverem conectados
+    if body.bot_enabled is True:
+        acc = supabase.table("trading_accounts").select("id").eq("user_id", user_id).eq("is_active", True).limit(1).execute()
+        tg = supabase.table("telegram_configs").select("id, chat_id").eq("user_id", user_id).limit(1).execute()
+        has_wallet = bool(acc.data and len(acc.data) > 0)
+        has_telegram = bool(tg.data and len(tg.data) > 0 and (tg.data[0].get("chat_id") or "").strip())
+        if not has_wallet:
+            raise HTTPException(400, "Conecte a carteira Hyperliquid antes de ligar o bot.")
+        if not has_telegram:
+            raise HTTPException(400, "Conecte o Telegram antes de ligar o bot.")
+
     existing = supabase.table("bot_config").select("id, user_id, trading_account_id").eq("user_id", user_id).limit(1).execute()
     if existing.data and len(existing.data) > 0:
         supabase.table("bot_config").update(payload).eq("user_id", user_id).execute()

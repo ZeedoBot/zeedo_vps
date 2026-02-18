@@ -235,7 +235,7 @@ export default function DashboardPage() {
             <p className={`text-lg font-medium ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
               {botStatus?.status === "running" ? "Ligado" : "Desligado"}
             </p>
-            {botStatus?.status === "running" && (
+            {botStatus?.status === "running" ? (
               <button
                 type="button"
                 onClick={toggleBot}
@@ -244,17 +244,21 @@ export default function DashboardPage() {
               >
                 {botToggling ? "…" : "Desligar"}
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={toggleBot}
+                disabled={botToggling || !walletStatus?.connected || !telegramStatus?.connected}
+                className="text-sm font-medium px-3 py-1.5 rounded-lg border border-green-500/50 text-green-600 hover:bg-green-500/10 transition-colors shrink-0 ml-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                {botToggling ? "…" : "Ligar"}
+              </button>
             )}
           </div>
-          {botStatus?.status !== "running" && (
-            <button
-              type="button"
-              onClick={toggleBot}
-              disabled={botToggling}
-              className="text-sm font-medium px-3 py-1.5 rounded-lg border border-green-500/50 text-green-600 hover:bg-green-500/10 transition-colors mt-2"
-            >
-              {botToggling ? "…" : "Ligar"}
-            </button>
+          {botStatus?.status !== "running" && (!walletStatus?.connected || !telegramStatus?.connected) && (
+            <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 mt-1">
+              Conecte a carteira e o Telegram para ligar o bot.
+            </p>
           )}
           <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline block mt-2">
             Configurar

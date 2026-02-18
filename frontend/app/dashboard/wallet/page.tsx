@@ -149,7 +149,7 @@ export default function WalletPage() {
         session.access_token
       );
 
-      setMessage({ type: "ok", text: "Carteira conectada com sucesso! O Zeedo usa API Wallet da Hyperliquid (sem permissão de saque)." });
+      setMessage({ type: "ok", text: "Carteira conectada com sucesso!" });
       const data = await apiGet<WalletStatus>("/wallet/status", session.access_token);
       setStatus(data);
     } catch (err: unknown) {
@@ -193,7 +193,11 @@ export default function WalletPage() {
       <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Carteira Hyperliquid</h1>
       <div className="card max-w-xl">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Conecte sua carteira para autorizar o Zeedo a operar na Hyperliquid. Utilizamos API Wallet – o sistema não possui permissão técnica para realizar saques.
+          Conecte sua carteira para autorizar o Zeedo a operar na Hyperliquid.
+          <br />
+          Utilizamos a tecnologia API Wallet, ou seja, sua chave privada não é compartilhada e o sistema não possui permissão técnica para realizar saques.
+          <br />
+          <strong>Zeedo nunca pedirá sua chave privada. Jamais compartilhe-a com ninguém.</strong>
         </p>
         {status?.connected && (
           <div className="mb-4 space-y-3">
