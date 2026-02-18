@@ -25,12 +25,14 @@ def login_with_email_or_username(body: LoginBody):
     if not settings.supabase_url or not settings.supabase_service_key:
         raise HTTPException(500, "Servidor não configurado")
 
-    email = body.email_or_username.strip()
+    raw = body.email_or_username.strip()
     password = body.password
 
-    if "@" not in email:
+    if "@" in raw:
+        email = raw.lower()
+    else:
         supabase = get_supabase()
-        r = supabase.table("users").select("email").eq("username", email).limit(1).execute()
+        r = supabase.table("users").select("email").ilike("username", raw).limit(1).execute()
         if not r.data or len(r.data) == 0:
             raise HTTPException(401, "Nome de usuário ou senha incorretos.")
         email = r.data[0].get("email")

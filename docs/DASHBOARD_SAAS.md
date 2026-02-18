@@ -15,7 +15,7 @@ Bot - Mainnet (V1)/
 │   │   ├── dependencies.py     # get_current_user_id (JWT)
 │   │   ├── routes/
 │   │   │   ├── auth.py         # GET /auth/me, /auth/health
-│   │   │   ├── wallet.py       # POST/GET /wallet/connect, /wallet/status
+│   │   │   ├── wallet.py       # POST /wallet/prepare-agent, connect-agent; GET /wallet/status
 │   │   │   ├── telegram.py     # POST/GET /telegram/connect, /telegram/status
 │   │   │   └── bot.py          # GET/PUT /bot/config, GET /bot/status
 │   │   └── services/
@@ -44,7 +44,7 @@ Bot - Mainnet (V1)/
 ├── migrations/
 │   └── 003_dashboard_auth_and_plans.sql   # Sync auth.users → users, subscriptions, plan_limits
 └── auth/
-    └── encryption.py           # Usado pelo backend para criptografar chave privada
+    └── encryption.py           # Criptografia da chave da API Wallet (agent)
 ```
 
 ---
@@ -52,7 +52,7 @@ Bot - Mainnet (V1)/
 ## SQL das tabelas (resumo)
 
 - **users**: já existe em `001`; id, email, subscription_status, subscription_tier. Sincronizado com `auth.users` via trigger em `003`.
-- **trading_accounts**: já existe; user_id, wallet_address, encrypted_private_key, encryption_salt, network, is_active.
+- **trading_accounts**: user_id, wallet_address (master), encrypted_private_key (chave do agent), encryption_salt, network, is_active.
 - **telegram_configs**: já existe; user_id, bot_token, chat_id (e opcionais). View **telegram_connections** em `003` (apenas indicadores has_bot_token, has_chat_id).
 - **bot_config**, **instance_status**: já existem.
 - **003** adiciona: trigger `on_auth_user_created` (auth.users → public.users), tabelas **subscriptions** e **plan_limits**, view **telegram_connections**.
@@ -87,24 +87,21 @@ Fluxo alternativo: formulário “Solicitar acesso” com e-mail → backend (ou
 
 ---
 
-## Fluxo de conexão da carteira (Hyperliquid)
+## Fluxo de conexão da carteira (Hyperliquid – API Wallet)
 
-1. Usuário acessa **Dashboard → Carteira**, preenche **endereço da carteira** e **chave privada** (e rede).
-2. Frontend envia `POST /wallet/connect` com body `{ wallet_address, private_key, network }` e header `Authorization: Bearer <token>`.
-3. Backend:
-   - Valida JWT e obtém `user_id`.
-   - Chama `wallet_service.encrypt_and_save_private_key(private_key, user_id)` (usa `auth/encryption.py`).
-   - Grava em `trading_accounts`: `user_id`, `wallet_address`, `encrypted_private_key`, `encryption_salt`, `network`, `is_active = true`. Desativa outras contas do mesmo usuário.
-4. Resposta: apenas confirmação e endereço; **a chave privada nunca é retornada**.
-5. `GET /wallet/status`: retorna apenas `connected`, `wallet_address` (com opção de mascarar no meio) e `network`; nunca retorna chave.
+1. Usuário acessa **Dashboard → Carteira** e clica em **Conectar com Rabby / MetaMask**.
+2. Frontend chama `POST /wallet/prepare-agent` → backend gera agent, retorna `agent_address`, `nonce` e `typed_data` (EIP-712).
+3. Usuário assina a mensagem com sua carteira (`eth_signTypedData_v4`). Frontend envia `POST /wallet/connect-agent` com `master_address`, `agent_address`, `signature_*`, `nonce`.
+4. Backend submete `approveAgent` à Hyperliquid, criptografa e grava a chave do agent em `trading_accounts`. O agent não tem permissão de saque.
+5. `GET /wallet/status`: retorna `connected`, `wallet_address` (mascarado) e `network`.
 
 ---
 
 ## Boas práticas de segurança
 
-- **Chave privada**
+- **Chave da API Wallet (agent)**
   - Criptografada no backend com `ENCRYPTION_MASTER_KEY` + salt por usuário antes de persistir.
-  - Nunca logada; nunca enviada em resposta da API; nunca exposta no frontend após o submit.
+  - Nunca logada; nunca enviada em resposta da API; nunca exposta no frontend. O agent não possui permissão de saque.
 - **API**
   - Todas as rotas de dados protegidas por `Depends(get_current_user_id)`; uso de `user_id` do token em todas as operações.
   - Backend usa **SUPABASE_SERVICE_KEY** para escrita no Supabase; frontend usa apenas **ANON_KEY** para auth.

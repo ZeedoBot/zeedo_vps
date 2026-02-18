@@ -12,7 +12,7 @@ Documento único de referência: estado atual, estrutura, como rodar e serviços
 |-------|------------|---------|
 | 1 | Usuário acessa zeedo.ia.br | Frontend Next.js (proxy nginx) |
 | 2 | Login → Supabase Auth | JWT gerado |
-| 3 | Dashboard: Carteira | API `POST /wallet/connect` → `trading_accounts` (chave criptografada com ENCRYPTION_MASTER_KEY) |
+| 3 | Dashboard: Carteira | API `POST /wallet/prepare-agent` + `connect-agent` → `trading_accounts` (API Wallet Hyperliquid, chave criptografada) |
 | 4 | Dashboard: Telegram | Link "Conectar" → Telegram /start com payload → Webhook `POST /webhooks/telegram` salva `chat_id` em `telegram_configs` e envia mensagem Zeedo ON + links |
 | 5 | Dashboard: Ligar Bot | API `PUT /bot/config` → `bot_config.bot_enabled = true` |
 | 6 | Manager (zeedo-manager) | A cada 30s, lê `bot_config` onde `bot_enabled = true` |

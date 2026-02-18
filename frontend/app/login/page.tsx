@@ -97,6 +97,11 @@ export default function LoginPage() {
             Criar conta
           </Link>
         </p>
+        <p className="mt-3 text-center text-xs text-zeedo-black/50 dark:text-zeedo-white/50">
+          <Link href="/termos" className="hover:text-zeedo-orange hover:underline">Termos de Uso</Link>
+          {" · "}
+          <Link href="/privacidade" className="hover:text-zeedo-orange hover:underline">Política de Privacidade</Link>
+        </p>
       </div>
     </div>
   );

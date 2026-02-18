@@ -1,6 +1,6 @@
 """
-Serviço de carteira: criptografa e persiste chave privada.
-Nunca retorna a chave privada; apenas confirmação e endereço.
+Serviço de carteira: criptografa e persiste a chave da API Wallet (agent) da Hyperliquid.
+A chave armazenada é do agent (sem permissão de saque). Nunca é retornada ao frontend.
 """
 import sys
 from pathlib import Path
@@ -14,13 +14,13 @@ from auth.encryption import EncryptionManager
 from backend.app.config import get_settings
 
 
-def encrypt_and_save_private_key(private_key: str, user_id: str) -> tuple[str, str]:
+def encrypt_and_save_private_key(agent_key: str, user_id: str) -> tuple[str, str]:
     """
-    Criptografa a chave privada e retorna (encrypted_key_b64, salt_b64).
-    O backend deve salvar esses valores em trading_accounts; nunca devolve a chave em texto plano.
+    Criptografa a chave da API Wallet (agent) e retorna (encrypted_key_b64, salt_b64).
+    O backend salva em trading_accounts; nunca devolve a chave em texto plano.
     """
     key = (get_settings().encryption_master_key or "").strip().strip("[]")
     if not key:
         raise ValueError("ENCRYPTION_MASTER_KEY não configurada no servidor. Configure no .env do backend.")
     enc = EncryptionManager(master_key=key)
-    return enc.encrypt_private_key(private_key.strip(), user_id)
+    return enc.encrypt_private_key(agent_key.strip(), user_id)

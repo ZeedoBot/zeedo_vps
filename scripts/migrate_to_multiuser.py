@@ -1,6 +1,7 @@
 """
 Script de migração de dados existentes para estrutura multiusuário.
-Cria usuário padrão e migra dados existentes.
+Cria usuário padrão e migra dados existentes. Usa chave para migrar conta existente.
+Para novos usuários, use o Dashboard (conexão via API Wallet).
 """
 import os
 import sys

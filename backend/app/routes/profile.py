@@ -59,6 +59,8 @@ def update_profile(
             continue
         if isinstance(v, str) and v.strip() == "":
             payload[k] = None
+        elif isinstance(v, date):
+            payload[k] = v.isoformat()
         else:
             payload[k] = v
     if not payload:

@@ -76,6 +76,9 @@ export default function ProfilePage() {
     <div>
       <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white mb-6">Perfil</h1>
       <div className="card max-w-xl">
+        <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 mb-6">
+          Complete seu cadastro para se tornar elegível a futuras premiações.
+        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="full_name" className="block text-sm font-medium text-zeedo-orange mb-1">

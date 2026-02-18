@@ -145,16 +145,17 @@ class BotInstance:
             return {}
     
     def _setup_client(self):
-        """Configura cliente Hyperliquid."""
+        """Configura cliente Hyperliquid. Suporta chave principal ou API Wallet (agent)."""
         if not self.config.private_key:
             raise ValueError("Chave Privada não encontrada")
-        
+
         account = Account.from_key(self.config.private_key)
+        # wallet_address = master (onde estão os fundos); account.address = signer (pode ser agent)
         self.wallet_address = self.config.wallet_address or account.address
-        
         from hyperliquid.utils import constants
         base_url = constants.MAINNET_API_URL if self.config.is_mainnet else constants.TESTNET_API_URL
         self.info = Info(base_url, skip_ws=True)
+        # Para API Wallet (agent): account_address=master. Para chave principal: account_address=master (mesmo valor).
         self.exchange = Exchange(account, base_url, account_address=self.wallet_address)
         
         self.logger.info(f"Bot Conectado: {self.wallet_address} (Rede: {'MAINNET' if self.config.is_mainnet else 'TESTNET'})")

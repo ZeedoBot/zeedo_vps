@@ -11,6 +11,17 @@ type WalletStatus = {
   network?: string;
 };
 
+type PrepareAgentResponse = {
+  agent_address: string;
+  nonce: number;
+  typed_data: {
+    domain: { name: string; version: string; chainId: number; verifyingContract: string };
+    types: Record<string, { name: string; type: string }[]>;
+    primaryType: string;
+    message: Record<string, unknown>;
+  };
+};
+
 const RABBY_DOWNLOAD_URL = "https://rabby.io/";
 
 function truncateAddress(addr: string): string {
@@ -18,22 +29,27 @@ function truncateAddress(addr: string): string {
   return `${addr.slice(0, 10)}...${addr.slice(-8)}`;
 }
 
+function parseSignature(hexSig: string): { r: string; s: string; v: number } {
+  const clean = hexSig.startsWith("0x") ? hexSig.slice(2) : hexSig;
+  const r = "0x" + clean.slice(0, 64);
+  const s = "0x" + clean.slice(64, 128);
+  let v = parseInt(clean.slice(128, 130), 16);
+  if (v < 27) v += 27;
+  return { r, s, v };
+}
+
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<string[]>;
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
     };
   }
 }
 
 export default function WalletPage() {
   const [status, setStatus] = useState<WalletStatus | null>(null);
-  const [walletAddress, setWalletAddress] = useState("");
-  const [privateKey, setPrivateKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [web3Connecting, setWeb3Connecting] = useState(false);
-  const [connectMode, setConnectMode] = useState<"web3" | "manual">("web3");
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => {
@@ -51,28 +67,60 @@ export default function WalletPage() {
     load();
   }, []);
 
-  async function connectWeb3() {
+  async function connectWithApiWallet() {
     if (typeof window === "undefined" || !window.ethereum) {
       setMessage({ type: "err", text: "Instale a Rabby Wallet ou MetaMask para conectar." });
       return;
     }
     setMessage(null);
-    setWeb3Connecting(true);
+    setSubmitting(true);
     try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      const addr = accounts?.[0];
-      if (addr) {
-        setWalletAddress(addr);
-        setConnectMode("web3");
-        setMessage({ type: "ok", text: "Carteira conectada. Agora exporte a chave privada e cole abaixo para o bot operar." });
-      } else {
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" }) as string[];
+      const masterAddress = accounts?.[0];
+      if (!masterAddress) {
         setMessage({ type: "err", text: "Nenhuma conta retornada." });
+        return;
       }
-    } catch (err) {
+
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setMessage({ type: "err", text: "Sessão expirada. Faça login novamente." });
+        return;
+      }
+
+      const prep = await apiPost<PrepareAgentResponse>("/wallet/prepare-agent", {}, session.access_token);
+
+      const typedData = prep.typed_data;
+      const sig = await window.ethereum.request({
+        method: "eth_signTypedData_v4",
+        params: [masterAddress, JSON.stringify(typedData)],
+      }) as string;
+
+      const { r, s, v } = parseSignature(sig);
+
+      await apiPost(
+        "/wallet/connect-agent",
+        {
+          master_address: masterAddress,
+          agent_address: prep.agent_address,
+          nonce: prep.nonce,
+          signature_r: r.startsWith("0x") ? r.slice(2) : r,
+          signature_s: s.startsWith("0x") ? s.slice(2) : s,
+          signature_v: v,
+          network: "mainnet",
+        },
+        session.access_token
+      );
+
+      setMessage({ type: "ok", text: "Carteira conectada com sucesso! O Zeedo usa API Wallet da Hyperliquid (sem permissão de saque)." });
+      const data = await apiGet<WalletStatus>("/wallet/status", session.access_token);
+      setStatus(data);
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao conectar.";
-      setMessage({ type: "err", text: msg });
+      setMessage({ type: "err", text: String(msg) });
     } finally {
-      setWeb3Connecting(false);
+      setSubmitting(false);
     }
   }
 
@@ -94,39 +142,6 @@ export default function WalletPage() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage(null);
-    if (!walletAddress.trim() || !privateKey.trim()) {
-      setMessage({ type: "err", text: "Preencha o endereço e a chave privada." });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        setMessage({ type: "err", text: "Sessão expirada. Faça login novamente." });
-        return;
-      }
-      await apiPost(
-        "/wallet/connect",
-        { wallet_address: walletAddress.trim(), private_key: privateKey.trim(), network: "mainnet" },
-        session.access_token
-      );
-      setMessage({ type: "ok", text: "Carteira conectada com sucesso." });
-      setPrivateKey("");
-      setWalletAddress("");
-      setConnectMode("web3");
-      const data = await apiGet<WalletStatus>("/wallet/status", session.access_token);
-      setStatus(data);
-    } catch (err) {
-      setMessage({ type: "err", text: err instanceof Error ? err.message : "Erro ao conectar." });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   if (loading) return <p className="text-gray-500 dark:text-gray-400">Carregando…</p>;
 
   return (
@@ -134,7 +149,7 @@ export default function WalletPage() {
       <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Carteira Hyperliquid</h1>
       <div className="card max-w-xl">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Conecte a carteira que o bot usará para operar na Hyperliquid. A chave privada é criptografada e nunca é exibida novamente.
+          Conecte sua carteira para autorizar o Zeedo a operar na Hyperliquid. Utilizamos API Wallet – o sistema não possui permissão técnica para realizar saques.
         </p>
         {status?.connected && (
           <div className="mb-4 space-y-3">
@@ -152,111 +167,38 @@ export default function WalletPage() {
             >
               Desconectar Carteira
             </button>
-            <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">Para trocar de carteira, conecte novamente ou use o formulário abaixo.</p>
+            <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">Para trocar de carteira, desconecte e conecte novamente.</p>
           </div>
         )}
 
         {!status?.connected && (
           <>
-            <div className="space-y-4 mb-6">
-              <button
-                type="button"
-                onClick={connectWeb3}
-                disabled={web3Connecting}
-                className="w-full btn-primary flex items-center justify-center gap-2"
-              >
-                {web3Connecting ? "Conectando…" : "Conectar com Rabby / MetaMask"}
-              </button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-200 dark:border-gray-600" />
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-zeedo-white dark:bg-zeedo-black px-2 text-zeedo-orange">ou</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setConnectMode("manual");
-                  setMessage(null);
-                }}
-                className="w-full text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white underline"
-              >
-                Conectar manualmente
-              </button>
-            </div>
-
+            <button
+              type="button"
+              onClick={connectWithApiWallet}
+              disabled={submitting}
+              className="w-full btn-primary flex items-center justify-center gap-2"
+            >
+              {submitting ? "Conectando…" : "Conectar com Rabby / MetaMask"}
+            </button>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+              Você assinará uma mensagem para autorizar o Zeedo. Não é necessário gas. O sistema não pode realizar saques.
+            </p>
             <a
               href={RABBY_DOWNLOAD_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-sm text-primary-600 hover:underline dark:text-primary-400 mb-6"
+              className="block text-sm text-primary-600 hover:underline dark:text-primary-400 mt-4"
             >
               Não tem uma carteira? Crie agora.
             </a>
           </>
         )}
 
-        {!status?.connected && (connectMode === "manual" || walletAddress) && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="wallet" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Endereço da carteira
-              </label>
-              <input
-                id="wallet"
-                type="text"
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                readOnly={!!walletAddress && connectMode === "web3"}
-                className="input-field"
-                placeholder="0x..."
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="key" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Chave privada
-              </label>
-              <input
-                id="key"
-                type="password"
-                value={privateKey}
-                onChange={(e) => setPrivateKey(e.target.value)}
-                className="input-field font-mono"
-                placeholder="Mantenha em segredo. Será criptografada no servidor."
-                required={!status?.connected}
-                autoComplete="off"
-              />
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                A chave nunca é armazenada em texto claro e não será mostrada de novo.
-              </p>
-            </div>
-            {message && (
-              <p className={`text-sm ${message.type === "ok" ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                {message.text}
-              </p>
-            )}
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? "Salvando…" : status?.connected ? "Atualizar carteira" : "Conectar carteira"}
-            </button>
-          </form>
-        )}
-
-        {status?.connected && (
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <div>
-              <label htmlFor="wallet-update" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço da carteira</label>
-              <input id="wallet-update" type="text" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className="input-field" placeholder="0x..." required />
-            </div>
-            <div>
-              <label htmlFor="key-update" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chave privada</label>
-              <input id="key-update" type="password" value={privateKey} onChange={(e) => setPrivateKey(e.target.value)} className="input-field font-mono" placeholder="Chave privada" required autoComplete="off" />
-            </div>
-            {message && <p className={`text-sm ${message.type === "ok" ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>{message.text}</p>}
-            <button type="submit" disabled={submitting} className="btn-primary">{submitting ? "Salvando…" : "Atualizar carteira"}</button>
-          </form>
+        {message && (
+          <p className={`text-sm mt-4 ${message.type === "ok" ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+            {message.text}
+          </p>
         )}
       </div>
     </div>

@@ -109,11 +109,17 @@ export default function SignupPage() {
             {loading ? "Criando conta…" : "Criar conta"}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-sm text-gray-600 dark:text-zeedo-white/60">
           Já tem conta?{" "}
-          <Link href="/login" className="font-medium text-primary-600 hover:text-primary-700">
+          <Link href="/login" className="font-medium text-zeedo-orange hover:underline">
             Entrar
           </Link>
+        </p>
+        <p className="mt-3 text-center text-xs text-gray-500 dark:text-zeedo-white/50">
+          Ao criar conta, você aceita os{" "}
+          <Link href="/termos" className="text-zeedo-orange hover:underline">Termos de Uso</Link>
+          {" e a "}
+          <Link href="/privacidade" className="text-zeedo-orange hover:underline">Política de Privacidade</Link>.
         </p>
       </div>
     </div>

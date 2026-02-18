@@ -23,6 +23,11 @@ export default function HomePage() {
             Criar conta
           </Link>
         </div>
+        <p className="mt-8 text-xs text-zeedo-black/50 dark:text-zeedo-white/50 text-center">
+          <Link href="/termos" className="hover:text-zeedo-orange hover:underline">Termos de Uso</Link>
+          {" · "}
+          <Link href="/privacidade" className="hover:text-zeedo-orange hover:underline">Política de Privacidade</Link>
+        </p>
       </div>
     </div>
   );
