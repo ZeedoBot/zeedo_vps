@@ -1,8 +1,9 @@
 """
 Perfil do usuário: nome, username, data de nascimento, país, telefone.
 """
-from datetime import date, datetime, timezone
-from fastapi import APIRouter, Depends
+import logging
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -10,6 +11,7 @@ from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/profile", tags=["profile"])
+logger = logging.getLogger(__name__)
 
 
 class ProfileUpdate(BaseModel):
@@ -50,11 +52,21 @@ def update_profile(
 ):
     """Atualiza perfil do usuário (colunas na tabela users)."""
     supabase = get_supabase()
-    payload = body.model_dump(exclude_none=True)
+    raw = body.model_dump(exclude_none=True)
+    payload = {}
+    for k, v in raw.items():
+        if v is None:
+            continue
+        if isinstance(v, str) and v.strip() == "":
+            payload[k] = None
+        else:
+            payload[k] = v
     if not payload:
         return {"success": True, "message": "Nada a atualizar"}
 
-    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
-    supabase.table("users").update(payload).eq("id", user_id).execute()
-
+    try:
+        supabase.table("users").update(payload).eq("id", user_id).execute()
+    except Exception as e:
+        logger.exception("Erro ao atualizar perfil")
+        raise HTTPException(status_code=500, detail="Erro ao salvar perfil. Tente novamente.")
     return {"success": True, "message": "Perfil atualizado."}

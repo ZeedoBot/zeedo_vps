@@ -13,6 +13,11 @@ type WalletStatus = {
 
 const RABBY_DOWNLOAD_URL = "https://rabby.io/";
 
+function truncateAddress(addr: string): string {
+  if (!addr || addr.length <= 18) return addr || "—";
+  return `${addr.slice(0, 10)}...${addr.slice(-8)}`;
+}
+
 declare global {
   interface Window {
     ethereum?: {
@@ -133,8 +138,11 @@ export default function WalletPage() {
         </p>
         {status?.connected && (
           <div className="mb-4 space-y-3">
-            <div className="p-3 rounded-lg border border-green-500/30 text-green-700 dark:text-green-400 text-sm">
-              Conectada: <strong>{status.wallet_address_full ?? status.wallet_address}</strong>
+            <div className="p-3 rounded-lg border border-green-500/30 text-green-700 dark:text-green-400 text-sm overflow-hidden">
+              Conectada:{" "}
+              <strong className="break-all" title={status.wallet_address_full ?? status.wallet_address ?? undefined}>
+                {truncateAddress(status.wallet_address_full ?? status.wallet_address ?? "")}
+              </strong>
             </div>
             <button
               type="button"

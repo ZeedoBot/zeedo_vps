@@ -49,6 +49,11 @@ type BotStatus = { status: string };
 type WalletStatus = { connected: boolean; wallet_address: string | null };
 type TelegramStatus = { connected: boolean };
 
+function truncateAddress(addr: string): string {
+  if (!addr || addr.length <= 16) return addr || "Conectada";
+  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+}
+
 function groupTradesById(trades: Trade[]) {
   const map = new Map<string, { pnl: number; token: string; side: string; tf: string; time: number }>();
   for (const t of trades) {
@@ -198,8 +203,8 @@ export default function DashboardPage() {
           <h2 className="text-sm font-medium text-zeedo-orange mb-1">
             Carteira Hyperliquid
           </h2>
-          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">
-            {walletStatus?.connected ? walletStatus.wallet_address ?? "Conectada" : "Não conectada"}
+          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate" title={walletStatus?.wallet_address ?? undefined}>
+            {walletStatus?.connected ? truncateAddress(walletStatus.wallet_address ?? "") : "Não conectada"}
           </p>
           <a
             href="/dashboard/wallet"
@@ -226,26 +231,34 @@ export default function DashboardPage() {
           <h2 className="text-sm font-medium text-zeedo-orange mb-1">
             Bot
           </h2>
-          <p className={`text-lg font-medium ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
-            {botStatus?.status === "running" ? "Ligado" : "Desligado"}
-          </p>
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
+          <div className="flex items-center justify-between gap-2">
+            <p className={`text-lg font-medium ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
+              {botStatus?.status === "running" ? "Ligado" : "Desligado"}
+            </p>
+            {botStatus?.status === "running" && (
+              <button
+                type="button"
+                onClick={toggleBot}
+                disabled={botToggling}
+                className="text-sm font-medium px-3 py-1.5 rounded-lg border border-red-500/50 text-red-600 hover:bg-red-500/10 transition-colors shrink-0 ml-auto"
+              >
+                {botToggling ? "…" : "Desligar"}
+              </button>
+            )}
+          </div>
+          {botStatus?.status !== "running" && (
             <button
               type="button"
               onClick={toggleBot}
               disabled={botToggling}
-              className={`text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors ${
-                botStatus?.status === "running"
-                  ? "border-red-500/50 text-red-600 hover:bg-red-500/10"
-                  : "border-green-500/50 text-green-600 hover:bg-green-500/10"
-              }`}
+              className="text-sm font-medium px-3 py-1.5 rounded-lg border border-green-500/50 text-green-600 hover:bg-green-500/10 transition-colors mt-2"
             >
-              {botToggling ? "…" : botStatus?.status === "running" ? "Desligar" : "Ligar"}
+              {botToggling ? "…" : "Ligar"}
             </button>
-            <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline">
-              Configurar
-            </a>
-          </div>
+          )}
+          <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline block mt-2">
+            Configurar
+          </a>
         </div>
       </div>
 

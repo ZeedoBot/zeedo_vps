@@ -8,11 +8,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/profile", label: "Perfil" },
   { href: "/dashboard/wallet", label: "Carteira" },
   { href: "/dashboard/telegram", label: "Telegram" },
   { href: "/dashboard/bot", label: "Bot" },
   { href: "/choose-plan", label: "Alterar Plano" },
+  { href: "/dashboard/profile", label: "Perfil" },
 ];
 
 export default function DashboardLayout({
@@ -20,7 +20,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] = useState<{ email?: string } | null>(null);
+  const [user, setUser] = useState<{ email?: string; username?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
@@ -28,17 +28,41 @@ export default function DashboardLayout({
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    async function load() {
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.replace("/login");
         return;
       }
-      setUser(session.user ?? null);
+      try {
+        const me = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/me`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } }
+        ).then((r) => r.json());
+        setUser({
+          email: session.user?.email ?? me.email,
+          username: me.username ?? undefined,
+        });
+      } catch {
+        setUser({ email: session.user?.email ?? undefined });
+      }
       setLoading(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) router.replace("/login");
-      else setUser(session.user ?? null);
+    }
+    load();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        router.replace("/login");
+        return;
+      }
+      try {
+        const me = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/me`,
+          { headers: { Authorization: `Bearer ${session.access_token}` } }
+        ).then((r) => r.json());
+        setUser({ email: session.user?.email ?? me.email, username: me.username ?? undefined });
+      } catch {
+        setUser({ email: session.user?.email ?? undefined });
+      }
     });
     return () => subscription.unsubscribe();
   }, [router]);
@@ -64,7 +88,7 @@ export default function DashboardLayout({
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-2 px-4 sm:px-6">
           <div className="flex items-center gap-2 min-w-0">
             <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-zeedo-black dark:text-zeedo-white shrink-0">
-              <img src="/zeedo-logo.png?v=3" alt="Zeedo" className="h-8 w-8 object-contain mix-blend-multiply dark:mix-blend-screen" />
+              <img src="/zeedo-logo.png?v=4" alt="Zeedo" className="h-8 w-8 object-contain mix-blend-multiply dark:mix-blend-screen" />
               <span className="hidden sm:inline text-zeedo-black dark:text-zeedo-white">Zeedo</span>
             </Link>
             <nav className="hidden md:flex gap-6 ml-4">
@@ -83,7 +107,7 @@ export default function DashboardLayout({
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <ThemeToggle />
-            <span className="hidden sm:inline text-sm text-zeedo-black/60 dark:text-zeedo-white/60 truncate max-w-[140px]">{user?.email}</span>
+            <span className="hidden sm:inline text-sm text-zeedo-black/60 dark:text-zeedo-white/60 truncate max-w-[140px]">{user?.username || user?.email}</span>
             <button
               type="button"
               onClick={handleLogout}
@@ -121,7 +145,7 @@ export default function DashboardLayout({
                 </Link>
               ))}
               <div className="border-t border-zeedo-orange/20 my-2 pt-2 px-4">
-                <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 truncate">{user?.email}</p>
+                <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 truncate">{user?.username || user?.email}</p>
               </div>
             </nav>
           </div>

@@ -4,10 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,20 +18,25 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
+      const res = await apiPost<{ access_token: string; refresh_token: string }>(
+        "/auth/login",
+        { email_or_username: emailOrUsername.trim(), password },
+        undefined
+      ).catch((err: Error) => {
+        setError(err.message?.includes("401") || err.message?.includes("incorretos") ? "E-mail/nome de usuário ou senha incorretos." : err.message || "Erro ao entrar.");
+        return null;
+      });
+      if (!res?.access_token) return;
+
       const supabase = createClient();
-      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: err } = await supabase.auth.setSession({ access_token: res.access_token, refresh_token: res.refresh_token });
       if (err) {
-        setError(err.message === "Invalid login credentials" ? "E-mail ou senha incorretos." : err.message);
+        setError("Erro ao configurar sessão.");
         return;
       }
-      const session = data?.session;
-      if (!session?.access_token) {
-        router.push("/choose-plan");
-        router.refresh();
-        return;
-      }
+
       try {
-        const me = await apiGet<{ subscription_tier?: string }>("/auth/me", session.access_token);
+        const me = await apiGet<{ subscription_tier?: string }>("/auth/me", res.access_token);
         const hasPlan = me.subscription_tier && ["basic", "pro", "enterprise"].includes(me.subscription_tier);
         router.push(hasPlan ? "/dashboard" : "/choose-plan");
       } catch {
@@ -47,21 +52,21 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
       <div className="card w-full max-w-md">
         <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white mb-1">Entrar</h1>
-        <p className="text-zeedo-black/60 dark:text-zeedo-white/60 text-sm mb-6">Use seu e-mail e senha para acessar o dashboard.</p>
+        <p className="text-zeedo-black/60 dark:text-zeedo-white/60 text-sm mb-6">Use e-mail ou nome de usuário e senha para acessar o dashboard.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-zeedo-orange mb-1">
-              E-mail
+            <label htmlFor="emailOrUsername" className="block text-sm font-medium text-zeedo-orange mb-1">
+              E-mail ou nome de usuário
             </label>
             <input
-              id="email"
-              type="email"
-              autoComplete="email"
+              id="emailOrUsername"
+              type="text"
+              autoComplete="username"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
               className="input-field"
-              placeholder="seu@email.com"
+              placeholder="seu@email.com ou usuario"
             />
           </div>
           <div>

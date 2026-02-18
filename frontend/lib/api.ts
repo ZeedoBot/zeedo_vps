@@ -29,9 +29,9 @@ export async function apiGet<T = unknown>(path: string, token: string): Promise<
 export async function apiPost<T = unknown>(
   path: string,
   body: unknown,
-  token: string
+  token?: string
 ): Promise<T> {
-  const res = await apiFetch(path, { method: "POST", body: JSON.stringify(body), token });
+  const res = await apiFetch(path, { method: "POST", body: JSON.stringify(body), token: token ?? undefined });
   if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
   return res.json();
 }
