@@ -140,12 +140,9 @@ def update_config(
             payload["trading_account_id"] = trading_account_id
         supabase.table("bot_config").insert(payload).execute()
 
-    # Notifica no Telegram quando bot liga/desliga
-    if body.bot_enabled is not None:
-        if body.bot_enabled:
-            send_telegram_to_user(supabase, user_id, "🟢 Zeedo Conectado")
-        else:
-            send_telegram_to_user(supabase, user_id, "😴 Zeedo Desligado")
+    # Notifica no Telegram quando bot desliga (o "Conectado" vem do instance ao iniciar)
+    if body.bot_enabled is not None and not body.bot_enabled:
+        send_telegram_to_user(supabase, user_id, "😴 Zeedo Desligado")
 
     return {"success": True, "message": "Configuração atualizada. O bot será reiniciado em até 30 segundos se estiver ligado."}
 

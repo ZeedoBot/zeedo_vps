@@ -20,9 +20,10 @@ def setup_user_logger(user_id: str, log_dir: str = "logs") -> logging.Logger:
     # Cria diretório se não existir
     os.makedirs(log_dir, exist_ok=True)
     
-    # Cria logger específico do usuário
+    # Cria logger específico do usuário (propagate=False evita duplicação no console)
     logger = logging.getLogger(f"bot.user_{user_id}")
     logger.setLevel(logging.INFO)
+    logger.propagate = False
     
     # Remove handlers existentes para evitar duplicação
     logger.handlers.clear()
