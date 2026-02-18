@@ -96,7 +96,6 @@ def setup_client():
     info = Info(BASE_URL, skip_ws=True)
     exchange = Exchange(account, BASE_URL, account_address=wallet_addr)
     logging.info(f"Bot Conectado: {wallet_addr} (Rede: {'MAINNET' if IS_MAINNET else 'TESTNET'})")
-    tg_send(f"🟢 Zeedo Conectado: Notificações Ativas")
     return info, exchange, wallet_addr
 
 def register_process():
@@ -606,10 +605,15 @@ def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, 
 
 def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
     try:
+        # Limite: só considera trades após criação da conta no Zeedo (multiusuário)
+        min_ts_ms = None
+        if hasattr(storage, 'get_user_created_at_timestamp_ms'):
+            min_ts_ms = storage.get_user_created_at_timestamp_ms()
+
         user_fills = info.user_fills(wallet)
         if not user_fills:
             return
-        
+
         trades_db = storage.get_trades_db()
         if not isinstance(trades_db, list):
             trades_db = []
@@ -623,8 +627,12 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             oid = str(fill.get('oid') or fill.get('id') or "")
             if not oid:
                 continue
-            
             if oid in processed_oids:
+                continue
+            # Ignora trades anteriores à criação da conta no Zeedo
+            fill_ts = int(fill.get('time') or fill.get('t') or fill.get('timestamp') or 0)
+            if min_ts_ms is not None and fill_ts > 0 and fill_ts < min_ts_ms:
+                processed_oids.add(oid)  # evita reprocessar
                 continue
 
             new_fills_by_oid[oid].append(fill)

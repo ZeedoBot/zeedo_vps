@@ -256,6 +256,31 @@ class SupabaseStorage(StorageBase):
             logging.error(f"Supabase get_config: {e}")
             return {}
 
+    def get_user_created_at_timestamp_ms(self, user_id: str = None) -> int | None:
+        """Retorna created_at do usuário em ms (para filtrar trades antigos). None = sem filtro."""
+        if not self._client:
+            return None
+        try:
+            uid = user_id or self._user_id
+            if not uid:
+                return None
+            r = self._client.table("users").select("created_at").eq("id", uid).limit(1).execute()
+            if not r.data or len(r.data) == 0:
+                return None
+            created = r.data[0].get("created_at")
+            if not created:
+                return None
+            # created é ISO string; converte para ms
+            from datetime import datetime
+            if isinstance(created, str):
+                dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            else:
+                dt = created
+            return int(dt.timestamp() * 1000)
+        except Exception as e:
+            logging.error(f"Supabase get_user_created_at_timestamp_ms: {e}")
+            return None
+
     def get_telegram_config(self, user_id: str = None) -> dict | None:
         """Retorna config do Telegram (bot_token, chat_id) do usuário."""
         if not self._client:

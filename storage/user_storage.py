@@ -78,3 +78,9 @@ class UserStorage(StorageBase):
         if hasattr(self.backend, 'get_telegram_config'):
             return self.backend.get_telegram_config(user_id=self.user_id)
         return None
+
+    def get_user_created_at_timestamp_ms(self) -> int | None:
+        """Retorna created_at do usuário em ms. None = sem filtro (modo legado)."""
+        if hasattr(self.backend, 'get_user_created_at_timestamp_ms'):
+            return self.backend.get_user_created_at_timestamp_ms(user_id=self.user_id)
+        return None
