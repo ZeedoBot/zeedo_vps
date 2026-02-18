@@ -26,12 +26,12 @@ const PERIOD_OPTIONS = [
   { value: "custom", label: "Por data" },
 ] as const;
 
-function filterTradesByPeriod(
-  trades: { time: number }[],
+function filterTradesByPeriod<T extends { time: number }>(
+  trades: T[],
   period: string,
   dateFrom: string | null,
   dateTo: string | null
-): { time: number }[] {
+): T[] {
   const now = Date.now();
   let startMs = 0;
   let endMs = Infinity;
