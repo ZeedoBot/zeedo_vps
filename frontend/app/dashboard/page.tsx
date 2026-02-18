@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPut } from "@/lib/api";
 import {
   LineChart,
   Line,
@@ -129,6 +129,23 @@ export default function DashboardPage() {
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [botToggling, setBotToggling] = useState(false);
+
+  async function toggleBot() {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setBotToggling(true);
+    try {
+      const isRunning = botStatus?.status === "running";
+      await apiPut("/bot/config", { bot_enabled: !isRunning }, session.access_token);
+      setBotStatus({ status: !isRunning ? "running" : "stopped" });
+    } catch {
+      setError("Erro ao alterar status do bot.");
+    } finally {
+      setBotToggling(false);
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -169,7 +186,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white">
-        Visão geral
+        Dashboard
       </h1>
       <p className="text-zeedo-black/60 dark:text-zeedo-white/60 -mt-4">
         Acompanhe o status do seu bot, carteira e performance em um só lugar.
@@ -209,15 +226,26 @@ export default function DashboardPage() {
           <h2 className="text-sm font-medium text-zeedo-orange mb-1">
             Bot
           </h2>
-          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white capitalize">
-            {botStatus?.status === "running" ? "Rodando" : "Parado"}
+          <p className={`text-lg font-medium ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
+            {botStatus?.status === "running" ? "Ligado" : "Desligado"}
           </p>
-          <a
-            href="/dashboard/bot"
-            className="text-sm text-zeedo-orange hover:underline mt-2 inline-block"
-          >
-            Configurar
-          </a>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <button
+              type="button"
+              onClick={toggleBot}
+              disabled={botToggling}
+              className={`text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                botStatus?.status === "running"
+                  ? "border-red-500/50 text-red-600 hover:bg-red-500/10"
+                  : "border-green-500/50 text-green-600 hover:bg-green-500/10"
+              }`}
+            >
+              {botToggling ? "…" : botStatus?.status === "running" ? "Desligar" : "Ligar"}
+            </button>
+            <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline">
+              Configurar
+            </a>
+          </div>
         </div>
       </div>
 
@@ -227,7 +255,7 @@ export default function DashboardPage() {
           📊 Painel de Lucros e Performance
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          <MetricCard label="Saldo Hyperliquid" value={`$${balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
+          <MetricCard label="Saldo Hyperliquid" value={`$${balance.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
           <MetricCard label="Total Trades" value={String(metrics.totalTrades)} />
           <MetricCard label="Taxa de Acerto" value={`${metrics.winrate.toFixed(1)}%`} />
           <MetricCard label="Lucro" value={`$${metrics.totalPnl.toFixed(2)}`} />

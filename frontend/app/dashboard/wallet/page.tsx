@@ -71,6 +71,24 @@ export default function WalletPage() {
     }
   }
 
+  async function handleDisconnect() {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setSubmitting(true);
+    setMessage(null);
+    try {
+      await apiPost("/wallet/disconnect", {}, session.access_token);
+      setMessage({ type: "ok", text: "Carteira desconectada." });
+      const data = await apiGet<WalletStatus>("/wallet/status", session.access_token);
+      setStatus(data);
+    } catch (err) {
+      setMessage({ type: "err", text: err instanceof Error ? err.message : "Erro ao desconectar." });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
@@ -114,8 +132,19 @@ export default function WalletPage() {
           Conecte a carteira que o bot usará para operar na Hyperliquid. A chave privada é criptografada e nunca é exibida novamente.
         </p>
         {status?.connected && (
-          <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-400 text-sm">
-            Conectada: <strong>{status.wallet_address_full ?? status.wallet_address}</strong>
+          <div className="mb-4 space-y-3">
+            <div className="p-3 rounded-lg border border-green-500/30 text-green-700 dark:text-green-400 text-sm">
+              Conectada: <strong>{status.wallet_address_full ?? status.wallet_address}</strong>
+            </div>
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              disabled={submitting}
+              className="text-sm font-medium text-red-600 hover:text-red-700 border border-red-500/40 rounded-lg px-3 py-2"
+            >
+              Desconectar Carteira
+            </button>
+            <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">Para trocar de carteira, conecte novamente ou use o formulário abaixo.</p>
           </div>
         )}
 
@@ -209,7 +238,6 @@ export default function WalletPage() {
 
         {status?.connected && (
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Para trocar de carteira, conecte novamente ou use o formulário abaixo.</p>
             <div>
               <label htmlFor="wallet-update" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço da carteira</label>
               <input id="wallet-update" type="text" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} className="input-field" placeholder="0x..." required />

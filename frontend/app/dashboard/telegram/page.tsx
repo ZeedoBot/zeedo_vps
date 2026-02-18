@@ -12,6 +12,7 @@ export default function TelegramPage() {
   const [connectLink, setConnectLink] = useState<ConnectLink | null>(null);
   const [chatIdManual, setChatIdManual] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [showChangeForm, setShowChangeForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -60,6 +61,7 @@ export default function TelegramPage() {
       await apiPost("/telegram/connect", { chat_id: chatIdManual.trim() }, session.access_token);
       setMessage({ type: "ok", text: "Telegram conectado com sucesso." });
       setChatIdManual("");
+      setShowChangeForm(false);
       const data = await apiGet<TelegramStatus>("/telegram/status", session.access_token);
       setStatus(data);
     } catch (err) {
@@ -73,58 +75,80 @@ export default function TelegramPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Telegram</h1>
-      <div className="card max-w-xl dark:bg-zeedo-black/80 dark:border-zeedo-white/10">
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Receba notificações do bot diretamente no seu Telegram. O bot já está configurado — você só precisa conectar sua conta.
-        </p>
-        {status?.connected && (
-          <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-400 text-sm">
-            ✓ Conectado {status.chat_id_masked ? `(ID: ${status.chat_id_masked})` : ""}
-          </div>
-        )}
-        {!status?.connected && connectLink && (
+      <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white mb-6">Telegram</h1>
+      <div className="card max-w-xl">
+        {status?.connected && !showChangeForm ? (
           <div className="space-y-4">
+            <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">Telegram Conectado</p>
+            {status.chat_id_masked && (
+              <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">ID: {status.chat_id_masked}</p>
+            )}
             <button
               type="button"
-              onClick={handleConnect}
-              className="btn-primary w-full"
+              onClick={() => setShowChangeForm(true)}
+              className="inline-block text-sm font-medium text-zeedo-orange px-3 py-2 border border-zeedo-orange/40 rounded-lg hover:bg-zeedo-orange/10"
             >
-              Conectar Telegram
+              Alterar
             </button>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Será aberto o app do Telegram. Toque em <strong>Iniciar</strong> e as notificações serão enviadas para a sua conversa.
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 mb-4">
+              {status?.connected ? "Conecte outra conta para alterar." : "Receba notificações do bot diretamente no seu Telegram. O bot já está configurado — você só precisa conectar sua conta."}
             </p>
-            <button
-              type="button"
-              onClick={() => setShowManual(!showManual)}
-              className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
-            >
-              {showManual ? "Ocultar" : "Ou informar Chat ID manualmente"}
-            </button>
-            {showManual && (
-              <form onSubmit={handleManualSubmit} className="pt-4 border-t border-gray-200 dark:border-gray-600 space-y-4">
-                <div>
-                  <label htmlFor="chat_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Chat ID (obtido com @userinfobot no Telegram)
-                  </label>
-                  <input
-                    id="chat_id"
-                    type="text"
-                    value={chatIdManual}
-                    onChange={(e) => setChatIdManual(e.target.value)}
-                    className="input-field"
-                    placeholder="Ex: 123456789"
-                  />
-                </div>
-                <button type="submit" disabled={submitting} className="btn-primary">
-                  {submitting ? "Salvando…" : "Conectar"}
+            {(showChangeForm || !status?.connected) && connectLink && (
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={handleConnect}
+                  className="btn-primary w-full"
+                >
+                  Conectar Telegram
                 </button>
-              </form>
+                <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                  Será aberto o app do Telegram. Toque em <strong>Iniciar</strong> e as notificações serão enviadas para a sua conversa.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowManual(!showManual)}
+                  className="text-sm text-zeedo-orange hover:underline"
+                >
+                  {showManual ? "Ocultar" : "Ou informar Chat ID manualmente"}
+                </button>
+                {showManual && (
+                  <form onSubmit={handleManualSubmit} className="pt-4 border-t border-zeedo-orange/20 space-y-4">
+                    <div>
+                      <label htmlFor="chat_id" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Chat ID (obtido com @userinfobot no Telegram)
+                      </label>
+                      <input
+                        id="chat_id"
+                        type="text"
+                        value={chatIdManual}
+                        onChange={(e) => setChatIdManual(e.target.value)}
+                        className="input-field"
+                        placeholder="Ex: 123456789"
+                      />
+                    </div>
+                    <button type="submit" disabled={submitting} className="btn-primary">
+                      {submitting ? "Salvando…" : "Conectar"}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+            {showChangeForm && status?.connected && (
+              <button
+                type="button"
+                onClick={() => setShowChangeForm(false)}
+                className="mt-4 text-sm text-zeedo-black/60 dark:text-zeedo-white/60 hover:underline"
+              >
+                Cancelar
+              </button>
             )}
           </div>
         )}
-        {!status?.connected && !connectLink && (
+        {!status?.connected && !connectLink && !showChangeForm && (
           <p className="text-sm text-amber-600 dark:text-amber-400">
             Bot do Telegram não configurado. Entre em contato com o suporte.
           </p>
