@@ -132,8 +132,16 @@ export default function WalletPage() {
       const data = await apiGet<WalletStatus>("/wallet/status", session.access_token);
       setStatus(data);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao conectar.";
-      setMessage({ type: "err", text: String(msg) });
+      console.error("[Wallet connect]", err);
+      let msg = "Erro ao conectar.";
+      if (err instanceof Error) {
+        msg = err.message;
+      } else if (err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string") {
+        msg = (err as { message: string }).message;
+      } else if (typeof err === "string") {
+        msg = err;
+      }
+      setMessage({ type: "err", text: msg });
     } finally {
       setSubmitting(false);
     }
