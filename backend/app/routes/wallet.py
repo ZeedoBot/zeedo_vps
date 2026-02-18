@@ -150,24 +150,55 @@ def connect_agent(
         "signature": {"r": r, "s": s, "v": body.signature_v},
     }
 
+    def _extract_hl_error(data: dict) -> str:
+        """Extrai mensagem de erro da resposta da Hyperliquid (vários formatos)."""
+        resp_obj = data.get("response") or data
+        if isinstance(resp_obj, dict):
+            err = resp_obj.get("error")
+            if err:
+                return str(err)
+            inner = resp_obj.get("data") or {}
+            if isinstance(inner, dict) and inner.get("error"):
+                return str(inner["error"])
+            statuses = inner.get("statuses") if isinstance(inner, dict) else []
+            if statuses and isinstance(statuses[0], dict) and statuses[0].get("error"):
+                return str(statuses[0]["error"])
+        if data.get("status") != "ok":
+            return str(resp_obj) if resp_obj else str(data)
+        return ""
+
     url = HYPERLIQUID_EXCHANGE_URL_MAINNET if body.network == "mainnet" else HYPERLIQUID_EXCHANGE_URL_TESTNET
     try:
         resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
-        data = resp.json()
+        try:
+            data = resp.json()
+        except Exception:
+            data = {}
         logger.info("Hyperliquid response: status=%s body=%s", resp.status_code, data)
+
         if resp.status_code != 200:
-            raise HTTPException(status_code=502, detail="Hyperliquid não respondeu. Tente novamente.")
-        if data.get("status") != "ok":
-            resp_obj = data.get("response", {})
-            err = resp_obj.get("error") if isinstance(resp_obj, dict) else str(resp_obj)
-            # Hyperliquid às vezes retorna erro em response.data ou aninhado
-            if not err and isinstance(resp_obj, dict):
-                inner = resp_obj.get("data") or resp_obj.get("response", {})
-                err = inner.get("error") if isinstance(inner, dict) else str(inner) or str(resp_obj)
-            raise HTTPException(status_code=400, detail=f"Hyperliquid rejeitou: {err or data}")
+            err = _extract_hl_error(data) or resp.text or resp.reason
+            raise HTTPException(
+                status_code=400,
+                detail=f"Hyperliquid: {err}" if err else "Hyperliquid não respondeu. Tente novamente.",
+            )
+        err = _extract_hl_error(data)
+        if data.get("status") != "ok" or err:
+            raise HTTPException(status_code=400, detail=f"Hyperliquid: {err or str(data)}")
+    except HTTPException:
+        raise
     except requests.RequestException as e:
-        logger.exception("Erro ao conectar à Hyperliquid")
-        raise HTTPException(status_code=502, detail="Erro ao comunicar com a Hyperliquid. Tente novamente.")
+        logger.exception("Erro ao conectar à Hyperliquid: %s", e)
+        detail = "Erro ao comunicar com a Hyperliquid. Verifique sua conexão."
+        if hasattr(e, "response") and e.response is not None:
+            try:
+                body = e.response.json()
+                err = _extract_hl_error(body) if isinstance(body, dict) else e.response.text[:200]
+                if err:
+                    detail = f"Hyperliquid: {err}"
+            except Exception:
+                pass
+        raise HTTPException(status_code=502, detail=detail)
 
     try:
         encrypted_key, salt = encrypt_and_save_private_key(agent_private_key, user_id)
@@ -228,12 +259,11 @@ def wallet_status(user_id: str = Depends(get_current_user_id)):
 @router.post("/disconnect")
 def disconnect_wallet(user_id: str = Depends(get_current_user_id)):
     """
-    Remove a conexão da carteira: desvincula bot_config e remove o registro em trading_accounts.
-    Limpa chave criptografada e demais dados sensíveis.
+    Desativa a carteira do usuário (is_active = False).
+    Também desliga o bot para evitar operações sem carteira válida.
     """
     supabase = get_supabase()
-    # Desvincula bot_config da trading_account antes de excluir
-    supabase.table("bot_config").update({"trading_account_id": None}).eq("user_id", user_id).execute()
-    # Remove o registro da carteira (inclui chave criptografada)
-    supabase.table("trading_accounts").delete().eq("user_id", user_id).execute()
+    supabase.table("trading_accounts").update({"is_active": False}).eq("user_id", user_id).execute()
+    # Desliga o bot ao desconectar carteira – evita bot “ligado” sem carteira
+    supabase.table("bot_config").update({"bot_enabled": False}).eq("user_id", user_id).execute()
     return {"success": True, "message": "Carteira desconectada."}

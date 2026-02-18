@@ -133,14 +133,28 @@ def update_config(
 
 @router.get("/status")
 def bot_status(user_id: str = Depends(get_current_user_id)):
-    """Status da instância (running/stopped) e último heartbeat."""
+    """
+    Status do bot: usa bot_config.bot_enabled como fonte de verdade para Ligado/Desligado.
+    O instance_status reflete o estado real da instância (atualizado pelo manager).
+    """
     supabase = get_supabase()
-    r = supabase.table("instance_status").select("status, last_heartbeat, error_message").eq("user_id", user_id).limit(1).execute()
-    if not r.data or len(r.data) == 0:
-        return {"status": "stopped", "last_heartbeat": None, "error_message": None}
-    row = r.data[0]
+    cfg = supabase.table("bot_config").select("bot_enabled").eq("user_id", user_id).limit(1).execute()
+    inst = supabase.table("instance_status").select("status, last_heartbeat, error_message").eq("user_id", user_id).limit(1).execute()
+    bot_enabled = bool(cfg.data and len(cfg.data) > 0 and cfg.data[0].get("bot_enabled"))
+    status = "stopped"
+    last_heartbeat = None
+    error_message = None
+    if inst.data and len(inst.data) > 0:
+        row = inst.data[0]
+        status = row.get("status", "stopped")
+        last_heartbeat = row.get("last_heartbeat")
+        error_message = row.get("error_message")
+    # Fonte de verdade: bot_enabled. Se usuário desligou, mostra Desligado imediatamente.
+    display_status = "running" if bot_enabled else "stopped"
     return {
-        "status": row.get("status", "stopped"),
-        "last_heartbeat": row.get("last_heartbeat"),
-        "error_message": row.get("error_message"),
+        "status": display_status,
+        "instance_status": status,
+        "bot_enabled": bot_enabled,
+        "last_heartbeat": last_heartbeat,
+        "error_message": error_message,
     }
