@@ -22,6 +22,7 @@ export default function DashboardLayout({
 }) {
   const [user, setUser] = useState<{ email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -56,8 +57,6 @@ export default function DashboardLayout({
       </div>
     );
   }
-
-  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-zeedo-white dark:bg-zeedo-black">
