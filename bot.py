@@ -1558,9 +1558,9 @@ def run_main_loop(info, exchange, wallet, storage, config_overrides=None):
         while True:
             loop_start = time.time()
             try:
-                all_open_orders = info.frontend_open_orders(wallet)
-                user_state_cache = info.user_state(wallet)
-                all_mids_cache = info.all_mids()           
+                all_open_orders = info.frontend_open_orders(wallet) or []
+                user_state_cache = info.user_state(wallet) or {}
+                all_mids_cache = info.all_mids() or {}
             
             except Exception as e:
                 if "429" in str(e):
