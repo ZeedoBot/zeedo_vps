@@ -108,6 +108,9 @@ export default function TelegramPage() {
                 <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
                   Será aberto o app do Telegram. Toque em <strong>Iniciar</strong> e as notificações serão enviadas para a sua conversa.
                 </p>
+                <p className="text-xs text-zeedo-orange/90 dark:text-zeedo-orange/90 mt-2">
+                  Já conectou? Atualize a página para ver o status atualizado.
+                </p>
                 <button
                   type="button"
                   onClick={() => setShowManual(!showManual)}

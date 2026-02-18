@@ -44,8 +44,11 @@ export default function SignupPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
         <div className="card w-full max-w-md text-center">
-          <p className="text-green-700 font-medium">Conta criada com sucesso.</p>
-          <p className="text-gray-600 text-sm mt-2">Redirecionando para o login…</p>
+          <p className="text-green-700 dark:text-green-400 font-medium">Conta criada com sucesso.</p>
+          <p className="text-gray-600 dark:text-zeedo-white/70 text-sm mt-3">
+            Verifique o e-mail <strong>{email}</strong> e confirme sua conta pelo link enviado antes de fazer login.
+          </p>
+          <p className="text-gray-500 dark:text-zeedo-white/50 text-xs mt-4">Redirecionando para o login…</p>
         </div>
       </div>
     );
