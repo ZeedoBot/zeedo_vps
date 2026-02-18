@@ -227,7 +227,13 @@ def wallet_status(user_id: str = Depends(get_current_user_id)):
 
 @router.post("/disconnect")
 def disconnect_wallet(user_id: str = Depends(get_current_user_id)):
-    """Desativa a carteira do usuário (is_active = False)."""
+    """
+    Remove a conexão da carteira: desvincula bot_config e remove o registro em trading_accounts.
+    Limpa chave criptografada e demais dados sensíveis.
+    """
     supabase = get_supabase()
-    supabase.table("trading_accounts").update({"is_active": False}).eq("user_id", user_id).execute()
+    # Desvincula bot_config da trading_account antes de excluir
+    supabase.table("bot_config").update({"trading_account_id": None}).eq("user_id", user_id).execute()
+    # Remove o registro da carteira (inclui chave criptografada)
+    supabase.table("trading_accounts").delete().eq("user_id", user_id).execute()
     return {"success": True, "message": "Carteira desconectada."}
