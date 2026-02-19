@@ -11,7 +11,7 @@ router = APIRouter(prefix="/plans", tags=["plans"])
 
 
 class PlanChooseBody(BaseModel):
-    plan: str = Field(..., pattern="^(basic|pro|enterprise)$")
+    plan: str = Field(..., pattern="^(basic|pro|satoshi)$")
 
 
 @router.get("/limits")
@@ -23,7 +23,7 @@ def get_plan_limits(user_id: str = Depends(get_current_user_id)):
     plan = "basic"
     if ur.data and len(ur.data) > 0:
         plan = (ur.data[0].get("subscription_tier") or "basic").lower()
-        if plan not in ("basic", "pro", "enterprise"):
+        if plan not in ("basic", "pro", "satoshi"):
             plan = "basic"
 
     r = supabase.table("plan_limits").select("*").eq("plan", plan).limit(1).execute()

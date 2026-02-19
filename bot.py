@@ -89,7 +89,7 @@ FIB_STOP_LEVEL = 2.0
 FIB_ENTRY2_LEVEL = 1.414
 
 # ENTRADA 2 (Pro/Enterprise): plano permite e usuário pode ativar/desativar
-ENTRY2_ALLOWED = True   # Definido por plan (basic=False, pro/enterprise=True)
+ENTRY2_ALLOWED = True   # Definido por plan (basic=False, pro/satoshi=True)
 ENTRY2_ENABLED = True   # Toggle do usuário em bot_config.entry2_enabled
 
 # CONEXÃO

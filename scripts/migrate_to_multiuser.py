@@ -66,7 +66,7 @@ def migrate_to_multiuser(admin_email: str = None, admin_private_key: str = None)
             user_result = client.table("users").insert({
                 "email": admin_email,
                 "subscription_status": "active",
-                "subscription_tier": "enterprise",
+                "subscription_tier": "satoshi",
                 "is_active": True
             }).execute()
             user_id = user_result.data[0]["id"]

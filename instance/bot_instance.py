@@ -61,9 +61,9 @@ class BotInstance:
             # 4. Cria Telegram client
             self.telegram = TelegramClient(self.user_id, self.storage)
             
-            # Plano e entrada 2: basic=só entrada 1; pro/enterprise=entrada 1+2 com toggle
+            # Plano e entrada 2: basic=só entrada 1; pro/satoshi=entrada 1+2 com toggle
             plan = self._get_user_plan()
-            allowed_entry2 = plan in ('pro', 'enterprise')
+            allowed_entry2 = plan in ('pro', 'satoshi')
             entry2_enabled = bool(bot_config_dict.get('entry2_enabled', True))
 
             # 5. Cria BotConfig
@@ -104,7 +104,7 @@ class BotInstance:
         # TODO: Implementar sinalização de parada para o engine
     
     def _get_user_plan(self) -> str:
-        """Retorna o plano do usuário (basic, pro, enterprise)."""
+        """Retorna o plano do usuário (basic, pro, satoshi)."""
         try:
             backend = get_storage()
             if hasattr(backend, '_client') and backend._client:

@@ -25,7 +25,7 @@ class BotConfig:
     
     # Entrada 2 (Pro/Enterprise): -1.414 fib. Basic=só entrada 1.
     entry2_enabled: bool = True
-    entry2_allowed: bool = True  # Por plano: basic=False, pro/enterprise=True
+    entry2_allowed: bool = True  # Por plano: basic=False, pro/satoshi=True
 
     # Risk Management
     target_loss_usd: float = 5.0

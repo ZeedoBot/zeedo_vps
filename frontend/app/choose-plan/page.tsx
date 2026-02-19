@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const PLANS = [
   { id: "basic", name: "Basic", price: 49, color: "green" },
   { id: "pro", name: "Pro", price: 79, color: "blue" },
-  { id: "enterprise", name: "Enterprise", price: 199, color: "purple" },
+  { id: "satoshi", name: "Satoshi", price: 199, color: "purple" },
 ] as const;
 
 export default function ChoosePlanPage() {
@@ -29,7 +29,7 @@ export default function ChoosePlanPage() {
       }
       try {
         const me = await apiGet<{ subscription_tier?: string }>("/auth/me", session.access_token);
-        if (me.subscription_tier && ["basic", "pro", "enterprise"].includes(me.subscription_tier)) {
+        if (me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier)) {
           setHasPlan(true);
         }
       } catch {
@@ -85,8 +85,13 @@ export default function ChoosePlanPage() {
               type="button"
               onClick={() => handleSelect(plan.id)}
               disabled={loading}
-              className="card flex flex-col items-center p-6 transition-all hover:ring-2 hover:ring-zeedo-orange focus:outline-none focus:ring-2 focus:ring-zeedo-orange disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`card relative flex flex-col items-center p-6 transition-all hover:ring-2 hover:ring-zeedo-orange focus:outline-none focus:ring-2 focus:ring-zeedo-orange disabled:opacity-50 disabled:cursor-not-allowed ${plan.id === "pro" ? "pt-10" : ""}`}
             >
+              {plan.id === "pro" && (
+                <span className="absolute top-0 left-0 rounded-br-lg bg-zeedo-orange px-2 py-1 text-xs font-medium text-white">
+                  Recomendado
+                </span>
+              )}
               <span className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">{plan.name}</span>
               <span className="mt-2 text-2xl font-bold text-zeedo-orange">
                 R${plan.price}
@@ -125,12 +130,14 @@ export default function ChoosePlanPage() {
                       <span className="ml-2 text-gray-600 dark:text-gray-400">Máx. 5</span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">+</span>
-                      <span className="ml-2 text-gray-600 dark:text-gray-400">Função Only Short ou Only Long</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Segunda entrada automática</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Função Only</span>
                     </div>
                   </>
                 )}
-                {plan.id === "enterprise" && (
+                {plan.id === "satoshi" && (
                   <>
                     <div className="text-sm">
                       <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
@@ -145,8 +152,10 @@ export default function ChoosePlanPage() {
                       <span className="ml-2 text-gray-600 dark:text-gray-400">Ilimitado</span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium text-gray-700 dark:text-gray-300">+</span>
-                      <span className="ml-2 text-gray-600 dark:text-gray-400">Função Only Short ou Only Long</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Segunda entrada automática</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">Função Only</span>
                     </div>
                   </>
                 )}

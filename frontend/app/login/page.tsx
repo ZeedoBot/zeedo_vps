@@ -37,7 +37,7 @@ export default function LoginPage() {
 
       try {
         const me = await apiGet<{ subscription_tier?: string }>("/auth/me", res.access_token);
-        const hasPlan = me.subscription_tier && ["basic", "pro", "enterprise"].includes(me.subscription_tier);
+        const hasPlan = me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier);
         router.push(hasPlan ? "/dashboard" : "/choose-plan");
       } catch {
         router.push("/choose-plan");

@@ -22,7 +22,7 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
     plan = "basic"
     if ur.data and len(ur.data) > 0:
         plan = (ur.data[0].get("subscription_tier") or "basic").lower()
-        if plan not in ("basic", "pro", "enterprise"):
+        if plan not in ("basic", "pro", "satoshi"):
             plan = "basic"
     r = supabase.table("plan_limits").select("*").eq("plan", plan).limit(1).execute()
     if not r.data or len(r.data) == 0:
