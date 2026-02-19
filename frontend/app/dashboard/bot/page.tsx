@@ -211,55 +211,64 @@ export default function BotPage() {
             </div>
           </div>
           <div>
-            <label htmlFor="trade_mode" className="block text-sm font-medium text-zeedo-orange mb-1">
-              Modo
-            </label>
-            <select
-              id="trade_mode"
-              value={config?.trade_mode ?? "BOTH"}
-              onChange={(e) => setConfig((c) => (c ? { ...c, trade_mode: e.target.value } : null))}
-              className="input-field max-w-xs"
-            >
+            <label className="block text-sm font-medium text-zeedo-orange mb-2">Modo</label>
+            <div className="flex flex-wrap gap-2">
               {tradeModeOptions.map((m) => (
-                <option key={m} value={m}>
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setConfig((c) => (c ? { ...c, trade_mode: m } : null))}
+                  className={`rounded-lg px-3 py-1.5 text-sm border transition-colors ${
+                    (config?.trade_mode ?? "BOTH") === m
+                      ? "bg-zeedo-orange text-white border-zeedo-orange"
+                      : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
+                  }`}
+                >
                   {TRADE_MODE_LABELS[m] ?? m}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
-          <div className={`flex flex-wrap items-center gap-3 ${!limits?.allowed_entry2 ? "opacity-60" : ""}`}>
-            <label htmlFor="entry2" className={`text-sm font-medium text-zeedo-orange ${limits?.allowed_entry2 ? "cursor-pointer" : "cursor-not-allowed"}`}>
-              2ª entrada (-1.414 fib)
-            </label>
-            <button
-              type="button"
-              id="entry2"
-              role="switch"
-              aria-checked={limits?.allowed_entry2 ? entry2Enabled : false}
-              aria-disabled={!limits?.allowed_entry2}
-              onClick={() => limits?.allowed_entry2 && setEntry2Enabled((v) => !v)}
-              disabled={!limits?.allowed_entry2}
-              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
-                !limits?.allowed_entry2
-                  ? "cursor-not-allowed bg-zeedo-black/20 dark:bg-white/10"
-                  : `cursor-pointer ${entry2Enabled ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"}`
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
-                  limits?.allowed_entry2 && entry2Enabled ? "translate-x-5" : "translate-x-1"
+          <div className={`space-y-2 ${!limits?.allowed_entry2 ? "opacity-60" : ""}`}>
+            <div className="flex flex-wrap items-center gap-3">
+              <label htmlFor="entry2" className={`text-sm font-medium text-zeedo-orange ${limits?.allowed_entry2 ? "cursor-pointer" : "cursor-not-allowed"}`}>
+                Segunda entrada:
+              </label>
+              <button
+                type="button"
+                id="entry2"
+                role="switch"
+                aria-checked={limits?.allowed_entry2 ? entry2Enabled : false}
+                aria-disabled={!limits?.allowed_entry2}
+                onClick={() => limits?.allowed_entry2 && setEntry2Enabled((v) => !v)}
+                disabled={!limits?.allowed_entry2}
+                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
+                  !limits?.allowed_entry2
+                    ? "cursor-not-allowed bg-zeedo-black/20 dark:bg-white/10"
+                    : `cursor-pointer ${entry2Enabled ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"}`
                 }`}
-              />
-            </button>
-            {limits?.allowed_entry2 ? (
-              <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
-                {entry2Enabled ? "Ativada" : "Desativada"}
-              </span>
-            ) : (
-              <span className="text-sm text-amber-600 dark:text-amber-500">
-                Indisponível no plano atual. Faça upgrade para o plano Pro para ter acesso.
-              </span>
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                    limits?.allowed_entry2 && entry2Enabled ? "translate-x-5" : "translate-x-1"
+                  }`}
+                />
+              </button>
+              {limits?.allowed_entry2 ? (
+                <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
+                  {entry2Enabled ? "Ativada" : "Desativada"}
+                </span>
+              ) : (
+                <span className="text-sm text-amber-600 dark:text-amber-500">
+                  Indisponível no plano atual. Faça upgrade para o plano Pro para ter acesso.
+                </span>
+              )}
+            </div>
+            {limits?.allowed_entry2 && (
+              <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                Se estiver ligada, Zeedo colocará uma ordem automática de segunda entrada. Caso você não queira automatizar a segunda entrada, deixe desmarcado.
+              </p>
             )}
           </div>
 
