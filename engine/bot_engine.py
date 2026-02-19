@@ -55,6 +55,8 @@ class BotEngine:
             "LSR_SPECIAL_1_SYMBOLS": self.config.lsr_special_1_symbols,
             "LSR_SPECIAL_2_SYMBOLS": self.config.lsr_special_2_symbols,
             "STRENGTH_UPDATE_INTERVAL": self.config.strength_update_interval,
+            "ENTRY2_ENABLED": self.config.entry2_enabled,
+            "ENTRY2_ALLOWED": self.config.entry2_allowed,
         }
 
     def run(self, info, exchange, wallet_addr):

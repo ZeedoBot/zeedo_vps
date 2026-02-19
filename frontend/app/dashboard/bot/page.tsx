@@ -15,10 +15,12 @@ type PlanLimits = {
   allowed_symbols: string[];
   allowed_timeframes: string[];
   allowed_trade_modes: string[];
+  allowed_entry2?: boolean;
 };
 
 type BotConfig = {
   bot_enabled: boolean;
+  entry2_enabled?: boolean;
   symbols: string[];
   timeframes: string[];
   trade_mode: string;
@@ -46,6 +48,7 @@ export default function BotPage() {
   const [maxPositions, setMaxPositions] = useState(2);
   const [maxGlobalExposure, setMaxGlobalExposure] = useState(2500);
   const [maxSinglePosition, setMaxSinglePosition] = useState(1250);
+  const [entry2Enabled, setEntry2Enabled] = useState(true);
 
   const limits = config?.plan_limits;
 
@@ -63,6 +66,7 @@ export default function BotPage() {
         setMaxPositions(data.max_positions ?? 2);
         setMaxGlobalExposure(data.max_global_exposure ?? 2500);
         setMaxSinglePosition(data.max_single_pos_exposure ?? 1250);
+        setEntry2Enabled(data.entry2_enabled ?? true);
       } finally {
         setLoading(false);
       }
@@ -87,17 +91,21 @@ export default function BotPage() {
     const mge = Math.min(maxGlobalExposure, limits.max_global_exposure_usd);
     const msp = Math.min(maxSinglePosition, limits.max_single_position_usd);
     try {
+      const payload: Record<string, unknown> = {
+        symbols: symbolsInput,
+        timeframes: timeframesInput,
+        trade_mode: config?.trade_mode ?? "BOTH",
+        target_loss_usd: tl,
+        max_global_exposure: mge,
+        max_single_pos_exposure: msp,
+        max_positions: mp,
+      };
+      if (limits?.allowed_entry2) {
+        payload.entry2_enabled = entry2Enabled;
+      }
       await apiPut(
         "/bot/config",
-        {
-          symbols: symbolsInput,
-          timeframes: timeframesInput,
-          trade_mode: config?.trade_mode ?? "BOTH",
-          target_loss_usd: tl,
-          max_global_exposure: mge,
-          max_single_pos_exposure: msp,
-          max_positions: mp,
-        },
+        payload,
         session.access_token
       );
       setConfig((c) =>
@@ -106,6 +114,7 @@ export default function BotPage() {
               ...c,
               symbols: symbolsInput,
               timeframes: timeframesInput,
+              entry2_enabled: limits?.allowed_entry2 ? entry2Enabled : c.entry2_enabled,
               target_loss_usd: tl,
               max_positions: mp,
               max_global_exposure: mge,
@@ -217,6 +226,41 @@ export default function BotPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className={`flex flex-wrap items-center gap-3 ${!limits?.allowed_entry2 ? "opacity-60" : ""}`}>
+            <label htmlFor="entry2" className={`text-sm font-medium text-zeedo-orange ${limits?.allowed_entry2 ? "cursor-pointer" : "cursor-not-allowed"}`}>
+              2ª entrada (-1.414 fib)
+            </label>
+            <button
+              type="button"
+              id="entry2"
+              role="switch"
+              aria-checked={limits?.allowed_entry2 ? entry2Enabled : false}
+              aria-disabled={!limits?.allowed_entry2}
+              onClick={() => limits?.allowed_entry2 && setEntry2Enabled((v) => !v)}
+              disabled={!limits?.allowed_entry2}
+              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
+                !limits?.allowed_entry2
+                  ? "cursor-not-allowed bg-zeedo-black/20 dark:bg-white/10"
+                  : `cursor-pointer ${entry2Enabled ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"}`
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                  limits?.allowed_entry2 && entry2Enabled ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
+            {limits?.allowed_entry2 ? (
+              <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
+                {entry2Enabled ? "Ativada" : "Desativada"}
+              </span>
+            ) : (
+              <span className="text-sm text-amber-600 dark:text-amber-500">
+                Indisponível no plano atual. Faça upgrade para o plano Pro para ter acesso.
+              </span>
+            )}
           </div>
 
           <hr className="border-zeedo-orange/20" />

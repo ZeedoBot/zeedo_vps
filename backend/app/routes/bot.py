@@ -39,11 +39,13 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
         "allowed_symbols": allowed if allowed else ALL_SYMBOLS,
         "allowed_timeframes": row.get("allowed_timeframes") or ["15m"],
         "allowed_trade_modes": row.get("allowed_trade_modes") or ["BOTH"],
+        "allowed_entry2": bool(row.get("allowed_entry2", False)),
     }
 
 
 class BotConfigUpdate(BaseModel):
     bot_enabled: Optional[bool] = None
+    entry2_enabled: Optional[bool] = None
     symbols: Optional[List[str]] = None
     timeframes: Optional[List[str]] = None
     trade_mode: Optional[str] = Field(None, pattern="^(BOTH|LONG_ONLY|SHORT_ONLY)$")
@@ -59,11 +61,12 @@ def get_config(user_id: str = Depends(get_current_user_id)):
     supabase = get_supabase()
     limits = _get_plan_limits(supabase, user_id)
     r = supabase.table("bot_config").select(
-        "symbols, timeframes, trade_mode, bot_enabled, "
+        "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, "
         "target_loss_usd, max_global_exposure, max_single_pos_exposure, max_positions, updated_at"
     ).eq("user_id", user_id).limit(1).execute()
     out = {
         "bot_enabled": False,
+        "entry2_enabled": True,
         "symbols": [],
         "timeframes": [],
         "trade_mode": "BOTH",
@@ -91,6 +94,8 @@ def update_config(
         return {"success": True, "message": "Nada a atualizar"}
 
     # Validação contra plan_limits
+    if body.entry2_enabled is not None and body.entry2_enabled and not limits.get("allowed_entry2", False):
+        raise HTTPException(400, "Entrada 2 disponível apenas nos planos Pro e Enterprise.")
     if body.target_loss_usd is not None:
         if body.target_loss_usd < limits["target_loss_min"] or body.target_loss_usd > limits["target_loss_max"]:
             raise HTTPException(400, f"target_loss deve estar entre {limits['target_loss_min']} e {limits['target_loss_max']} (plano {limits['plan']})")

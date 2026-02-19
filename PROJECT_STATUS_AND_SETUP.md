@@ -116,8 +116,6 @@ Bot - Mainnet (V1)/
 │   ├── run_checks.py
 │   ├── setup_vps.sh
 │   └── deploy_vps.sh
-├── zeedo_pro/
-│   └── dashboard_pro.py
 ├── docs/
 │   ├── README.md
 │   └── DASHBOARD_SAAS.md

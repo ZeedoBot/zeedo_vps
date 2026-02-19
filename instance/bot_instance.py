@@ -61,6 +61,11 @@ class BotInstance:
             # 4. Cria Telegram client
             self.telegram = TelegramClient(self.user_id, self.storage)
             
+            # Plano e entrada 2: basic=só entrada 1; pro/enterprise=entrada 1+2 com toggle
+            plan = self._get_user_plan()
+            allowed_entry2 = plan in ('pro', 'enterprise')
+            entry2_enabled = bool(bot_config_dict.get('entry2_enabled', True))
+
             # 5. Cria BotConfig
             self.config = BotConfig(
                 user_id=self.user_id,
@@ -69,6 +74,8 @@ class BotInstance:
                 symbols=bot_config_dict.get('symbols', []),
                 timeframes=bot_config_dict.get('timeframes', []),
                 trade_mode=bot_config_dict.get('trade_mode', 'BOTH'),
+                entry2_enabled=entry2_enabled,
+                entry2_allowed=allowed_entry2,
                 target_loss_usd=bot_config_dict.get('target_loss_usd', 5.0),
                 max_global_exposure=bot_config_dict.get('max_global_exposure', 5000.0),
                 max_single_pos_exposure=bot_config_dict.get('max_single_pos_exposure', 2500.0),
@@ -96,6 +103,18 @@ class BotInstance:
         self.running = False
         # TODO: Implementar sinalização de parada para o engine
     
+    def _get_user_plan(self) -> str:
+        """Retorna o plano do usuário (basic, pro, enterprise)."""
+        try:
+            backend = get_storage()
+            if hasattr(backend, '_client') and backend._client:
+                r = backend._client.table("users").select("subscription_tier").eq("id", self.user_id).limit(1).execute()
+                if r.data and r.data[0].get("subscription_tier"):
+                    return (r.data[0]["subscription_tier"] or "basic").lower()
+        except Exception as e:
+            self.logger.warning(f"Erro ao buscar plano: {e}")
+        return "basic"
+
     def _load_user_config(self) -> dict:
         """Carrega configuração do usuário do banco."""
         try:

@@ -86,7 +86,11 @@ FIB_LEVELS = [
     (1.618, 0.30)   #Alvo 3 (1.618)
 ]
 FIB_STOP_LEVEL = 2.0
-FIB_ENTRY2_LEVEL = 1.6
+FIB_ENTRY2_LEVEL = 1.414
+
+# ENTRADA 2 (Pro/Enterprise): plano permite e usuário pode ativar/desativar
+ENTRY2_ALLOWED = True   # Definido por plan (basic=False, pro/enterprise=True)
+ENTRY2_ENABLED = True   # Toggle do usuário em bot_config.entry2_enabled
 
 # CONEXÃO
 def setup_client():
@@ -127,7 +131,7 @@ def tg_send(msg):
         requests.post(url, json=payload, timeout=3)
         if TELEGRAM_BOT_TOKEN_SENDER and TELEGRAM_CHAT_ID_SENDER:
             try:
-                price_keywords = ['entrada:', '1ª entrada:', '2ª entrada:', '3ª entrada:', 'stop:', 'novo stop:', 'stop atual:', 'trigger:', 'preço:']
+                price_keywords = ['entrada:', '1ª entrada:', '2ª entrada:', 'stop:', 'novo stop:', 'stop atual:', 'trigger:', 'preço:']
                 value_keywords = ['tamanho:', 'total:', 'qty:', 'size:', 'valor:', 'pnl:', 'investido:']
                 def mult_val(m):  # Multiplica apenas valores monetários e quantidades
                     start = max(0, m.start() - 30)
@@ -984,34 +988,33 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 res, trade_id = place_trade_entry(exchange, sym, sig["side"], final_qty, entry_px)
                 signal_ts_sec = sig["signal_ts"] / 1000
                 if res:
-                    # Calcula quantidades esperadas: 2ª = 1ª+5%, 3ª = 1ª (permite diferenciar 1ª+3ª de 1ª+2ª)
+                    # 1ª entrada: -0.618. 2ª entrada (se permitido): -1.414. Apenas 2 entradas.
                     qty_entry_1 = final_qty  # 1ª entrada
-                    qty_entry_2 = final_qty + second_qty  # 1ª + 2ª
-                    qty_entry_3 = final_qty + second_qty + final_qty  # 1ª + 2ª + 3ª
-                    qty_entry_3_alt = final_qty + final_qty  # 1ª + 3ª (quando 3ª executa antes da 2ª)
-                    
-                    entry_tracker[sym] = {
+                    qty_entry_2 = final_qty + second_qty  # 1ª + 2ª (apenas se ENTRY2_ALLOWED e ENTRY2_ENABLED)
+                    tracker_data = {
                         'side': sig["side"],
-                        'tf': tf, 
-                        'placed_at': time.time(), 
+                        'tf': tf,
+                        'placed_at': time.time(),
                         'signal_ts': signal_ts_sec,
                         'planned_stop': stop_real,
-                        'entry2_px': entry2_px,
-                        'entry2_qty': second_qty,
-                        'entry2_placed': False,
-                        'tech_base': sig["tech_base"], 
+                        'tech_base': sig["tech_base"],
                         'setup_high': sig["setup_high"],
                         'setup_low': sig["setup_low"],
-                        'entry_px': entry_px, 
-                        'qty': final_qty, 
+                        'entry_px': entry_px,
+                        'qty': final_qty,
                         'qty_entry_1': qty_entry_1,
                         'qty_entry_2': qty_entry_2,
-                        'qty_entry_3': qty_entry_3,
-                        'qty_entry_3_alt': qty_entry_3_alt,
                         'trade_id': trade_id,
                         'pnl_realized': 0.0,
                         'last_size': 0.0
                     }
+                    if ENTRY2_ALLOWED and ENTRY2_ENABLED:
+                        tracker_data['entry2_px'] = entry2_px
+                        tracker_data['entry2_qty'] = second_qty
+                        tracker_data['entry2_placed'] = False
+                    else:
+                        tracker_data['entry2_placed'] = True  # Bloqueia entrada 2
+                    entry_tracker[sym] = tracker_data
                     storage.save_entry_tracker(entry_tracker)
                     
                     if sym not in history_tracker: history_tracker[sym] = {}
@@ -1101,16 +1104,13 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             mem_data = entry_tracker.get(sym, {})
             entry = float(pos["entryPx"])
             side = "long" if raw_size > 0 else "short"
-            new_stop = None  # evita UnboundLocalError quando 3ª entrada é confirmada sem ter passado pelo bloco do candle favorável
             
-            # Só aplica detecção de entrada 1/2/3 para trades do bot (não manuais)
+            # Só aplica detecção de entrada 1/2 para trades do bot (não manuais)
             is_bot_trade = mem_data.get('tf') is not None and mem_data.get('origin') != 'MANUAL'
             
-            # Identificação determinística baseada em qty esperado
+            # Identificação determinística baseada em qty esperado (apenas 2 entradas)
             qty_entry_1 = mem_data.get('qty_entry_1')
             qty_entry_2 = mem_data.get('qty_entry_2')
-            qty_entry_3 = mem_data.get('qty_entry_3')
-            qty_entry_3_alt = mem_data.get('qty_entry_3_alt')
             
             # Tolerância para arredondamentos de precisão (0.1% ou mínimo 0.01)
             def qty_matches(expected, actual):
@@ -1160,49 +1160,6 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 entry_tracker[sym]["last_size"] = size
                 entry_tracker[sym]["tp3_at_zero"] = True  # TP3 passa a nível 0 (setup high/low) após entrada 2
                 storage.save_entry_tracker(entry_tracker)
-            
-            # Entrada 3 confirmada (1ª+2ª+3ª ou 1ª+3ª quando 3ª executa antes da 2ª)
-            elif is_bot_trade and (qty_entry_3 or qty_entry_3_alt) and (qty_matches(qty_entry_3, size) or (qty_entry_3_alt and qty_matches(qty_entry_3_alt, size))) and size_changed and (not qty_matches(qty_entry_2, size) if qty_entry_2 else True) and (not qty_matches(qty_entry_3, last_size) and (not qty_entry_3_alt or not qty_matches(qty_entry_3_alt, last_size)) if last_size > 0 else True):
-                usd_value = size * entry
-                planned_stop_current = mem_data.get('planned_stop', entry)
-                logging.info(f"🚀 ENTRADA 3 CONFIRMADA: {side.upper()} {sym} | Qty:{size:.2f} | Preço:{entry:.4f} | Valor: ${usd_value:.2f}")
-                tg_send(
-                    f"🚀 ENTRADA 3 CONFIRMADA\n"
-                    f"{side.upper()} {sym} {mem_data.get('tf')}\n"
-                    f"Entrada: {entry:.4f}\n"
-                    f"Stop Atual: {planned_stop_current:.4f}\n"
-                    f"Total: {size:.2f}\n"
-                    f"Valor: ${usd_value:.2f}"
-                )
-                
-                # Cancela SL/TP (igual à entrada 2)
-                for o in all_open_orders:
-                    if o["coin"] == sym and o.get("reduceOnly", False):
-                        try:
-                            exchange.cancel(sym, o["oid"])
-                        except Exception as e:
-                            logging.error(f"Erro ao cancelar SL/TP {sym}: {e}")
-                
-                entry_tracker[sym]["last_size"] = size
-                # Stop: low (long) ou high (short) do candle que rompeu o setup até o último candle fechado
-                tf = mem_data.get('tf')
-                setup_break_ts = mem_data.get('setup_break_candle_ts')
-                if tf and setup_break_ts is not None:
-                    try:
-                        raw_hl = fetch_candles_hyperliquid(info, sym, tf)
-                        if raw_hl:
-                            data_hl = [[c["t"], float(c["o"]), float(c["h"]), float(c["l"]), float(c["c"]), float(c["v"])] for c in raw_hl]
-                            df_hl = pd.DataFrame(data_hl, columns=["timestamp", "open", "high", "low", "close", "volume"]).sort_values("timestamp").reset_index(drop=True)
-                            tf_sec = get_tf_seconds(tf)
-                            now_ms = int(time.time() * 1000)
-                            df_range = df_hl[(df_hl["timestamp"] >= setup_break_ts) & (df_hl["timestamp"] + tf_sec * 1000 <= now_ms)]
-                            if not df_range.empty:
-                                new_stop = round_px(df_range["low"].min() if side == "long" else df_range["high"].max())
-                                entry_tracker[sym]['planned_stop'] = new_stop
-                                logging.info(f"🛡️ Stop após entrada 3 (setup_break→último fechado): {sym} | {side} | {new_stop:.4f}")
-                    except Exception as e:
-                        logging.error(f"Erro stop após entrada 3 {sym}: {e}")
-                storage.save_entry_tracker(entry_tracker)
             curr_price = float(all_mids.get(sym, entry))
 
             my_orders = [o for o in all_open_orders if o["coin"] == sym]
@@ -1248,106 +1205,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
 
                 place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor, tp3_at_zero=mem_data.get('tp3_at_zero', False))
 
-            # Marca o candle que perde o low do setup (long) ou high do setup (short) — referência para 3ª entrada
-            if not is_manual and not mem_data.get('setup_break_candle_ts') and setup_high is not None and setup_low is not None and abs(size) > 0:
-                tf = mem_data.get('tf')
-                if tf:
-                    try:
-                        signal_ts_ms = int(mem_data.get('signal_ts', 0) * 1000) or int(mem_data.get('placed_at', 0) * 1000)
-                        raw_hl = fetch_candles_hyperliquid(info, sym, tf)
-                        if raw_hl and len(raw_hl) >= 1:
-                            tf_sec = get_tf_seconds(tf)
-                            now_ms = int(time.time() * 1000)
-                            candles_sorted = sorted(raw_hl, key=lambda x: x["t"])
-                            for c in candles_sorted:
-                                ts = c["t"]
-                                if ts <= signal_ts_ms:
-                                    continue
-                                if ts + tf_sec * 1000 >= now_ms:
-                                    break
-                                low_c = float(c["l"])
-                                high_c = float(c["h"])
-                                breaks_setup = (side == "long" and low_c < setup_low) or (side == "short" and high_c > setup_high)
-                                if breaks_setup:
-                                    if sym in entry_tracker:
-                                        entry_tracker[sym]['setup_break_candle_ts'] = ts
-                                        storage.save_entry_tracker(entry_tracker)
-                                        logging.info(f"📌 Candle de referência 3ª entrada ({sym}): perda do {'low' if side == 'long' else 'high'} do setup em ts={ts}")
-                                    break
-                    except Exception as e:
-                        logging.error(f"Erro ao marcar setup_break_candle_ts {sym}: {e}")
-
-            # 3ª entrada: STOP MARKET no primeiro candle favorável após o candle que perdeu o low/high do setup
-            if not is_manual and mem_data.get('setup_break_candle_ts') and not mem_data.get('third_entry_placed', False):
-                if mem_data.get("pnl_realized", 0) <= 0 and abs(size) > 0:  # Só coloca se não houve TP parcial (pnl <= 0) e ainda há posição
-                    tf = mem_data.get('tf')
-                    entry2_qty = mem_data.get('entry2_qty')
-                    planned_stop = mem_data.get('planned_stop')
-                    if tf and entry2_qty and entry2_qty > 0:
-                        try:
-                            raw_hl = fetch_candles_hyperliquid(info, sym, tf)
-                            if raw_hl and len(raw_hl) >= 2:
-                                data_hl = [[c["t"], float(c["o"]), float(c["h"]), float(c["l"]), float(c["c"]), float(c["v"])] for c in raw_hl]
-                                df_hl = pd.DataFrame(data_hl, columns=["timestamp", "open", "high", "low", "close", "volume"])
-                                df_hl = df_hl.sort_values("timestamp").reset_index(drop=True)
-                                
-                                tf_sec = get_tf_seconds(tf)
-                                now = int(time.time())
-                                if len(df_hl) > 0 and df_hl.iloc[-1]["timestamp"] + tf_sec * 1000 > now * 1000:
-                                    df_hl = df_hl.iloc[:-1]
-                                
-                                setup_break_ts = mem_data.get('setup_break_candle_ts')
-                                base_idx = None
-                                for idx in range(len(df_hl)):
-                                    if df_hl.iloc[idx]["timestamp"] == setup_break_ts:
-                                        base_idx = idx
-                                        break
-                                
-                                if base_idx is not None and base_idx < len(df_hl) - 1:
-                                    if setup_break_ts and setup_break_ts + tf_sec * 1000 >= now * 1000:
-                                        pass
-                                    else:
-                                        for idx in range(base_idx + 1, len(df_hl)):
-                                            candle = df_hl.iloc[idx]
-                                            candle_close_time = candle["timestamp"] + tf_sec * 1000
-                                            if candle_close_time >= now * 1000:
-                                                continue
-                                            
-                                            is_favoravel = (side == "long" and candle["close"] > candle["open"]) or (side == "short" and candle["close"] < candle["open"])
-                                            if is_favoravel:
-                                                # Cria 3ª entrada STOP MARKET (stop NÃO é movido aqui; só após confirmação da entrada 3)
-                                                if side == "long":
-                                                    third_entry_trigger = round_px(candle["high"])
-                                                    new_stop = round_px(candle["low"])
-                                                else:
-                                                    third_entry_trigger = round_px(candle["low"])
-                                                    new_stop = round_px(candle["high"])
-                                                
-                                                # Verifica se novo stop seria melhor que o atual (só para decidir se coloca a ordem)
-                                                if planned_stop:
-                                                    if side == "long" and new_stop <= planned_stop:
-                                                        continue
-                                                    if side == "short" and new_stop >= planned_stop:
-                                                        continue
-                                                
-                                                # Cria 3ª entrada STOP MARKET (tamanho = 1ª entrada = final_qty)
-                                                try:
-                                                    is_buy = (side == "long")
-                                                    trade_id = mem_data.get('trade_id', sym)
-                                                    third_qty = mem_data.get('qty', entry2_qty)  # 3ª = final_qty (igual 1ª)
-                                                    client_oid = f"{trade_id}_3rd_{int(time.time()*1000)}".replace(" ", "_").replace("-", "_")
-                                                    exchange.order(sym, is_buy, third_qty, third_entry_trigger, {"trigger": {"triggerPx": third_entry_trigger, "isMarket": True, "tpsl": "sl"}}, reduce_only=False)
-                                                    entry_tracker[sym]['third_entry_placed'] = True
-                                                    entry_tracker[sym]['third_entry_px'] = third_entry_trigger
-                                                    storage.save_entry_tracker(entry_tracker)
-                                                    logging.info(f"🚀 3ª ENTRADA (STOP MARKET): {sym} | {side} | Qty:{third_qty} | Trigger:{third_entry_trigger:.4f}")
-                                                    break
-                                                except Exception as e:
-                                                    logging.error(f"Erro ao criar 3ª entrada {sym}: {e}")
-                        except Exception as e:
-                            logging.error(f"Erro ao processar 3ª entrada {sym}: {e}")
-
-            # Segunda entrada (limit) no nível de reentrada (ex-antigo stop = setup low/high)
+            # Segunda entrada (limit) no nível -1.414 fib (Pro/Enterprise, se ativada)
             if not is_manual and not mem_data.get('entry2_placed', True):
                 if mem_data.get("pnl_realized", 0) > 0:
                     entry_tracker[sym]['entry2_placed'] = True
@@ -1444,8 +1302,8 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 for o in my_orders:
                     if o["coin"] == sym:
                         client_oid = str(o.get("clientOrderId", "")).lower()
-                        # Padrões de ordens do bot: trade_id, TP1/TP2/TP3, 3rd, etc.
-                        if any(pattern in client_oid for pattern in ["tp1", "tp2", "tp3", "_3rd_", "tp1_", "tp2_", "tp3_"]):
+                        # Padrões de ordens do bot: trade_id, TP1/TP2/TP3, etc.
+                        if any(pattern in client_oid for pattern in ["tp1", "tp2", "tp3", "tp1_", "tp2_", "tp3_"]):
                             has_bot_orders = True
                             break
                         # Verifica se o clientOrderId começa com um padrão conhecido de trade_id

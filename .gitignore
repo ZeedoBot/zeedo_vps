@@ -21,8 +21,6 @@ bot_tracker.json
 bot_history.json
 trades_database.json
 bot_config.json
-zeedo_pro/trades_database_telegram.json
-
 # IDE / Editor
 .vscode/
 .idea/
