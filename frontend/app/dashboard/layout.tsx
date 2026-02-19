@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/trades", label: "Trades" },
   { href: "/dashboard/wallet", label: "Carteira" },
   { href: "/dashboard/telegram", label: "Telegram" },
   { href: "/dashboard/bot", label: "Configurações do Bot" },

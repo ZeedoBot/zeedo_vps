@@ -114,7 +114,8 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
     tracker = _fetch_tracker(user_id)
     logs = _fetch_logs()
 
-    # Classifica posições: ativas (com size) vs pendentes
+    # Classifica posições: ativas (no tracker E na Hyperliquid) vs pendentes (só no tracker)
+    # Fonte de verdade: bot_tracker. Match com HL para distinguir ativa vs pendente.
     active_positions: list[dict] = []
     pending_positions: list[dict] = []
     if wallet:
@@ -122,12 +123,12 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
             resp = requests.post(HYPERLIQUID_API, json={"type": "clearinghouseState", "user": wallet}, timeout=10)
             if resp.ok:
                 data = resp.json()
-                positions = {p["position"]["coin"]: float(p["position"]["szi"]) for p in data.get("assetPositions", []) if float(p["position"]["szi"]) != 0}
+                hl_positions = {p["position"]["coin"]: float(p["position"]["szi"]) for p in data.get("assetPositions", []) if float(p["position"]["szi"]) != 0}
                 for t in tracker:
                     sym = t.get("symbol", "")
-                    if sym in positions:
+                    if sym in hl_positions:
                         t["status"] = "ativa"
-                        t["size"] = positions[sym]
+                        t["size"] = abs(hl_positions[sym])
                         active_positions.append(t)
                     else:
                         t["status"] = "pendente"
@@ -136,7 +137,8 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                 for t in tracker:
                     t["status"] = "pendente"
                     pending_positions.append(t)
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Erro ao buscar clearinghouseState: {e}")
             for t in tracker:
                 t["status"] = "pendente"
                 pending_positions.append(t)
