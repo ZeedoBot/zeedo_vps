@@ -62,11 +62,11 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
       <div className="card w-full max-w-md">
-        <h1 className="text-xl font-semibold text-gray-900 mb-1">Criar conta</h1>
-        <p className="text-gray-600 text-sm mb-6">Preencha seus dados para começar.</p>
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Criar conta</h1>
+        <p className="text-gray-600 dark:text-zeedo-white/80 text-sm mb-6">Preencha seus dados para começar.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-zeedo-white/90 mb-1">
               E-mail
             </label>
             <input
@@ -81,7 +81,7 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-zeedo-white/90 mb-1">
               Senha
             </label>
             <input
@@ -96,7 +96,7 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-zeedo-white/90 mb-1">
               Confirmar senha
             </label>
             <input

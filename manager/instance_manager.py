@@ -55,9 +55,16 @@ class InstanceManager:
     def _check_users(self):
         """Verifica usuários ativos e gerencia instâncias."""
         try:
-            # Busca usuários ativos no banco
-            active_users = self._get_active_users()
+            # Busca usuários ativos no banco (bot_enabled = true)
+            active_users = set(self._get_active_users())
             
+            # Para instâncias de usuários que desligaram (não estão mais em active_users)
+            for user_id in list(self.active_instances.keys()):
+                if user_id not in active_users:
+                    self.logger.info(f"Bot desabilitado para usuário {user_id}, parando...")
+                    self._stop_instance(user_id)
+            
+            # Inicia/atualiza instâncias para usuários ativos
             for user_id in active_users:
                 config = self._get_user_config(user_id)
                 
@@ -77,7 +84,6 @@ class InstanceManager:
                         self._restart_instance(user_id, config)
                 else:
                     if is_running:
-                        # Para instância
                         self.logger.info(f"Bot desabilitado para usuário {user_id}, parando...")
                         self._stop_instance(user_id)
         except Exception as e:
