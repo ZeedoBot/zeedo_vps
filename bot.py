@@ -79,11 +79,10 @@ LOOKBACK_DIVERGENCE = 35
 MIN_PIVOT_DIST = 4           
 LOCAL_LOW_WINDOW = 4    #MENOR CORPO DOS ÚLTIMOS 4
 
-# ALVOS DE FIBO
+# ALVOS DE FIBO (apenas 2 alvos)
 FIB_LEVELS = [
-    (0.618, 0.10),  #Alvo 1 (0.618)
-    (1.0, 0.60),   #Alvo 2 (1.0)
-    (1.618, 0.30)   #Alvo 3 (1.618)
+    (0.618, 0.50),  # Alvo 1 (0.618)
+    (1.0, 0.50),    # Alvo 2 (1.0)
 ]
 FIB_STOP_LEVEL = 2.0
 FIB_ENTRY2_LEVEL = 1.414
@@ -580,35 +579,32 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         logging.error(f"Erro Entry LIMIT: {e}")
         return None, None
 
-def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, tp3_at_zero=False):
+def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None):
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
 
     start_px = anchor_px if anchor_px else entry_px
-    is_buy_tp = False if side == "long" else True 
+    is_buy_tp = False if side == "long" else True
     logging.info(f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}")
 
     for idx, (fib_mult, pct) in enumerate(FIB_LEVELS, start=1):
         qty_tp = round_sz(total_qty * pct, sz_dec)
         if qty_tp <= 0:
             continue
-        # Após confirmação da entrada 2: TP3 vai para nível 0 (setup high/low)
-        use_mult = 0.0 if (idx == 3 and tp3_at_zero) else fib_mult
         if side == "long":
-            target_px = start_px + (fib_base_dist * use_mult)
+            target_px = start_px + (fib_base_dist * fib_mult)
         else:
-            target_px = start_px - (fib_base_dist * use_mult)
+            target_px = start_px - (fib_base_dist * fib_mult)
 
         target_px = round_px(target_px)
-        client_oid = f"TP{idx}_{use_mult}"
+        client_oid = f"TP{idx}_{fib_mult}"
 
         try:
             exchange.order(symbol, is_buy_tp, qty_tp, target_px, {"limit": {"tif": "Gtc"}, "clientOrderId": client_oid}, reduce_only=True)
-            logging.info(f"🎯 TP{idx} ({use_mult}) @ {target_px}")
+            logging.info(f"🎯 TP{idx} ({fib_mult}) @ {target_px}")
         except Exception as e:
-            logging.error(f"Erro TP {use_mult}: {e}")
-    logging.info(f"⚠️ 1% Runner mantido.")
+            logging.error(f"Erro TP {fib_mult}: {e}")
 
 def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
     try:
@@ -1158,7 +1154,6 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                             logging.error(f"Erro ao cancelar SL/TP {sym}: {e}")
                 
                 entry_tracker[sym]["last_size"] = size
-                entry_tracker[sym]["tp3_at_zero"] = True  # TP3 passa a nível 0 (setup high/low) após entrada 2
                 storage.save_entry_tracker(entry_tracker)
             curr_price = float(all_mids.get(sym, entry))
 
@@ -1203,7 +1198,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     anchor = entry
                     logging.warning(f"⚠️ Fallback Fib para {sym}")
 
-                place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor, tp3_at_zero=mem_data.get('tp3_at_zero', False))
+                place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor)
 
             # Segunda entrada (limit) no nível -1.414 fib (Pro/Enterprise, se ativada)
             if not is_manual and not mem_data.get('entry2_placed', True):
@@ -1302,8 +1297,8 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 for o in my_orders:
                     if o["coin"] == sym:
                         client_oid = str(o.get("clientOrderId", "")).lower()
-                        # Padrões de ordens do bot: trade_id, TP1/TP2/TP3, etc.
-                        if any(pattern in client_oid for pattern in ["tp1", "tp2", "tp3", "tp1_", "tp2_", "tp3_"]):
+                        # Padrões de ordens do bot: trade_id, TP1, TP2
+                        if any(pattern in client_oid for pattern in ["tp1", "tp2", "tp1_", "tp2_"]):
                             has_bot_orders = True
                             break
                         # Verifica se o clientOrderId começa com um padrão conhecido de trade_id

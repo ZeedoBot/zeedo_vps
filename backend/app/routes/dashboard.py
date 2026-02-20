@@ -114,8 +114,9 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
     tracker = _fetch_tracker(user_id)
     logs = _fetch_logs()
 
-    # Classifica posições: ativas (no tracker E na Hyperliquid) vs pendentes (só no tracker)
-    # Fonte de verdade: bot_tracker. Match com HL para distinguir ativa vs pendente.
+    # Posições ativas: tracker com posição aberta na Hyperliquid
+    # Posições pendentes: tracker sem posição (ordem limit aguardando ou setup). Quando o trade
+    # encerra, o bot faz entry_tracker.pop() e save — o SupabaseStorage agora remove do banco.
     active_positions: list[dict] = []
     pending_positions: list[dict] = []
     if wallet:

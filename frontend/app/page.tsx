@@ -16,13 +16,18 @@ export default function HomePage() {
         <h1 className="text-2xl font-semibold text-zeedo-black dark:text-zeedo-white mb-2">Zeedo</h1>
         <p className="text-zeedo-black/70 dark:text-zeedo-white/70 mb-8">Você vive a vida. O Zeedo vive o mercado.<br />Sem emoção, sem cansaço. Apenas a matemática trabalhando por você.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/login" className="btn-primary text-center">
-            Entrar
-          </Link>
-          <Link href="/signup" className="btn-secondary text-center">
+          <Link href="/signup" className="btn-primary text-center">
             Criar conta
           </Link>
+          <Link href="/login" className="btn-secondary text-center">
+            Entrar
+          </Link>
         </div>
+        <p className="mt-4">
+          <Link href="/vendas" className="text-sm text-zeedo-orange hover:underline">
+            Conheça o Zeedo →
+          </Link>
+        </p>
         <p className="mt-8 text-xs text-zeedo-black/50 dark:text-zeedo-white/50 text-center">
           <Link href="/termos" className="hover:text-zeedo-orange hover:underline">Termos de Uso</Link>
           {" · "}

@@ -63,12 +63,31 @@ class SupabaseStorage(StorageBase):
             return {}
 
     def save_entry_tracker(self, data: dict, user_id: str = None) -> None:
-        """Salva entry_tracker em bot_tracker (upsert por symbol)."""
+        """
+        Salva entry_tracker em bot_tracker (upsert por symbol).
+        Remove do banco os symbols que não estão mais em data (equivalente ao LocalStorage,
+        que sobrescreve o arquivo inteiro). Assim entry_tracker.pop(sym) + save persiste a remoção.
+        """
         if not self._client or not isinstance(data, dict):
             return
         try:
             user_id = user_id or self._user_id
-            # Upsert cada symbol individualmente
+            current_symbols = set(data.keys()) if data else set()
+            # Busca symbols atuais no DB para este user
+            query = self._client.table(TABLE_TRACKER).select("symbol")
+            if user_id:
+                query = query.eq("user_id", user_id)
+            r = query.execute()
+            db_symbols = {row["symbol"] for row in (r.data or []) if row.get("symbol")}
+            # Remove do banco os symbols que não estão mais no data
+            to_delete = db_symbols - current_symbols
+            if to_delete:
+                for symbol in to_delete:
+                    q = self._client.table(TABLE_TRACKER).delete().eq("symbol", symbol)
+                    if user_id:
+                        q = q.eq("user_id", user_id)
+                    q.execute()
+            # Upsert cada symbol que está no data
             for symbol, symbol_data in data.items():
                 if symbol and isinstance(symbol_data, dict):
                     record = {
