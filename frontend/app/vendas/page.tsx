@@ -10,6 +10,7 @@ const PLANS = [
     id: "basic",
     name: "Basic",
     price: 49,
+    recommended: false,
     features: ["Ativos: BTC e ETH", "Timeframes: 15m", "Trades simultâneos: máx. 2"],
     cta: "Começar",
   },
@@ -31,6 +32,7 @@ const PLANS = [
     id: "satoshi",
     name: "Satoshi",
     price: 199,
+    recommended: false,
     features: [
       "Ativos: Todos disponíveis",
       "Timeframes: 5m, 15m, 30m, 1h, 4h e 1d",
