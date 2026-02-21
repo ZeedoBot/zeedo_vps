@@ -951,22 +951,32 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 entry2_px = round_px(sig["entry2_px"])
                 stop_real = round_px(sig["stop_real"])
                 avg_entry = (entry_px + entry2_px) / 2
-                risk_per_unit = abs(avg_entry - stop_real)
+                use_two_entries = ENTRY2_ALLOWED and ENTRY2_ENABLED
+                risk_per_unit = abs(avg_entry - stop_real) if use_two_entries else abs(entry_px - stop_real)
                 if risk_per_unit == 0: 
                     analyzed_candles[candle_id] = True
                     continue
                 total_size = TARGET_LOSS_USD / risk_per_unit
-                qty_first = total_size / 2
-                qty_second = total_size / 2
-                trade_notional = total_size * entry_px
-                limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
-                if trade_notional > limit_notional:
-                    total_size = limit_notional / avg_entry
+                if use_two_entries:
                     qty_first = total_size / 2
                     qty_second = total_size / 2
+                else:
+                    qty_first = total_size
+                    qty_second = 0
+                trade_notional = total_size * entry_px
+                limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
+                anchor_entry = avg_entry if use_two_entries else entry_px
+                if trade_notional > limit_notional:
+                    total_size = limit_notional / anchor_entry
+                    if use_two_entries:
+                        qty_first = total_size / 2
+                        qty_second = total_size / 2
+                    else:
+                        qty_first = total_size
+                        qty_second = 0
                 sz_dec = get_precision(meta, sym)
                 final_qty = round_sz(qty_first, sz_dec)
-                second_qty = round_sz(final_qty * 1.05, sz_dec)  # 2ª entrada = 1ª + 5%
+                second_qty = round_sz(qty_second, sz_dec) if use_two_entries else 0
                 if final_qty * entry_px < 10: 
                     analyzed_candles[candle_id] = True
                     continue

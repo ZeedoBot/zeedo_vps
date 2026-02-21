@@ -110,15 +110,19 @@ export default function ChoosePlanPage() {
                     <>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">BTC e ETH</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">6 tokens (BTC, ETH, SOL, XRP, BNB, HYPE)</span>
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
                         <span className="ml-2 text-gray-600 dark:text-gray-400">15m</span>
                       </div>
                       <div className="text-sm">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">$5</span>
+                      </div>
+                      <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">Máx. 2</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">1</span>
                       </div>
                     </>
                   )}
@@ -138,7 +142,7 @@ export default function ChoosePlanPage() {
                       </div>
                       <div className="text-sm pt-1">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">$50K</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">$150 por trade</span>
                       </div>
                       <div className="text-sm pt-2">
                         <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>

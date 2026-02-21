@@ -25,7 +25,6 @@ type BotConfig = {
   timeframes: string[];
   trade_mode: string;
   target_loss_usd: number;
-  max_global_exposure: number;
   max_single_pos_exposure: number;
   max_positions: number;
   plan_limits?: PlanLimits;
@@ -46,7 +45,6 @@ export default function BotPage() {
   const [timeframesInput, setTimeframesInput] = useState<string[]>([]);
   const [targetLoss, setTargetLoss] = useState(5);
   const [maxPositions, setMaxPositions] = useState(2);
-  const [maxGlobalExposure, setMaxGlobalExposure] = useState(2500);
   const [maxSinglePosition, setMaxSinglePosition] = useState(1250);
   const [entry2Enabled, setEntry2Enabled] = useState(true);
 
@@ -62,10 +60,11 @@ export default function BotPage() {
         setConfig(data);
         setSymbolsInput(data.symbols ?? []);
         setTimeframesInput(data.timeframes ?? []);
+        const pl = data.plan_limits;
         setTargetLoss(data.target_loss_usd ?? 5);
         setMaxPositions(data.max_positions ?? 2);
-        setMaxGlobalExposure(data.max_global_exposure ?? 2500);
-        setMaxSinglePosition(data.max_single_pos_exposure ?? 1250);
+        const maxSingle = data.max_single_pos_exposure ?? 1250;
+        setMaxSinglePosition(pl ? Math.min(maxSingle, pl.max_single_position_usd) : maxSingle);
         setEntry2Enabled(data.entry2_enabled ?? true);
       } finally {
         setLoading(false);
@@ -88,7 +87,6 @@ export default function BotPage() {
     setMessage(null);
     const tl = clampValue(targetLoss, limits.target_loss_min, limits.target_loss_max);
     const mp = clampValue(maxPositions, 1, limits.max_positions);
-    const mge = Math.min(maxGlobalExposure, limits.max_global_exposure_usd);
     const msp = Math.min(maxSinglePosition, limits.max_single_position_usd);
     try {
       const payload: Record<string, unknown> = {
@@ -96,7 +94,7 @@ export default function BotPage() {
         timeframes: timeframesInput,
         trade_mode: config?.trade_mode ?? "BOTH",
         target_loss_usd: tl,
-        max_global_exposure: mge,
+        max_global_exposure: limits.max_global_exposure_usd,
         max_single_pos_exposure: msp,
         max_positions: mp,
       };
@@ -117,14 +115,12 @@ export default function BotPage() {
               entry2_enabled: limits?.allowed_entry2 ? entry2Enabled : c.entry2_enabled,
               target_loss_usd: tl,
               max_positions: mp,
-              max_global_exposure: mge,
               max_single_pos_exposure: msp,
             }
           : null
       );
       setTargetLoss(tl);
       setMaxPositions(mp);
-      setMaxGlobalExposure(mge);
       setMaxSinglePosition(msp);
       setMessage({ type: "ok", text: "Configuração salva. O bot será reiniciado em até 30 segundos se estiver ligado." });
     } catch (err) {
@@ -291,7 +287,12 @@ export default function BotPage() {
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                Plano: {limits.target_loss_min} – {limits.target_loss_max} USD
+                Máx. {limits.target_loss_min} – {limits.target_loss_max >= 99999 ? "Ilimitado" : `${limits.target_loss_max} USD`}
+              </p>
+              <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
+                {entry2Enabled
+                  ? "O target loss considera a média entre a 1ª e 2ª entrada. Se o stop for acionado apenas com a 1ª entrada, a perda será menor."
+                  : "Target loss considera apenas a 1ª entrada."}
               </p>
             </div>
             <div title={`Limite do plano: 1 – ${limits.max_positions}`}>
@@ -309,30 +310,10 @@ export default function BotPage() {
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                Plano: até {limits.max_positions}
+                Máx. {limits.max_positions}
               </p>
             </div>
-            <div title={`Limite do plano: até ${limits.max_global_exposure_usd} USD`}>
-              <label htmlFor="max_global" className="block text-sm font-medium text-zeedo-orange mb-1">
-                Patrimônio exposto (total)
-              </label>
-              <input
-                id="max_global"
-                type="number"
-                min={0}
-                max={limits.max_global_exposure_usd}
-                step={100}
-                value={maxGlobalExposure}
-                onChange={(e) =>
-                  setMaxGlobalExposure(Math.min(Number(e.target.value) || 0, limits.max_global_exposure_usd))
-                }
-                className="input-field max-w-xs"
-              />
-              <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                Plano: até {limits.max_global_exposure_usd.toLocaleString()} USD
-              </p>
-            </div>
-            <div title={`Limite do plano: até ${limits.max_single_position_usd} USD`}>
+            <div title={limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.max_single_position_usd} USD`}>
               <label htmlFor="max_single" className="block text-sm font-medium text-zeedo-orange mb-1">
                 Patrimônio por trade
               </label>
@@ -341,7 +322,7 @@ export default function BotPage() {
                 type="number"
                 min={0}
                 max={limits.max_single_position_usd}
-                step={100}
+                step={limits.max_single_position_usd <= 10 ? 1 : 100}
                 value={maxSinglePosition}
                 onChange={(e) =>
                   setMaxSinglePosition(Math.min(Number(e.target.value) || 0, limits.max_single_position_usd))
@@ -349,7 +330,7 @@ export default function BotPage() {
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                Plano: até {limits.max_single_position_usd.toLocaleString()} USD
+                {limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.max_single_position_usd.toLocaleString()} USD`}
               </p>
             </div>
           </div>

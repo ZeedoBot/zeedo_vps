@@ -124,12 +124,24 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
             resp = requests.post(HYPERLIQUID_API, json={"type": "clearinghouseState", "user": wallet}, timeout=10)
             if resp.ok:
                 data = resp.json()
-                hl_positions = {p["position"]["coin"]: float(p["position"]["szi"]) for p in data.get("assetPositions", []) if float(p["position"]["szi"]) != 0}
+                hl_positions_map = {}
+                for p in data.get("assetPositions", []):
+                    pos = p.get("position", {})
+                    szi = float(pos.get("szi", 0))
+                    if szi != 0:
+                        coin = pos.get("coin", "")
+                        hl_positions_map[coin] = {
+                            "szi": szi,
+                            "unrealizedPnl": float(pos.get("unrealizedPnl", 0) or 0),
+                            "entryPx": float(pos.get("entryPx", 0) or 0),
+                        }
                 for t in tracker:
                     sym = t.get("symbol", "")
-                    if sym in hl_positions:
+                    if sym in hl_positions_map:
+                        hlp = hl_positions_map[sym]
                         t["status"] = "ativa"
-                        t["size"] = abs(hl_positions[sym])
+                        t["size"] = abs(hlp["szi"])
+                        t["unrealized_pnl"] = round(hlp["unrealizedPnl"], 2)
                         active_positions.append(t)
                     else:
                         t["status"] = "pendente"

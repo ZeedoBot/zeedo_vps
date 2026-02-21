@@ -14,6 +14,7 @@ type Position = {
   placed_at: number;
   status: string;
   size?: number;
+  unrealized_pnl?: number;
 };
 
 type OverviewData = {
@@ -26,25 +27,28 @@ type OverviewData = {
 export default function TradesPage() {
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) return;
-      try {
-        const ov = await apiGet<OverviewData>("/dashboard/overview", session.access_token);
-        setOverview(ov);
-      } catch {
-        setError("Não foi possível carregar os dados.");
-      } finally {
-        setLoading(false);
-      }
+  async function load(showRefreshing = false) {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    try {
+      if (showRefreshing) setRefreshing(true);
+      setError("");
+      const ov = await apiGet<OverviewData>("/dashboard/overview", session.access_token);
+      setOverview(ov);
+    } catch {
+      setError("Não foi possível carregar os dados.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  }
+
+  useEffect(() => {
     load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>;
@@ -61,9 +65,19 @@ export default function TradesPage() {
 
       <div className="space-y-6">
         <section>
-          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
-            🟢 Posições em Aberto
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">
+              🟢 Posições ativas
+            </h2>
+            <button
+              type="button"
+              onClick={() => load(true)}
+              disabled={refreshing}
+              className="text-sm text-zeedo-orange hover:underline disabled:opacity-50 disabled:no-underline"
+            >
+              {refreshing ? "Atualizando…" : "Atualizar"}
+            </button>
+          </div>
           {overview?.open_positions && overview.open_positions.length > 0 ? (
             <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
               <table className="min-w-full divide-y divide-zeedo-orange/20">
@@ -74,6 +88,7 @@ export default function TradesPage() {
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Valor</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">PnL</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
                   </tr>
                 </thead>
@@ -85,6 +100,9 @@ export default function TradesPage() {
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.side}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
+                      <td className={`px-4 py-2 text-sm text-right font-medium ${(p.unrealized_pnl ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                        {p.unrealized_pnl != null ? `${p.unrealized_pnl >= 0 ? "+" : ""}$${p.unrealized_pnl.toFixed(2)}` : "-"}
+                      </td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
                     </tr>
                   ))}
