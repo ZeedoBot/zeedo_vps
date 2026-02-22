@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { apiGet, apiPost } from "@/lib/api";
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next");
   const [emailOrUsername, setEmailOrUsername] = useState("");
@@ -110,5 +110,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

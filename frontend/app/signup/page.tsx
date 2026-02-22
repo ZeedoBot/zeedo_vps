@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
-export default function SignupPage() {
+function SignupContent() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next");
   const [email, setEmail] = useState("");
@@ -137,5 +137,17 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
   );
 }
