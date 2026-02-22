@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     telegram_bot_token: str = ""  # Token do bot (do .env)
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_basic: str = ""
+    stripe_price_pro: str = ""
+    stripe_price_satoshi: str = ""
 
     class Config:
         env_file = str(_ENV_FILE) if _ENV_FILE.exists() else ".env"

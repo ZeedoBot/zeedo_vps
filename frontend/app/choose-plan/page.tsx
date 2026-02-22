@@ -17,7 +17,14 @@ export default function ChoosePlanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasPlan, setHasPlan] = useState(false);
+  const [canceled, setCanceled] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("canceled=1")) {
+      setCanceled(true);
+    }
+  }, []);
 
   useEffect(() => {
     async function check() {
@@ -49,14 +56,23 @@ export default function ChoosePlanPage() {
     setLoading(true);
     setError("");
     try {
-      const result = await apiPost("/plans/choose", { plan: planId }, session.access_token);
-      if (result) {
-        router.push("/dashboard");
-        router.refresh();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const result = await apiPost<{ url: string }>(
+        "/stripe/create-checkout-session",
+        {
+          plan: planId,
+          success_url: `${origin}/dashboard?checkout=success`,
+          cancel_url: `${origin}/choose-plan?canceled=1`,
+        },
+        session.access_token
+      );
+      if (result?.url) {
+        window.location.href = result.url;
+        return;
       }
     } catch (err) {
-      console.error("Erro ao selecionar plano:", err);
-      const errorMessage = err instanceof Error ? err.message : "Erro ao salvar plano.";
+      console.error("Erro ao criar checkout:", err);
+      const errorMessage = err instanceof Error ? err.message : "Erro ao processar pagamento.";
       setError(errorMessage.includes("fetch") ? "Erro de conexão. Verifique se a API está rodando." : errorMessage);
     } finally {
       setLoading(false);
@@ -75,6 +91,11 @@ export default function ChoosePlanPage() {
         <p className="text-zeedo-black/60 dark:text-zeedo-white/60 mb-8 text-center">
           Selecione o plano que melhor atende às suas necessidades. Você pode alterar depois.
         </p>
+        {canceled && (
+          <p className="mb-4 text-sm text-amber-600 dark:text-amber-400 text-center">
+            Pagamento cancelado. Você pode tentar novamente quando quiser.
+          </p>
+        )}
         {error && (
           <p className="mb-4 text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
         )}
