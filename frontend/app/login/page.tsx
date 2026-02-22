@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { apiGet, apiPost } from "@/lib/api";
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next");
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -38,9 +40,13 @@ export default function LoginPage() {
       try {
         const me = await apiGet<{ subscription_tier?: string }>("/auth/me", res.access_token);
         const hasPlan = me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier);
-        router.push(hasPlan ? "/dashboard" : "/choose-plan");
+        if (nextPath === "/segredo") {
+          router.push("/segredo");
+        } else {
+          router.push(hasPlan ? "/dashboard" : "/choose-plan");
+        }
       } catch {
-        router.push("/choose-plan");
+        router.push(nextPath === "/segredo" ? "/segredo" : "/choose-plan");
       }
       router.refresh();
     } finally {
@@ -93,7 +99,7 @@ export default function LoginPage() {
         </form>
         <p className="mt-4 text-center text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
           Não tem conta?{" "}
-          <Link href="/signup" className="font-medium text-zeedo-orange hover:underline">
+          <Link href={nextPath === "/segredo" ? "/signup?next=/segredo" : "/signup"} className="font-medium text-zeedo-orange hover:underline">
             Criar conta
           </Link>
         </p>

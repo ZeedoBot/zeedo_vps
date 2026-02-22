@@ -579,16 +579,18 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         logging.error(f"Erro Entry LIMIT: {e}")
         return None, None
 
-def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None):
+def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, entry2_filled=False):
+    """Coloca TP1 (0.618) e TP2. Se entry2_filled, TP2 vai para 0.0 (anchor = setup_high/setup_low)."""
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
 
     start_px = anchor_px if anchor_px else entry_px
     is_buy_tp = False if side == "long" else True
-    logging.info(f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}")
+    fib_levels = [(0.618, 0.50), (0.0, 0.50)] if entry2_filled else FIB_LEVELS
+    logging.info(f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}" + (" | TP2→0.0 (2ª entrada)" if entry2_filled else ""))
 
-    for idx, (fib_mult, pct) in enumerate(FIB_LEVELS, start=1):
+    for idx, (fib_mult, pct) in enumerate(fib_levels, start=1):
         qty_tp = round_sz(total_qty * pct, sz_dec)
         if qty_tp <= 0:
             continue
@@ -1215,7 +1217,13 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     anchor = entry
                     logging.warning(f"⚠️ Fallback Fib para {sym}")
 
-                place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor)
+                qty_entry_2 = mem_data.get('qty_entry_2')
+                def _qty_matches(exp, act):
+                    if exp is None: return False
+                    tol = max(exp * 0.001, 0.01)
+                    return abs(act - exp) <= tol
+                entry2_filled = bool(qty_entry_2 and _qty_matches(qty_entry_2, abs(size)))
+                place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor, entry2_filled=entry2_filled)
 
             # Segunda entrada (limit) no nível -1.414 fib (Pro/Enterprise, se ativada)
             if not is_manual and not mem_data.get('entry2_placed', True):

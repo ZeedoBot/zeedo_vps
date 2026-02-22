@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -20,6 +21,8 @@ export default function SegredoPage() {
   const [error, setError] = useState("");
   const [cpf, setCpf] = useState("");
   const [trialStatus, setTrialStatus] = useState<"none" | "active" | "ended" | null>(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -27,10 +30,19 @@ export default function SegredoPage() {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        router.replace("/login");
+        setIsLoggedIn(false);
+        setSessionChecked(true);
         return;
       }
+      setIsLoggedIn(true);
       try {
+        const me = await apiGet<{ subscription_tier?: string; subscription_status?: string }>("/auth/me", session.access_token);
+        const hasActivePlan = me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier)
+          && (me.subscription_status === "active" || me.subscription_status === "trial");
+        if (hasActivePlan) {
+          router.replace("/dashboard");
+          return;
+        }
         const st = await apiGet<{ status: string }>("/trial/status", session.access_token);
         setTrialStatus(st.status as "none" | "active" | "ended");
         if (st.status === "active") {
@@ -40,6 +52,7 @@ export default function SegredoPage() {
       } catch {
         setTrialStatus("none");
       }
+      setSessionChecked(true);
     }
     check();
   }, [router]);
@@ -75,7 +88,7 @@ export default function SegredoPage() {
     }
   }
 
-  if (trialStatus === null) {
+  if (!sessionChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">Carregando…</p>
@@ -83,11 +96,14 @@ export default function SegredoPage() {
     );
   }
 
-  if (trialStatus === "ended") {
+  if (isLoggedIn && trialStatus === "ended") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black">
         <ThemeToggle />
         <div className="text-center max-w-md">
+          <div className="mb-6 flex justify-center">
+            <Image src="/zeedo-robot-segredo.png" alt="Zeedo" width={200} height={200} className="object-contain" priority />
+          </div>
           <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white mb-2">
             Trial já utilizado
           </h1>
@@ -105,19 +121,53 @@ export default function SegredoPage() {
     );
   }
 
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black relative">
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+        <div className="w-full max-w-md text-center">
+          <div className="mb-6 flex justify-center">
+            <Image src="/zeedo-robot-segredo.png" alt="Zeedo" width={220} height={220} className="object-contain" priority />
+          </div>
+          <h1 className="text-2xl font-semibold text-zeedo-black dark:text-zeedo-white mb-2">
+            Parabéns. Você acabou de ganhar 30 dias grátis de acesso ao plano Pro!
+          </h1>
+          <p className="text-zeedo-black/60 dark:text-zeedo-white/60 mb-8 text-sm">
+            Crie sua conta para resgatar seu benefício e começar a operar com o Zeedo Pro.
+          </p>
+          <Link
+            href="/signup?next=/segredo"
+            className="inline-block rounded-lg bg-zeedo-orange px-6 py-3 text-base font-medium text-white hover:opacity-90 transition-opacity"
+          >
+            Criar conta e resgatar
+          </Link>
+          <p className="mt-6 text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
+            Já tem conta?{" "}
+            <Link href="/login?next=/segredo" className="text-zeedo-orange hover:underline">
+              Entrar
+            </Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-zeedo-white dark:bg-zeedo-black relative">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-md">
+        <div className="mb-6 flex justify-center">
+          <Image src="/zeedo-robot-segredo.png" alt="Zeedo" width={220} height={220} className="object-contain" priority />
+        </div>
         <h1 className="text-2xl font-semibold text-zeedo-black dark:text-zeedo-white mb-2 text-center">
-          30 dias grátis do plano Pro
+          Parabéns. Você acabou de ganhar 30 dias grátis de acesso ao plano Pro!
         </h1>
         <p className="text-zeedo-black/60 dark:text-zeedo-white/60 mb-6 text-center text-sm">
-          Teste o Zeedo Pro por 30 dias ou até atingir $50 de lucro. O que ocorrer primeiro encerra o trial.
-          <br />
-          <span className="text-amber-600 dark:text-amber-500">Apenas 1 trial por pessoa (CPF) e por conta.</span>
+          Informe seu CPF para ativar o benefício.
         </p>
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div>

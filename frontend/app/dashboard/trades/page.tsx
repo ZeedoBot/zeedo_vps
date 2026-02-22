@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 
 type Position = {
   symbol: string;
@@ -29,6 +29,8 @@ export default function TradesPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [closing, setClosing] = useState<string | null>(null);
+  const [closePct, setClosePct] = useState<Record<string, number>>({});
 
   async function load(showRefreshing = false) {
     const supabase = createClient();
@@ -51,8 +53,24 @@ export default function TradesPage() {
     load();
   }, []);
 
+  async function handleClose(symbol: string) {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    const pct = closePct[symbol] ?? 100;
+    setClosing(symbol);
+    setError("");
+    try {
+      await apiPost("/dashboard/close-position", { symbol, pct }, session.access_token);
+      await load(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao fechar posição.");
+    } finally {
+      setClosing(null);
+    }
+  }
+
   if (loading) return <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
     <div className="space-y-8">
@@ -62,12 +80,17 @@ export default function TradesPage() {
       <p className="text-zeedo-black/60 dark:text-zeedo-white/60 -mt-4">
         Posições em aberto e pendentes na sua conta Hyperliquid.
       </p>
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 bg-red-500/10 rounded-lg px-4 py-2">
+          {error}
+        </p>
+      )}
 
       <div className="space-y-6">
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">
-              🟢 Posições ativas
+              🟢 Posições Ativas
             </h2>
             <button
               type="button"
@@ -90,6 +113,7 @@ export default function TradesPage() {
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Valor</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">PnL</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Fechar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zeedo-orange/20">
@@ -104,6 +128,27 @@ export default function TradesPage() {
                         {p.unrealized_pnl != null ? `${p.unrealized_pnl >= 0 ? "+" : ""}$${p.unrealized_pnl.toFixed(2)}` : "-"}
                       </td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
+                      <td className="px-4 py-2 text-sm text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <select
+                            value={closePct[p.symbol] ?? 100}
+                            onChange={(e) => setClosePct((prev) => ({ ...prev, [p.symbol]: Number(e.target.value) }))}
+                            className="rounded border border-zeedo-orange/40 bg-transparent px-2 py-1 text-xs text-zeedo-black dark:text-zeedo-white focus:border-zeedo-orange focus:outline-none"
+                          >
+                            <option value={100}>100%</option>
+                            <option value={50}>50%</option>
+                            <option value={25}>25%</option>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleClose(p.symbol)}
+                            disabled={closing === p.symbol}
+                            className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/30 disabled:opacity-50 dark:text-red-400"
+                          >
+                            {closing === p.symbol ? "…" : "Fechar"}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

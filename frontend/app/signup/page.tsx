@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,7 +30,9 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/login` : undefined;
+      const base = typeof window !== "undefined" ? window.location.origin : "";
+      const loginPath = nextPath && nextPath === "/segredo" ? "/login?next=/segredo" : "/login";
+      const redirectTo = base ? `${base}${loginPath}` : undefined;
       const { error: err } = await supabase.auth.signUp({
         email,
         password,
@@ -39,7 +43,7 @@ export default function SignupPage() {
         return;
       }
       setSuccess(true);
-      setTimeout(() => router.push("/login"), 2000);
+      setTimeout(() => router.push(loginPath), 2000);
     } finally {
       setLoading(false);
     }
@@ -53,7 +57,9 @@ export default function SignupPage() {
           <p className="text-gray-600 dark:text-zeedo-white/70 text-sm mt-3">
             Verifique o e-mail <strong>{email}</strong> e confirme sua conta pelo link enviado antes de fazer login.
           </p>
-          <p className="text-gray-500 dark:text-zeedo-white/50 text-xs mt-4">Redirecionando para o login…</p>
+          <p className="text-gray-500 dark:text-zeedo-white/50 text-xs mt-4">
+            Redirecionando para o login…
+          </p>
         </div>
       </div>
     );
@@ -119,7 +125,7 @@ export default function SignupPage() {
         </form>
         <p className="mt-4 text-center text-sm text-gray-600 dark:text-zeedo-white/60">
           Já tem conta?{" "}
-          <Link href="/login" className="font-medium text-zeedo-orange hover:underline">
+          <Link href={nextPath === "/segredo" ? "/login?next=/segredo" : "/login"} className="font-medium text-zeedo-orange hover:underline">
             Entrar
           </Link>
         </p>
