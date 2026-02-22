@@ -59,6 +59,9 @@ class BotConfigUpdate(BaseModel):
 def get_config(user_id: str = Depends(get_current_user_id)):
     """Retorna configuração do bot do usuário + limites do plano."""
     supabase = get_supabase()
+    ur = supabase.table("users").select("subscription_status").eq("id", user_id).limit(1).execute()
+    sub_status = (ur.data[0].get("subscription_status") or "").lower() if ur.data else ""
+    trial_ended = sub_status == "expired"
     limits = _get_plan_limits(supabase, user_id)
     r = supabase.table("bot_config").select(
         "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, "
@@ -78,6 +81,7 @@ def get_config(user_id: str = Depends(get_current_user_id)):
     if r.data and len(r.data) > 0:
         out.update(r.data[0])
     out["plan_limits"] = limits
+    out["trial_ended"] = trial_ended
     return out
 
 
@@ -124,6 +128,13 @@ def update_config(
 
     # Só permite ligar o bot se carteira E telegram estiverem conectados
     if body.bot_enabled is True:
+        ur = supabase.table("users").select("subscription_status, subscription_tier").eq("id", user_id).limit(1).execute()
+        sub_status = (ur.data[0].get("subscription_status") or "").lower() if ur.data else ""
+        if sub_status not in ("active", "trial"):
+            raise HTTPException(
+                400,
+                "Seu período de teste terminou ou você ainda não tem um plano ativo. Acesse a página de planos para continuar.",
+            )
         acc = supabase.table("trading_accounts").select("id").eq("user_id", user_id).eq("is_active", True).limit(1).execute()
         tg = supabase.table("telegram_configs").select("id, chat_id").eq("user_id", user_id).limit(1).execute()
         has_wallet = bool(acc.data and len(acc.data) > 0)

@@ -84,7 +84,7 @@ FIB_LEVELS = [
     (0.618, 0.50),  # Alvo 1 (0.618)
     (1.0, 0.50),    # Alvo 2 (1.0)
 ]
-FIB_STOP_LEVEL = 2.0
+FIB_STOP_LEVEL = 1.8
 FIB_ENTRY2_LEVEL = 1.414
 
 # ENTRADA 2 (Pro/Enterprise): plano permite e usuário pode ativar/desativar
@@ -709,14 +709,18 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                     trade["pnl_realized"] += pnl_fill
                 storage.save_entry_tracker(entry_tracker)
             
-            # Detecta side
-            raw_dir = str(base_fill.get('dir') or "")
-            if "Long" in raw_dir or raw_dir.lower().startswith("long"):
-                side = "LONG"
-            elif "short" in raw_dir or raw_dir.lower().startswith("short"):
-                side = "SHORT"
+            # Side: usa o tracker (correto) quando disponível. Fill indica a ação de fechamento (ex: BUY fecha SHORT),
+            # não a direção original do trade — por isso inferir do fill erra (SHORT fechando = BUY → LONG errado).
+            if trade:
+                side = (trade.get("side") or "long").upper()
             else:
-                side = "LONG" if str(base_fill.get('side','')).upper() in ('B','BUY') else "SHORT"
+                raw_dir = str(base_fill.get('dir') or "")
+                if "Long" in raw_dir or raw_dir.lower().startswith("long"):
+                    side = "LONG"
+                elif "short" in raw_dir or raw_dir.lower().startswith("short"):
+                    side = "SHORT"
+                else:
+                    side = "LONG" if str(base_fill.get('side','')).upper() in ('B','BUY') else "SHORT"
 
             # Cria registro
             fill_safe = dict(base_fill)
@@ -1050,6 +1054,8 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
         # Se o preço tocar no 0.618 (alvo 1), cancela ordens ativas. 0 da fibo = setup_high/setup_low; alvo 0.618 = anchor ± 0.618*tech_base.
         for sym in list(entry_tracker.keys()):
             mem = entry_tracker.get(sym, {})
+            if mem.get("alvo1_cancel_done"):
+                continue  # Já cancelou e notificou; evita spam a cada ciclo
             tech_base = mem.get("tech_base")
             setup_high = mem.get("setup_high")
             setup_low = mem.get("setup_low")
@@ -1078,6 +1084,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     except Exception as e:
                         logging.error(f"Erro ao cancelar ordem {sym}: {e}")
             
+            mem["alvo1_cancel_done"] = True
             if sym not in active_symbols:
                 entry_tracker.pop(sym, None)
                 storage.save_entry_tracker(entry_tracker)

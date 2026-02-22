@@ -78,7 +78,7 @@ type OverviewData = {
 };
 
 type BotStatus = { status: string };
-type BotConfig = { symbols: string[]; timeframes: string[] };
+type BotConfig = { symbols: string[]; timeframes: string[]; trial_ended?: boolean };
 type WalletStatus = { connected: boolean; wallet_address: string | null };
 type TelegramStatus = { connected: boolean };
 
@@ -178,12 +178,17 @@ export default function DashboardPage() {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
     setBotToggling(true);
+    setError("");
     try {
       const isRunning = botStatus?.status === "running";
       await apiPut("/bot/config", { bot_enabled: !isRunning }, session.access_token);
       setBotStatus({ status: !isRunning ? "running" : "stopped" });
-    } catch {
-      setError("Erro ao alterar status do bot.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro ao alterar status do bot.";
+      setError(msg);
+      if (msg.includes("trial") || msg.includes("plano") || msg.includes("planos")) {
+        setTimeout(() => { window.location.href = "/choose-plan"; }, 1500);
+      }
     } finally {
       setBotToggling(false);
     }
@@ -202,6 +207,10 @@ export default function DashboardPage() {
           apiGet<WalletStatus>("/wallet/status", session.access_token),
           apiGet<TelegramStatus>("/telegram/status", session.access_token),
         ]);
+        if (config?.trial_ended) {
+          window.location.href = "/choose-plan";
+          return;
+        }
         setOverview(ov);
         setBotStatus(bot);
         setBotConfig(config);

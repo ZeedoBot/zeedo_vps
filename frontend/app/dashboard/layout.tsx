@@ -40,6 +40,10 @@ export default function DashboardLayout({
           `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/me`,
           { headers: { Authorization: `Bearer ${session.access_token}` } }
         ).then((r) => r.json());
+        if ((me.subscription_status || "").toLowerCase() === "expired") {
+          window.location.href = "/choose-plan";
+          return;
+        }
         setUser({
           email: session.user?.email ?? me.email,
           username: me.username ?? undefined,
@@ -60,6 +64,10 @@ export default function DashboardLayout({
           `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/me`,
           { headers: { Authorization: `Bearer ${session.access_token}` } }
         ).then((r) => r.json());
+        if ((me.subscription_status || "").toLowerCase() === "expired") {
+          window.location.href = "/choose-plan";
+          return;
+        }
         setUser({ email: session.user?.email ?? me.email, username: me.username ?? undefined });
       } catch {
         setUser({ email: session.user?.email ?? undefined });

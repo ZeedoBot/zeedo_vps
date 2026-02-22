@@ -110,7 +110,7 @@ export default function ChoosePlanPage() {
                     <>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">6 tokens (BTC, ETH, SOL, XRP, BNB, HYPE)</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas 6 disponíveis</span>
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
@@ -118,7 +118,7 @@ export default function ChoosePlanPage() {
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">$5</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">$5 por trade</span>
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>

@@ -46,7 +46,7 @@ class BotConfig:
         (0.618, 0.50),  # Alvo 1 (0.618)
         (1.0, 0.50),    # Alvo 2 (1.0)
     ])
-    fib_stop_level: float = 2.0
+    fib_stop_level: float = 1.8
     fib_entry2_level: float = 1.414
     
     # LSR Binance
