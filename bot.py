@@ -842,7 +842,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
     for o in all_open_orders:
         if not o["reduceOnly"]: busy_symbols.add(o["coin"])
 
-    if len(positions) + len(pending_orders) >= MAX_POSITIONS:
+    if len(busy_symbols) >= MAX_POSITIONS:
         return
     current_exposure = 0.0
     all_mids = all_mids_cache
