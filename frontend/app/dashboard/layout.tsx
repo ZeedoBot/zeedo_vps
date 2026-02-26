@@ -6,12 +6,15 @@ import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
-const nav = [
+const mainNav = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/trades", label: "Trades" },
   { href: "/dashboard/wallet", label: "Carteira" },
   { href: "/dashboard/telegram", label: "Telegram" },
   { href: "/dashboard/bot", label: "Configurações do Bot" },
+];
+
+const userMenuNav = [
   { href: "/choose-plan", label: "Alterar Plano" },
   { href: "/dashboard/profile", label: "Perfil" },
 ];
@@ -115,7 +118,7 @@ export default function DashboardLayout({
               <span className="hidden sm:inline text-zeedo-black dark:text-zeedo-white">Zeedo</span>
             </Link>
             <nav className="hidden md:flex gap-6 ml-4">
-              {nav.map(({ href, label }) => (
+              {mainNav.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
@@ -131,7 +134,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {trialDaysLeft !== null && (
               <span
-                className="inline-flex items-center gap-1 rounded-full bg-zeedo-orange/15 px-3 py-1 text-xs font-medium text-zeedo-orange"
+                className="hidden sm:inline-flex items-center gap-1 rounded-full bg-zeedo-orange/15 px-3 py-1 text-xs font-medium text-zeedo-orange shrink-0"
                 title="Dias restantes no trial Pro grátis"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -141,59 +144,79 @@ export default function DashboardLayout({
               </span>
             )}
             <ThemeToggle />
-            <span className="hidden sm:inline text-sm text-zeedo-black/60 dark:text-zeedo-white/60 truncate max-w-[140px]">{user?.username || user?.email}</span>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-sm font-medium text-zeedo-black/70 hover:text-zeedo-orange dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
-            >
-              Sair
-            </button>
-            <button
-              type="button"
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 text-zeedo-orange"
-              aria-label="Menu"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            <span className="hidden lg:inline text-sm text-zeedo-black/60 dark:text-zeedo-white/60 truncate max-w-[140px]">{user?.username || user?.email}</span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2 text-zeedo-orange hover:bg-zeedo-orange/10 rounded-lg transition-colors"
+                aria-label="Menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    aria-hidden="true"
+                    onClick={() => setMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-zeedo-orange/20 bg-zeedo-white dark:bg-zeedo-black shadow-lg overflow-hidden">
+                    <div className="md:hidden border-b border-zeedo-orange/20 px-4 py-3 space-y-2">
+                      {trialDaysLeft !== null && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-zeedo-orange/15 px-3 py-1.5 text-sm font-medium text-zeedo-orange">
+                          {trialDaysLeft} {trialDaysLeft === 1 ? "dia" : "dias"} restantes no trial Pro
+                        </span>
+                      )}
+                    </div>
+                    <nav className="flex flex-col py-2">
+                      <div className="md:hidden">
+                        {mainNav.map(({ href, label }) => (
+                          <Link
+                            key={href}
+                            href={href}
+                            onClick={() => setMenuOpen(false)}
+                            className={`block px-4 py-2.5 text-sm font-medium ${
+                              pathname === href ? "text-zeedo-orange bg-zeedo-orange/10" : "text-zeedo-black/70 hover:bg-zeedo-orange/10 dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
+                            }`}
+                          >
+                            {label}
+                          </Link>
+                        ))}
+                        <div className="border-t border-zeedo-orange/20 my-1" />
+                      </div>
+                      {userMenuNav.map(({ href, label }) => (
+                        <Link
+                          key={href}
+                          href={href}
+                          onClick={() => setMenuOpen(false)}
+                          className={`block px-4 py-2.5 text-sm font-medium ${
+                            pathname === href ? "text-zeedo-orange bg-zeedo-orange/10" : "text-zeedo-black/70 hover:bg-zeedo-orange/10 dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
+                          }`}
+                        >
+                          {label}
+                        </Link>
+                      ))}
+                      <div className="border-t border-zeedo-orange/20 my-1" />
+                      <button
+                        type="button"
+                        onClick={() => { setMenuOpen(false); handleLogout(); }}
+                        className="block w-full text-left px-4 py-2.5 text-sm font-medium text-zeedo-black/70 hover:bg-zeedo-orange/10 hover:text-zeedo-orange dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
+                      >
+                        Sair
+                      </button>
+                    </nav>
+                    <div className="md:hidden border-t border-zeedo-orange/20 px-4 py-2">
+                      <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 truncate">{user?.username || user?.email}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
-        {menuOpen && (
-          <div className="md:hidden border-t border-zeedo-orange/20 bg-zeedo-white dark:bg-zeedo-black">
-            {trialDaysLeft !== null && (
-              <div className="px-4 pt-4 pb-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-zeedo-orange/15 px-3 py-1.5 text-sm font-medium text-zeedo-orange">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {trialDaysLeft} {trialDaysLeft === 1 ? "dia" : "dias"} restantes no trial Pro
-                </span>
-              </div>
-            )}
-            <nav className="flex flex-col py-4 px-4 gap-1">
-              {nav.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`py-3 px-4 rounded-lg text-sm font-medium ${
-                    pathname === href
-                      ? "text-zeedo-orange bg-zeedo-orange/10"
-                      : "text-zeedo-black/70 dark:text-zeedo-white/70 hover:bg-zeedo-orange/10"
-                  }`}
-                >
-                  {label}
-                </Link>
-              ))}
-              <div className="border-t border-zeedo-orange/20 my-2 pt-2 px-4">
-                <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 truncate">{user?.username || user?.email}</p>
-              </div>
-            </nav>
-          </div>
-        )}
       </header>
       <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
     </div>
