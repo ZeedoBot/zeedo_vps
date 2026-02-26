@@ -362,24 +362,28 @@ export default function AcessoAntecipadoPage() {
                   <br />
                   <span className="text-zeedo-orange">Operar manualmente drena sua energia?</span>
                 </h2>
-                <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-zeedo-black/70 dark:text-zeedo-white/70">
-                  Eu criei o Zeedo com a missão de resolver os dois maiores problemas de um trader:{" "}
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-zeedo-orange/10 px-2.5 py-1 font-medium text-zeedo-orange dark:bg-zeedo-orange/20">
-                    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    falta de tempo
-                  </span>
-                  {" "}e{" "}
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-zeedo-orange/10 px-2.5 py-1 font-medium text-zeedo-orange dark:bg-zeedo-orange/20">
-                    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
-                      <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
-                    </svg>
-                    emocional
-                  </span>
-                  .
+                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Eu criei o Zeedo com a missão de resolver os dois maiores problemas de um trader:
                 </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-8">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                      <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">FALTA DE TEMPO</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                      <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+                        <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+                      </svg>
+                    </div>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">EMOCIONAL</span>
+                  </div>
+                </div>
                 <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
                   Ficar grudado no gráfico, tomando decisões com emoção, perdendo noites de sono... isso não é sustentável. O Zeedo assume o trabalho operacional para você, executando uma estratégia baseada em um setup validado desde 2021, rodando 24 horas por dia, sem parar (a não ser que você mande).
                 </p>
@@ -413,14 +417,25 @@ export default function AcessoAntecipadoPage() {
 
         {/* Solução */}
         <motion.section
-          className="border-t border-zeedo-orange/20 bg-zeedo-black/5 dark:bg-white/5 px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="mx-auto max-w-4xl">
+          <div className="absolute inset-0">
+            <Image
+              src="/zeedo-robot.png"
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover opacity-[0.04] dark:opacity-[0.06]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/15 via-transparent to-zeedo-orange/5 dark:from-zeedo-orange/12 dark:via-transparent dark:to-zeedo-orange/5" />
+            <div className="absolute inset-0 bg-zeedo-white/80 dark:bg-zeedo-black/70" />
+          </div>
+          <div className="relative z-10 mx-auto max-w-4xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl">
               Automatize
               <br />
@@ -498,14 +513,25 @@ export default function AcessoAntecipadoPage() {
 
         {/* Bônus */}
         <motion.section
-          className="border-t border-zeedo-orange/20 bg-zeedo-orange/5 dark:bg-zeedo-orange/10 px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="mx-auto max-w-3xl">
+          <div className="absolute inset-0">
+            <Image
+              src="/zeedo-robot.png"
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover opacity-[0.06] dark:opacity-[0.08]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/25 via-zeedo-orange/10 to-transparent dark:from-zeedo-orange/20 dark:via-zeedo-orange/8 dark:to-transparent" />
+            <div className="absolute inset-0 bg-zeedo-white/70 dark:bg-zeedo-black/65" />
+          </div>
+          <div className="relative z-10 mx-auto max-w-3xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl text-zeedo-orange">
               Bônus!
             </h2>
@@ -645,14 +671,25 @@ export default function AcessoAntecipadoPage() {
 
         {/* CTA final com formulário */}
         <motion.section
-          className="border-t border-zeedo-orange/20 bg-zeedo-orange/5 dark:bg-zeedo-orange/10 px-4 py-20 sm:py-28"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 px-4 py-20 sm:py-28"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="absolute inset-0">
+            <Image
+              src="/zeedo-robot.png"
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover opacity-[0.06] dark:opacity-[0.08]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/25 via-zeedo-orange/10 to-transparent dark:from-zeedo-orange/20 dark:via-zeedo-orange/8 dark:to-transparent" />
+            <div className="absolute inset-0 bg-zeedo-white/70 dark:bg-zeedo-black/65" />
+          </div>
+          <div className="relative z-10 mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold sm:text-4xl">
               Pronto para deixar o Zeedo trabalhar por você?
             </h2>
