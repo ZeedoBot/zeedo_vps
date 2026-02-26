@@ -43,9 +43,9 @@ export default function BotPage() {
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [symbolsInput, setSymbolsInput] = useState<string[]>([]);
   const [timeframesInput, setTimeframesInput] = useState<string[]>([]);
-  const [targetLoss, setTargetLoss] = useState(5);
-  const [maxPositions, setMaxPositions] = useState(2);
-  const [maxSinglePosition, setMaxSinglePosition] = useState(1250);
+  const [targetLoss, setTargetLoss] = useState<number | "">(5);
+  const [maxPositions, setMaxPositions] = useState<number | "">(2);
+  const [maxSinglePosition, setMaxSinglePosition] = useState<number | "">(1250);
   const [entry2Enabled, setEntry2Enabled] = useState(true);
 
   const limits = config?.plan_limits;
@@ -85,9 +85,9 @@ export default function BotPage() {
     if (!session?.access_token) return;
     setSaving(true);
     setMessage(null);
-    const tl = clampValue(targetLoss, limits.target_loss_min, limits.target_loss_max);
-    const mp = clampValue(maxPositions, 1, limits.max_positions);
-    const msp = Math.min(maxSinglePosition, limits.max_single_position_usd);
+    const tl = clampValue(typeof targetLoss === "number" ? targetLoss : limits.target_loss_min, limits.target_loss_min, limits.target_loss_max);
+    const mp = clampValue(typeof maxPositions === "number" ? maxPositions : 1, 1, limits.max_positions);
+    const msp = Math.min(typeof maxSinglePosition === "number" ? maxSinglePosition : 0, limits.max_single_position_usd);
     try {
       const payload: Record<string, unknown> = {
         symbols: symbolsInput,
@@ -278,17 +278,22 @@ export default function BotPage() {
               </label>
               <input
                 id="target_loss"
-                type="number"
-                min={limits.target_loss_min}
-                max={limits.target_loss_max}
-                step={1}
+                type="text"
+                inputMode="numeric"
                 value={targetLoss}
                 onChange={(e) => {
-                  const val = e.target.value === "" ? "" : Number(e.target.value);
-                  setTargetLoss(val === "" ? limits.target_loss_min : clampValue(Number(val), limits.target_loss_min, limits.target_loss_max));
+                  const val = e.target.value.trim();
+                  if (val === "") {
+                    setTargetLoss("");
+                    return;
+                  }
+                  const num = Number(val);
+                  if (!isNaN(num)) {
+                    setTargetLoss(clampValue(num, limits.target_loss_min, limits.target_loss_max));
+                  }
                 }}
-                onBlur={(e) => {
-                  if (e.target.value === "") {
+                onBlur={() => {
+                  if (targetLoss === "") {
                     setTargetLoss(limits.target_loss_min);
                   }
                 }}
@@ -309,17 +314,22 @@ export default function BotPage() {
               </label>
               <input
                 id="max_positions"
-                type="number"
-                min={1}
-                max={limits.max_positions}
-                step={1}
+                type="text"
+                inputMode="numeric"
                 value={maxPositions}
                 onChange={(e) => {
-                  const val = e.target.value === "" ? "" : Number(e.target.value);
-                  setMaxPositions(val === "" ? 1 : clampValue(Number(val), 1, limits.max_positions));
+                  const val = e.target.value.trim();
+                  if (val === "") {
+                    setMaxPositions("");
+                    return;
+                  }
+                  const num = Number(val);
+                  if (!isNaN(num)) {
+                    setMaxPositions(clampValue(num, 1, limits.max_positions));
+                  }
                 }}
-                onBlur={(e) => {
-                  if (e.target.value === "") {
+                onBlur={() => {
+                  if (maxPositions === "") {
                     setMaxPositions(1);
                   }
                 }}
@@ -335,17 +345,22 @@ export default function BotPage() {
               </label>
               <input
                 id="max_single"
-                type="number"
-                min={0}
-                max={limits.max_single_position_usd}
-                step={limits.max_single_position_usd <= 10 ? 1 : 100}
+                type="text"
+                inputMode="numeric"
                 value={maxSinglePosition}
                 onChange={(e) => {
-                  const val = e.target.value === "" ? "" : Number(e.target.value);
-                  setMaxSinglePosition(val === "" ? 0 : Math.min(Number(val), limits.max_single_position_usd));
+                  const val = e.target.value.trim();
+                  if (val === "") {
+                    setMaxSinglePosition("");
+                    return;
+                  }
+                  const num = Number(val);
+                  if (!isNaN(num)) {
+                    setMaxSinglePosition(Math.min(num, limits.max_single_position_usd));
+                  }
                 }}
-                onBlur={(e) => {
-                  if (e.target.value === "") {
+                onBlur={() => {
+                  if (maxSinglePosition === "") {
                     setMaxSinglePosition(0);
                   }
                 }}

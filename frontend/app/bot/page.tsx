@@ -296,7 +296,7 @@ export default function BotPage() {
               whileInView="visible"
               viewport={{ once: true, margin: "-40px" }}
               whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
-              className="relative overflow-hidden rounded-xl border-l-4 border-zeedo-orange bg-zeedo-black/5 px-6 py-8 shadow-lg transition-shadow hover:shadow-xl dark:bg-white/5"
+              className="relative overflow-hidden rounded-xl border-l-4 border-zeedo-orange px-6 py-8 shadow-lg transition-shadow hover:shadow-xl"
             >
               <div className="relative text-center">
                 <h2 className="text-2xl font-bold sm:text-3xl">
@@ -365,20 +365,41 @@ export default function BotPage() {
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 hidden lg:block">
-            <Image src="/zeedo-robot.png" alt="" width={100} height={100} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden lg:block">
+            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden lg:block">
-            <Image src="/zeedo-robot.png" alt="" width={100} height={100} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:block">
+            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="relative z-10 mx-auto max-w-4xl">
-            <h2 className="text-center text-2xl font-bold sm:text-3xl">
-              Automatize
-              <br />
-              Configure
-              <br />
-              Relaxe
-            </h2>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6">
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <span className="text-lg font-bold text-zeedo-black dark:text-zeedo-white">Automatize</span>
+              </div>
+              <div className="hidden sm:block h-0.5 w-12 bg-zeedo-orange/30" />
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  </svg>
+                </div>
+                <span className="text-lg font-bold text-zeedo-black dark:text-zeedo-white">Configure</span>
+              </div>
+              <div className="hidden sm:block h-0.5 w-12 bg-zeedo-orange/30" />
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="text-lg font-bold text-zeedo-black dark:text-zeedo-white">Relaxe</span>
+              </div>
+            </div>
             <p className="mx-auto mt-6 max-w-2xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
               O Zeedo trabalha com uma combinação de sinais: divergências, padrões de candlestick, volume e níveis de Fibonacci. Mas você não precisa saber isso, deixe com o Zeedo que ele identifica os setups, executa e te notifica, sempre com gerenciamento de risco definido por você.
             </p>
