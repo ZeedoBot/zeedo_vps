@@ -133,14 +133,14 @@ const BENEFITS = [
   },
   {
     title: "Controle total",
-    desc: "Target loss, exposição máxima e segunda entrada , tudo configurável por você.",
+    desc: "Target loss, exposição máxima e segunda entrada, tudo configurável por você.",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
     ),
   },
   {
     title: "Alertas no Telegram",
-    desc: "Entradas, parciais, stops e PnL , tudo no seu celular, em tempo real.",
+    desc: "Entradas, parciais, stops e PnL, tudo no seu celular, em tempo real.",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     ),
@@ -362,8 +362,23 @@ export default function AcessoAntecipadoPage() {
                   <br />
                   <span className="text-zeedo-orange">Operar manualmente drena sua energia?</span>
                 </h2>
-                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
-                  Eu criei o Zeedo com a missão de resolver os dois maiores problemas de um trader: falta de tempo e emocional.
+                <p className="mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Eu criei o Zeedo com a missão de resolver os dois maiores problemas de um trader:{" "}
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-zeedo-orange/10 px-2.5 py-1 font-medium text-zeedo-orange dark:bg-zeedo-orange/20">
+                    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    falta de tempo
+                  </span>
+                  {" "}e{" "}
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-zeedo-orange/10 px-2.5 py-1 font-medium text-zeedo-orange dark:bg-zeedo-orange/20">
+                    <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+                      <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+                    </svg>
+                    emocional
+                  </span>
+                  .
                 </p>
                 <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
                   Ficar grudado no gráfico, tomando decisões com emoção, perdendo noites de sono... isso não é sustentável. O Zeedo assume o trabalho operacional para você, executando uma estratégia baseada em um setup validado desde 2021, rodando 24 horas por dia, sem parar (a não ser que você mande).
