@@ -296,9 +296,8 @@ export default function BotPage() {
               whileInView="visible"
               viewport={{ once: true, margin: "-40px" }}
               whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
-              className="relative overflow-hidden rounded-xl border-l-4 border-zeedo-orange bg-zeedo-orange/5 px-6 py-8 shadow-lg transition-shadow hover:shadow-xl dark:bg-zeedo-orange/10"
+              className="relative overflow-hidden rounded-xl border-l-4 border-zeedo-orange bg-zeedo-black/5 px-6 py-8 shadow-lg transition-shadow hover:shadow-xl dark:bg-white/5"
             >
-              <div className="absolute top-0 right-0 h-24 w-24 translate-x-8 -translate-y-8 rounded-full bg-zeedo-orange/10 dark:bg-zeedo-orange/20" />
               <div className="relative text-center">
                 <h2 className="text-2xl font-bold sm:text-3xl">
                   Você não tem tempo para fazer trades?
@@ -342,10 +341,9 @@ export default function BotPage() {
               whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
               className="relative overflow-hidden rounded-xl border border-zeedo-orange/30 bg-zeedo-black/5 px-6 py-8 shadow-lg transition-shadow hover:border-zeedo-orange/50 hover:shadow-xl dark:bg-white/5"
             >
-              <div className="absolute bottom-0 left-0 h-20 w-20 -translate-x-6 translate-y-6 rounded-full bg-zeedo-orange/10 dark:bg-zeedo-orange/20" />
               <div className="relative text-center">
-                <h3 className="text-xl font-bold sm:text-2xl">
-                  <span className="inline-block rounded-lg bg-zeedo-orange/20 px-3 py-1 text-zeedo-orange">Mas o Zeedo é só para Traders?</span>
+                <h3 className="text-xl font-bold sm:text-2xl text-zeedo-orange">
+                  Mas o Zeedo é só para Traders?
                 </h3>
                 <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
                   Não. O Zeedo ao mesmo tempo é a solução para iniciantes ou até para quem nunca fez um trade na vida e não sabe como começar.
@@ -360,23 +358,18 @@ export default function BotPage() {
 
         {/* Solução */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-zeedo-black/5 dark:bg-white/5 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="absolute inset-0">
-            <Image
-              src="/zeedo-robot.png"
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover opacity-[0.04] dark:opacity-[0.06]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/15 via-transparent to-zeedo-orange/5 dark:from-zeedo-orange/12 dark:via-transparent dark:to-zeedo-orange/5" />
-            <div className="absolute inset-0 bg-zeedo-white/80 dark:bg-zeedo-black/70" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 hidden lg:block">
+            <Image src="/zeedo-robot.png" alt="" width={100} height={100} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
+          </div>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden lg:block">
+            <Image src="/zeedo-robot.png" alt="" width={100} height={100} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="relative z-10 mx-auto max-w-4xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl">
@@ -456,45 +449,40 @@ export default function BotPage() {
 
         {/* Bônus */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-gradient-to-br from-zeedo-orange/10 via-transparent to-zeedo-orange/10 dark:from-zeedo-orange/5 dark:via-transparent dark:to-zeedo-orange/5 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="absolute inset-0">
-            <Image
-              src="/zeedo-robot.png"
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover opacity-[0.06] dark:opacity-[0.08]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/25 via-zeedo-orange/10 to-transparent dark:from-zeedo-orange/20 dark:via-zeedo-orange/8 dark:to-transparent" />
-            <div className="absolute inset-0 bg-zeedo-white/70 dark:bg-zeedo-black/65" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
+          </div>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
           </div>
           <div className="relative z-10 mx-auto max-w-3xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl text-zeedo-orange">
-              Bônus!
+              Bônus exclusivo para ajudar você!
             </h2>
             <p className="mt-6 text-center text-zeedo-black/70 dark:text-zeedo-white/70">
-              Você ainda ganha um mini curso introdutório, explicando como funciona tudo. Nesse bônus você terá aulas sobre:
+              Você ainda terá acesso a um mini curso introdutório, explicando como funciona tudo. Nesse bônus você terá aulas sobre:
             </p>
-            <ul className="mt-6 space-y-2 text-zeedo-black/80 dark:text-zeedo-white/80">
-              <li>• Como configurar o Zeedo</li>
-              <li>• Como criar uma carteira</li>
-              <li>• Como conectar a carteira na Hyperliquid</li>
-              <li>• Como conectar o Telegram para receber todos os sinais no seu celular em tempo real</li>
-              <li>• Dicas de gerenciamento de risco</li>
+            <ul className="mt-6 space-y-2 text-zeedo-black/80 dark:text-zeedo-white/80 list-none [&>li]:flex [&>li]:gap-2 [&>li]:items-start">
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Como configurar o Zeedo</li>
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Como criar uma carteira</li>
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Como conectar a carteira na Hyperliquid</li>
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Como conectar o Telegram para receber todos os sinais no seu celular em tempo real</li>
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Dicas de gerenciamento de risco</li>
             </ul>
             <p className="mt-8 text-center font-semibold text-zeedo-black dark:text-zeedo-white">
               Extra:
             </p>
-            <ul className="mt-4 space-y-2 text-zeedo-black/80 dark:text-zeedo-white/80">
-              <li>• Desvendando o operacional do Zeedo</li>
-              <li>• Acesso ao Suporte Individualizado</li>
-              <li>• Acesso à comunidade no Telegram</li>
+            <ul className="mt-4 space-y-2 text-zeedo-black/80 dark:text-zeedo-white/80 list-none [&>li]:flex [&>li]:gap-2 [&>li]:items-start">
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Desvendando o operacional do Zeedo</li>
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Acesso ao Suporte Individualizado</li>
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Acesso à comunidade no Telegram</li>
             </ul>
           </div>
         </motion.section>
@@ -729,23 +717,18 @@ export default function BotPage() {
 
         {/* CTA final */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 px-4 py-20 sm:py-28"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-gradient-to-br from-zeedo-orange/10 via-transparent to-zeedo-orange/10 dark:from-zeedo-orange/5 dark:via-transparent dark:to-zeedo-orange/5 px-4 py-20 sm:py-28"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="absolute inset-0">
-            <Image
-              src="/zeedo-robot.png"
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover opacity-[0.06] dark:opacity-[0.08]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/25 via-zeedo-orange/10 to-transparent dark:from-zeedo-orange/20 dark:via-zeedo-orange/8 dark:to-transparent" />
-            <div className="absolute inset-0 bg-zeedo-white/70 dark:bg-zeedo-black/65" />
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
+          </div>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
           </div>
           <div className="relative z-10 mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold sm:text-4xl">

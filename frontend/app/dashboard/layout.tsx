@@ -22,10 +22,18 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [user, setUser] = useState<{ email?: string; username?: string } | null>(null);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  function daysUntil(isoDate: string): number {
+    const now = new Date();
+    const end = new Date(isoDate);
+    const diff = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -40,7 +48,9 @@ export default function DashboardLayout({
           `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/me`,
           { headers: { Authorization: `Bearer ${session.access_token}` } }
         ).then((r) => r.json());
-        if ((me.subscription_status || "").toLowerCase() === "expired") {
+        const status = (me.subscription_status || "").toLowerCase();
+        const tier = (me.subscription_tier || "").toLowerCase();
+        if (status === "expired" || status === "inactive") {
           window.location.href = "/choose-plan";
           return;
         }
@@ -48,6 +58,19 @@ export default function DashboardLayout({
           email: session.user?.email ?? me.email,
           username: me.username ?? undefined,
         });
+        if (status === "trial" && tier === "pro") {
+          try {
+            const trial = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/trial/status`,
+              { headers: { Authorization: `Bearer ${session.access_token}` } }
+            ).then((r) => r.json());
+            if (trial.status === "active" && trial.trial?.expires_at) {
+              setTrialDaysLeft(daysUntil(trial.trial.expires_at));
+            }
+          } catch {
+            /* ignore */
+          }
+        }
       } catch {
         setUser({ email: session.user?.email ?? undefined });
       }
@@ -64,7 +87,8 @@ export default function DashboardLayout({
           `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/me`,
           { headers: { Authorization: `Bearer ${session.access_token}` } }
         ).then((r) => r.json());
-        if ((me.subscription_status || "").toLowerCase() === "expired") {
+        const status = (me.subscription_status || "").toLowerCase();
+        if (status === "expired" || status === "inactive") {
           window.location.href = "/choose-plan";
           return;
         }
@@ -115,6 +139,17 @@ export default function DashboardLayout({
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {trialDaysLeft !== null && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-zeedo-orange/15 px-3 py-1 text-xs font-medium text-zeedo-orange"
+                title="Dias restantes no trial Pro grátis"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {trialDaysLeft} {trialDaysLeft === 1 ? "dia" : "dias"} restantes
+              </span>
+            )}
             <ThemeToggle />
             <span className="hidden sm:inline text-sm text-zeedo-black/60 dark:text-zeedo-white/60 truncate max-w-[140px]">{user?.username || user?.email}</span>
             <button
@@ -138,6 +173,16 @@ export default function DashboardLayout({
         </div>
         {menuOpen && (
           <div className="md:hidden border-t border-zeedo-orange/20 bg-zeedo-white dark:bg-zeedo-black">
+            {trialDaysLeft !== null && (
+              <div className="px-4 pt-4 pb-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-zeedo-orange/15 px-3 py-1.5 text-sm font-medium text-zeedo-orange">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {trialDaysLeft} {trialDaysLeft === 1 ? "dia" : "dias"} restantes no trial Pro
+                </span>
+              </div>
+            )}
             <nav className="flex flex-col py-4 px-4 gap-1">
               {nav.map(({ href, label }) => (
                 <Link

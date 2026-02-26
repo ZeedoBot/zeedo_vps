@@ -38,8 +38,10 @@ function LoginContent() {
       }
 
       try {
-        const me = await apiGet<{ subscription_tier?: string }>("/auth/me", res.access_token);
-        const hasPlan = me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier);
+        const me = await apiGet<{ subscription_tier?: string; subscription_status?: string }>("/auth/me", res.access_token);
+        const status = (me.subscription_status || "").toLowerCase();
+        const hasPlan = me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier)
+          && (status === "active" || status === "trial");
         if (nextPath === "/segredo") {
           router.push("/segredo");
         } else {

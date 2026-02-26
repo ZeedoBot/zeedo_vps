@@ -37,6 +37,7 @@ export default function SegredoPage() {
       setIsLoggedIn(true);
       try {
         const me = await apiGet<{ subscription_tier?: string; subscription_status?: string }>("/auth/me", session.access_token);
+        // Redireciona só se tiver plano ativo (basic/pro/satoshi comprado ou trial Pro resgatado). Sem plano (inactive) = vê formulário CPF.
         const hasActivePlan = me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier)
           && (me.subscription_status === "active" || me.subscription_status === "trial");
         if (hasActivePlan) {
