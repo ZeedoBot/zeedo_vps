@@ -2,7 +2,6 @@ import os
 import time
 import logging
 import json
-import re
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -22,8 +21,6 @@ load_dotenv()
 #TELEGRAM 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-TELEGRAM_BOT_TOKEN_SENDER = os.getenv("TELEGRAM_BOT_TOKEN_SENDER", "")
-TELEGRAM_CHAT_ID_SENDER = os.getenv("TELEGRAM_CHAT_ID_SENDER", "")
 
 #CONFIGURAÇÕES DE LOGS
 log_formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S')
@@ -128,27 +125,6 @@ def tg_send(msg):
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
         payload = {"chat_id": TELEGRAM_CHAT_ID, "text": msg}
         requests.post(url, json=payload, timeout=3)
-        if TELEGRAM_BOT_TOKEN_SENDER and TELEGRAM_CHAT_ID_SENDER:
-            try:
-                price_keywords = ['entrada:', '1ª entrada:', '2ª entrada:', 'stop:', 'novo stop:', 'stop atual:', 'trigger:', 'preço:']
-                value_keywords = ['tamanho:', 'total:', 'qty:', 'size:', 'valor:', 'pnl:', 'investido:']
-                def mult_val(m):  # Multiplica apenas valores monetários e quantidades
-                    start = max(0, m.start() - 30)
-                    context = msg[start:m.start()].lower()
-                    has_dollar = m.group(2) == '$'
-                    is_value = any(kw in context for kw in value_keywords)
-                    is_price = any(kw in context for kw in price_keywords)
-                    if (has_dollar or is_value) and not is_price:
-                        n = float(m.group(3))
-                        d = len(m.group(3).split('.')[1]) if '.' in m.group(3) else 0
-                        f = f"{n * 5:.{d}f}".rstrip('0').rstrip('.') if d else f"{n * 5:.0f}"
-                        return (m.group(1) or '') + (m.group(2) or '') + f
-                    return m.group(0)  # Mantém original se não deve multiplicar
-                multiplied_msg = re.sub(r'(\+|\-)?\s*(\$)?\s*(\d+\.?\d*)', mult_val, msg)
-                requests.post(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN_SENDER}/sendMessage",
-                    json={"chat_id": TELEGRAM_CHAT_ID_SENDER, "text": multiplied_msg}, timeout=3)
-            except Exception:
-                pass
     except Exception as e:
         logging.error(f"Erro Telegram: {e}")
 

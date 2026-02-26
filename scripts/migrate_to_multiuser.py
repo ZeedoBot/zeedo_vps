@@ -153,8 +153,6 @@ def migrate_to_multiuser(admin_email: str = None, admin_private_key: str = None)
                     "user_id": user_id,
                     "bot_token": telegram_token,
                     "chat_id": telegram_chat,
-                    "bot_token_sender": os.getenv("TELEGRAM_BOT_TOKEN_SENDER", ""),
-                    "chat_id_sender": os.getenv("TELEGRAM_CHAT_ID_SENDER", "")
                 }).execute()
                 print(f"   OK: Telegram config criada")
             else:

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function VendasLayout({
+export default function BotLayout({
   children,
 }: {
   children: React.ReactNode;

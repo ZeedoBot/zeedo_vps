@@ -24,7 +24,7 @@ export default function HomePage() {
           </Link>
         </div>
         <p className="mt-4">
-          <Link href="/vendas" className="text-sm text-zeedo-orange hover:underline">
+          <Link href="/bot" className="text-sm text-zeedo-orange hover:underline">
             Conheça o Zeedo →
           </Link>
         </p>

@@ -308,7 +308,7 @@ class SupabaseStorage(StorageBase):
             user_id = user_id or self._user_id
             if not user_id:
                 return None
-            r = self._client.table("telegram_configs").select("bot_token, chat_id, bot_token_sender, chat_id_sender").eq("user_id", user_id).limit(1).execute()
+            r = self._client.table("telegram_configs").select("bot_token, chat_id").eq("user_id", user_id).limit(1).execute()
             if not r.data or len(r.data) == 0:
                 return None
             row = r.data[0]
@@ -319,8 +319,6 @@ class SupabaseStorage(StorageBase):
             return {
                 "bot_token": token,
                 "chat_id": chat,
-                "bot_token_sender": row.get("bot_token_sender") or "",
-                "chat_id_sender": row.get("chat_id_sender") or "",
             }
         except Exception as e:
             logging.error(f"Supabase get_telegram_config: {e}")

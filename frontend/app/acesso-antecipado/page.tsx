@@ -5,45 +5,7 @@ import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, type ReactNode } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
-
-const PLANS = [
-  {
-    id: "basic",
-    name: "Basic",
-    price: 49,
-    recommended: false,
-    features: ["Ativos: BTC e ETH", "Timeframes: 15m", "Trades simultâneos: máx. 2"],
-    cta: "Começar",
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 79,
-    recommended: true,
-    features: [
-      "Ativos: Todos disponíveis",
-      "Timeframes: 15m, 30m, 1h e 4h",
-      "Trades simultâneos: máx. 5",
-      "Segunda entrada automática",
-      "Função Only",
-    ],
-    cta: "Começar",
-  },
-  {
-    id: "satoshi",
-    name: "Satoshi",
-    price: 199,
-    recommended: false,
-    features: [
-      "Ativos: Todos disponíveis",
-      "Timeframes: 5m, 15m, 30m, 1h, 4h e 1d",
-      "Trades simultâneos: Ilimitado",
-      "Segunda entrada automática",
-      "Função Only",
-    ],
-    cta: "Começar",
-  },
-] as const;
+import { createClient } from "@/lib/supabase";
 
 const RABBY_URL = "https://rabby.io";
 
@@ -110,27 +72,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
         <br /><br />
         Além disso, a API utilizada não possui permissão para realizar saques. O Zeedo só pode abrir e fechar operações dentro das regras que você definir.
         <br /><br />
-        Você mantém controle total sobre:
-        <ul className="list-disc ml-4 mt-1 space-y-0.5">
-          <li>Limites de perda</li>
-          <li>Tamanho das posições</li>
-          <li>Exposição ao risco</li>
-          <li>Capital utilizado</li>
-        </ul>
-        <br />
-        Seu saldo continua sob seu controle.
-        <br /><br />
-        Se você ainda tem receio, recomendamos utilizar uma carteira &quot;virgem&quot;, onde você adiciona apenas o valor destinado à margem dos trades.
-      </>
-    ),
-  },
-  {
-    q: "Posso cancelar a qualquer momento?",
-    a: (
-      <>
-        Sim. Você pode cancelar a recorrência da assinatura a qualquer momento, evitando a próxima cobrança. Não existe fidelidade forçada além do período do plano já contratado.
-        <br /><br />
-        Além disso, oferecemos garantia incondicional de 7 dias. Se dentro dos primeiros 7 dias você decidir que o Zeedo não é para você, basta solicitar o cancelamento e receberá o reembolso.
+        Você mantém controle total sobre limites de perda, tamanho das posições, exposição ao risco e capital utilizado. Seu saldo continua sob seu controle.
       </>
     ),
   },
@@ -138,8 +80,8 @@ const FAQ: { q: string; a: ReactNode }[] = [
 
 const STEPS = [
   {
-    title: "Crie sua conta",
-    desc: "Cadastre-se em segundos e escolha o plano que faz sentido para você.",
+    title: "Cadastre-se",
+    desc: "Preencha o formulário de acesso antecipado e garanta seu lugar na fila.",
     icon: "1",
   },
   {
@@ -171,14 +113,14 @@ const BENEFITS = [
   },
   {
     title: "Controle total",
-    desc: "Target loss, exposição máxima e segunda entrada — tudo configurável por você.",
+    desc: "Target loss, exposição máxima e segunda entrada, tudo configurável por você.",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
     ),
   },
   {
     title: "Alertas no Telegram",
-    desc: "Entradas, parciais, stops e PnL — tudo no seu celular, em tempo real.",
+    desc: "Entradas, parciais, stops e PnL, tudo no seu celular, em tempo real.",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     ),
@@ -201,7 +143,108 @@ const staggerItem = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function VendasPage() {
+function EarlyAccessForm({ onSuccess }: { onSuccess?: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error: insertError } = await supabase.from("early_access_signups").insert({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+      });
+      if (insertError) throw insertError;
+      setSuccess(true);
+      setName("");
+      setEmail("");
+      setPhone("");
+      onSuccess?.();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (success) {
+    return (
+      <div className="rounded-xl border border-zeedo-orange/30 bg-zeedo-orange/10 p-8 text-center">
+        <p className="text-lg font-medium text-zeedo-orange">✓ Cadastro realizado!</p>
+        <p className="mt-2 text-zeedo-black/70 dark:text-zeedo-white/70">
+          Você será avisado assim que o Zeedo estiver disponível.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mx-auto max-w-md space-y-4">
+      <div>
+        <label htmlFor="early-name" className="mb-1 block text-sm font-medium text-zeedo-black dark:text-zeedo-white">
+          Nome
+        </label>
+        <input
+          id="early-name"
+          type="text"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Seu nome"
+          className="w-full rounded-lg border border-zeedo-orange/30 bg-white px-4 py-3 text-zeedo-black placeholder:text-zeedo-black/40 focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange dark:bg-zeedo-black/50 dark:text-zeedo-white dark:placeholder:text-zeedo-white/40"
+        />
+      </div>
+      <div>
+        <label htmlFor="early-email" className="mb-1 block text-sm font-medium text-zeedo-black dark:text-zeedo-white">
+          Email
+        </label>
+        <input
+          id="early-email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="seu@email.com"
+          className="w-full rounded-lg border border-zeedo-orange/30 bg-white px-4 py-3 text-zeedo-black placeholder:text-zeedo-black/40 focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange dark:bg-zeedo-black/50 dark:text-zeedo-white dark:placeholder:text-zeedo-white/40"
+        />
+      </div>
+      <div>
+        <label htmlFor="early-phone" className="mb-1 block text-sm font-medium text-zeedo-black dark:text-zeedo-white">
+          Telefone (WhatsApp)
+        </label>
+        <input
+          id="early-phone"
+          type="tel"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="(00) 00000-0000"
+          className="w-full rounded-lg border border-zeedo-orange/30 bg-white px-4 py-3 text-zeedo-black placeholder:text-zeedo-black/40 focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange dark:bg-zeedo-black/50 dark:text-zeedo-white dark:placeholder:text-zeedo-white/40"
+        />
+      </div>
+      {error && (
+        <p className="text-sm text-red-500">{error}</p>
+      )}
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary w-full py-3 disabled:opacity-70"
+      >
+        {loading ? "Enviando…" : "Garantir acesso antecipado"}
+      </button>
+    </form>
+  );
+}
+
+export default function AcessoAntecipadoPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const { scrollYProgress } = useScroll();
   const robotY = useTransform(scrollYProgress, [0, 0.3], [0, 80]);
@@ -217,12 +260,6 @@ export default function VendasPage() {
             <span className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">Zeedo</span>
           </Link>
           <div className="flex items-center gap-4">
-            <Link href="/login" className="text-sm font-medium text-zeedo-black/70 hover:text-zeedo-orange dark:text-zeedo-white/70 dark:hover:text-zeedo-orange transition-colors">
-              Entrar
-            </Link>
-            <Link href="/signup" className="btn-primary">
-              Criar conta
-            </Link>
             <ThemeToggle />
           </div>
         </div>
@@ -241,20 +278,20 @@ export default function VendasPage() {
                 transition={{ duration: 0.6 }}
               >
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                  <span className="text-zeedo-black dark:text-zeedo-white">Você vive a vida.</span>
+                  <span className="text-zeedo-black dark:text-zeedo-white">Acesso Antecipado</span>
                   <br />
-                  <span className="text-zeedo-orange">O Zeedo vive o mercado.</span>
+                  <span className="text-zeedo-orange">Garanta seu lugar.</span>
                 </h1>
                 <p className="mt-6 max-w-xl text-lg text-zeedo-black/70 dark:text-zeedo-white/70 sm:text-xl lg:mx-0 mx-auto">
-                  Bot de trading automatizado para Hyperliquid. Sem emoção, sem cansaço. Apenas a matemática trabalhando por você.
+                  Seja um dos primeiros a usar o Zeedo. Bot de trading automatizado, sem emoção, sem cansaço.
                 </p>
-                <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                  <Link href="/signup" className="btn-primary w-full max-w-xs py-3 text-base sm:w-auto text-center">
-                    Começar agora
-                  </Link>
-                  <Link href="#planos" className="btn-secondary w-full max-w-xs py-3 text-center text-base sm:w-auto">
-                    Ver planos
-                  </Link>
+                <div className="mt-10 flex justify-center lg:justify-start">
+                  <a
+                    href="#acesso-antecipado"
+                    className="btn-primary w-full max-w-xs py-3 text-base sm:w-auto text-center"
+                  >
+                    Garantir acesso antecipado
+                  </a>
                 </div>
               </motion.div>
               <motion.div
@@ -290,10 +327,12 @@ export default function VendasPage() {
         >
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-2xl font-bold sm:text-3xl">
-              Operar manualmente drena sua energia
+              Você não tem tempo para fazer trades?
+              <br />
+              Operar manualmente drena sua energia?
             </h2>
-            <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Ficar grudado no gráfico, tomando decisões com emoção, perdendo noites de sono — isso não é sustentável. O Zeedo assume o trabalho operacional para você, executando uma estratégia baseada em sinais técnicos e Fibonacci, 24 horas por dia, sem parar.
+            <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
+              O Zeedo foi criado para resolver os dois maiores problemas de um trader: falta de tempo e emocional. Deixe a matemática trabalhar por você.
             </p>
           </div>
         </motion.section>
@@ -309,10 +348,10 @@ export default function VendasPage() {
         >
           <div className="mx-auto max-w-4xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl">
-              Automatize. Configure. Relaxe.
+              Automatize / Configure / Relaxe
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
-              Divergências, padrões de candlestick e níveis de Fibonacci — o Zeedo identifica setups e executa na Hyperliquid com controles de risco que você define.
+            <p className="mx-auto mt-6 max-w-2xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
+              O Zeedo trabalha 24 horas por dia com sinais e gerenciamento de risco definido por você. Você recebe alertas no Telegram e acompanha tudo pelo celular.
             </p>
             <motion.div
               className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
@@ -372,16 +411,50 @@ export default function VendasPage() {
               ))}
             </div>
             <div className="mt-12 text-center">
-              <Link href="/signup" className="btn-primary inline-block">
-                Criar conta grátis
-              </Link>
+              <a href="#acesso-antecipado" className="btn-primary inline-block">
+                Garantir acesso antecipado
+              </a>
             </div>
           </div>
         </motion.section>
 
-        {/* Planos */}
+        {/* Bônus */}
         <motion.section
-          id="planos"
+          className="border-t border-zeedo-orange/20 bg-zeedo-orange/5 dark:bg-zeedo-orange/10 px-4 py-16 sm:py-24"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={fadeUp}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="mx-auto max-w-3xl">
+            <h2 className="text-center text-2xl font-bold sm:text-3xl text-zeedo-orange">
+              Bônus!
+            </h2>
+            <p className="mt-6 text-center text-zeedo-black/70 dark:text-zeedo-white/70">
+              Você ainda ganha um mini curso introdutório, explicando como funciona tudo. Nesse bônus você terá aulas sobre:
+            </p>
+            <ul className="mt-6 space-y-2 text-zeedo-black/80 dark:text-zeedo-white/80">
+              <li>• Como configurar o Zeedo</li>
+              <li>• Como criar uma carteira</li>
+              <li>• Como conectar a carteira na Hyperliquid</li>
+              <li>• Como conectar o Telegram para receber todos os sinais no seu celular em tempo real</li>
+              <li>• Dicas de gerenciamento de risco</li>
+            </ul>
+            <p className="mt-8 text-center font-semibold text-zeedo-black dark:text-zeedo-white">
+              Extra:
+            </p>
+            <ul className="mt-4 space-y-2 text-zeedo-black/80 dark:text-zeedo-white/80">
+              <li>• Desvendando o operacional do Zeedo</li>
+              <li>• Acesso ao Suporte Individualizado</li>
+              <li>• Acesso à comunidade no Telegram</li>
+            </ul>
+          </div>
+        </motion.section>
+
+        {/* Formulário de acesso antecipado */}
+        <motion.section
+          id="acesso-antecipado"
           className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
@@ -389,130 +462,15 @@ export default function VendasPage() {
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-2xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl">
-              Planos
+              Garanta seu acesso antecipado
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
-              Escolha o que cabe no seu objetivo. Você pode alterar depois.
+              Preencha o formulário e seja avisado assim que o Zeedo estiver disponível. Vagas limitadas.
             </p>
-            <div className="mt-12 grid gap-6 sm:grid-cols-3 items-stretch">
-              {PLANS.map((plan) => (
-                <motion.div
-                  key={plan.id}
-                  whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                  className={`card relative flex flex-col items-stretch p-6 transition-all hover:ring-2 hover:ring-zeedo-orange cursor-default ${plan.recommended ? "ring-2 ring-zeedo-orange" : ""} ${plan.recommended ? "pt-10" : ""}`}
-                >
-                  {plan.recommended && (
-                    <span className="absolute top-0 left-0 rounded-br-lg bg-zeedo-orange px-2 py-1 text-xs font-medium text-white">
-                      Recomendado
-                    </span>
-                  )}
-
-                  <div className="text-center">
-                    <div className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">{plan.name}</div>
-                    <div className="mt-2 flex flex-wrap items-baseline justify-center gap-x-1 gap-y-0">
-                      {plan.recommended && (
-                        <span className="text-sm text-gray-500 dark:text-gray-400 line-through">De R$129 por</span>
-                      )}
-                      <span className="text-2xl font-bold text-zeedo-orange">R${plan.price}</span>
-                      <span className="text-[0.7rem] text-gray-500 dark:text-gray-400">/mês</span>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 flex flex-col mt-4 min-h-[180px]">
-                    <div className="w-full space-y-2 text-left">
-                      {plan.id === "basic" && (
-                        <>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas 6 disponíveis</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">15m</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">$5 por trade</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">1</span>
-                          </div>
-                        </>
-                      )}
-                      {plan.id === "pro" && (
-                        <>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">Todos disponíveis (13)</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 30m, 1h e 4h</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">Máx. 5</span>
-                          </div>
-                          <div className="text-sm pt-1">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">$150 por trade</span>
-                          </div>
-                          <div className="text-sm pt-2">
-                            <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
-                            <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                              <li>Segunda entrada automática</li>
-                              <li>Only Long/Short</li>
-                            </ul>
-                          </div>
-                        </>
-                      )}
-                      {plan.id === "satoshi" && (
-                        <>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">Todos disponíveis (13)</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">5m, 15m, 30m, 1h, 4h e 1d</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">Ilimitado</span>
-                          </div>
-                          <div className="text-sm pt-1">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">Ilimitado</span>
-                          </div>
-                          <div className="text-sm pt-2">
-                            <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
-                            <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                              <li>Segunda entrada automática</li>
-                              <li>Only Long/Short</li>
-                            </ul>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-auto pt-6 flex flex-col items-center">
-                    <Link
-                      href="/signup"
-                      className={`inline-block rounded-lg px-4 py-2 text-sm font-medium text-center transition-colors min-w-[120px] ${
-                        plan.recommended
-                          ? "bg-zeedo-orange text-white hover:bg-primary-600"
-                          : "border border-zeedo-orange/40 text-zeedo-orange hover:bg-zeedo-orange/10"
-                      }`}
-                    >
-                      {plan.cta}
-                    </Link>
-                  </div>
-                </motion.div>
-              ))}
+            <div className="mt-12">
+              <EarlyAccessForm />
             </div>
           </div>
         </motion.section>
@@ -607,7 +565,7 @@ export default function VendasPage() {
           </div>
         </motion.section>
 
-        {/* CTA final */}
+        {/* CTA final com formulário */}
         <motion.section
           className="border-t border-zeedo-orange/20 bg-zeedo-orange/5 dark:bg-zeedo-orange/10 px-4 py-20 sm:py-28"
           initial="hidden"
@@ -618,27 +576,14 @@ export default function VendasPage() {
         >
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold sm:text-4xl">
-              Pronto para deixar o Zeedo trabalhar por você?
+              Pronto para garantir seu acesso?
             </h2>
             <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Crie sua conta em segundos e comece a operar com disciplina e automatização.
+              Cadastre-se e seja um dos primeiros a operar com o Zeedo.
             </p>
-            <div className="mt-8">
-              <motion.div
-                animate={{ scale: [1, 1.03, 1] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <Link href="/signup" className="btn-primary inline-block py-3 px-8 text-base">
-                  Criar conta
-                </Link>
-              </motion.div>
+            <div className="mt-8 flex justify-center">
+              <EarlyAccessForm />
             </div>
-            <p className="mt-6 text-xs text-zeedo-black/50 dark:text-zeedo-white/50">
-              Já tem conta?{" "}
-              <Link href="/login" className="text-zeedo-orange hover:underline">
-                Entrar
-              </Link>
-            </p>
           </div>
         </motion.section>
       </main>
