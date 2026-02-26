@@ -353,7 +353,7 @@ export default function AcessoAntecipadoPage() {
               whileInView="visible"
               viewport={{ once: true, margin: "-40px" }}
               whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
-              className="relative overflow-hidden rounded-xl border-l-4 border-zeedo-orange px-6 py-8 shadow-lg transition-shadow hover:shadow-xl"
+              className="relative overflow-hidden rounded-xl px-6 py-8 shadow-lg transition-shadow hover:shadow-xl"
             >
               <div className="relative text-center">
                 <h2 className="text-2xl font-bold sm:text-3xl">
@@ -534,11 +534,11 @@ export default function AcessoAntecipadoPage() {
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 hidden md:block">
-            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden md:block">
-            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="relative z-10 mx-auto max-w-3xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl text-zeedo-orange">
@@ -687,11 +687,11 @@ export default function AcessoAntecipadoPage() {
           variants={fadeUp}
           transition={{ duration: 0.5 }}
         >
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 hidden md:block">
-            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
+          <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 hidden md:block">
-            <Image src="/zeedo-robot.png" alt="" width={120} height={120} className="object-contain opacity-[0.12] dark:opacity-[0.18]" />
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden md:block">
+            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="relative z-10 mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold sm:text-4xl">
@@ -701,7 +701,17 @@ export default function AcessoAntecipadoPage() {
               Crie sua conta em segundos e comece a operar com disciplina e automatização.
             </p>
             <div className="mt-8 flex justify-center">
-              <EarlyAccessForm />
+              <button
+                onClick={() => {
+                  const formSection = document.getElementById('acesso-antecipado');
+                  if (formSection) {
+                    formSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className="rounded-lg bg-zeedo-orange px-8 py-3 font-medium text-white transition-all hover:bg-zeedo-orange/90 hover:shadow-lg"
+              >
+                Garantir acesso antecipado
+              </button>
             </div>
           </div>
         </motion.section>
