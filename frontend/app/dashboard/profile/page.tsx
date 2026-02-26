@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPut, apiPost } from "@/lib/api";
 
 type Profile = {
   full_name: string | null;
@@ -22,6 +22,19 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const [showChangeEmail, setShowChangeEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailMessage, setEmailMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [changingEmail, setChangingEmail] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -70,11 +83,69 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordMessage(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: "err", text: "As senhas não coincidem." });
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordMessage({ type: "err", text: "A nova senha deve ter no mínimo 6 caracteres." });
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      await apiPost(
+        "/account/change-password",
+        { current_password: currentPassword, new_password: newPassword },
+        session.access_token
+      );
+      setPasswordMessage({ type: "ok", text: "Senha alterada com sucesso." });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setShowChangePassword(false), 2000);
+    } catch (err) {
+      setPasswordMessage({ type: "err", text: err instanceof Error ? err.message : "Erro ao alterar senha." });
+    } finally {
+      setChangingPassword(false);
+    }
+  }
+
+  async function handleChangeEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailMessage(null);
+    setChangingEmail(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      await apiPost(
+        "/account/request-email-change",
+        { new_email: newEmail, password: emailPassword },
+        session.access_token
+      );
+      setEmailMessage({ type: "ok", text: `Link de confirmação enviado para ${newEmail}. Verifique seu email.` });
+      setNewEmail("");
+      setEmailPassword("");
+      setTimeout(() => setShowChangeEmail(false), 3000);
+    } catch (err) {
+      setEmailMessage({ type: "err", text: err instanceof Error ? err.message : "Erro ao solicitar troca de email." });
+    } finally {
+      setChangingEmail(false);
+    }
+  }
+
   if (loading) return <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>;
 
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white mb-6">Perfil</h1>
+    <div className="space-y-6">
+      <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white">Perfil</h1>
+      
       <div className="card max-w-xl">
         <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 mb-6">
           Complete seu cadastro para se tornar elegível a futuras premiações.
@@ -153,6 +224,128 @@ export default function ProfilePage() {
             {saving ? "Salvando…" : "Salvar"}
           </button>
         </form>
+      </div>
+
+      <div className="card max-w-xl">
+        <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">Segurança</h2>
+        <div className="space-y-4">
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowChangePassword(!showChangePassword);
+                setPasswordMessage(null);
+              }}
+              className="text-sm font-medium text-zeedo-orange hover:underline"
+            >
+              {showChangePassword ? "Cancelar" : "Alterar senha"}
+            </button>
+            {showChangePassword && (
+              <form onSubmit={handleChangePassword} className="mt-4 space-y-3 border-t border-zeedo-orange/20 pt-4">
+                <div>
+                  <label htmlFor="current_password" className="block text-sm font-medium text-zeedo-orange mb-1">
+                    Senha atual
+                  </label>
+                  <input
+                    id="current_password"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="new_password" className="block text-sm font-medium text-zeedo-orange mb-1">
+                    Nova senha
+                  </label>
+                  <input
+                    id="new_password"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="input-field"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirm_password" className="block text-sm font-medium text-zeedo-orange mb-1">
+                    Confirmar nova senha
+                  </label>
+                  <input
+                    id="confirm_password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="input-field"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                {passwordMessage && (
+                  <p className={`text-sm ${passwordMessage.type === "ok" ? "text-green-600" : "text-red-500"}`}>
+                    {passwordMessage.text}
+                  </p>
+                )}
+                <button type="submit" disabled={changingPassword} className="btn-primary">
+                  {changingPassword ? "Alterando…" : "Confirmar alteração"}
+                </button>
+              </form>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowChangeEmail(!showChangeEmail);
+                setEmailMessage(null);
+              }}
+              className="text-sm font-medium text-zeedo-orange hover:underline"
+            >
+              {showChangeEmail ? "Cancelar" : "Alterar email"}
+            </button>
+            {showChangeEmail && (
+              <form onSubmit={handleChangeEmail} className="mt-4 space-y-3 border-t border-zeedo-orange/20 pt-4">
+                <div>
+                  <label htmlFor="new_email" className="block text-sm font-medium text-zeedo-orange mb-1">
+                    Novo email
+                  </label>
+                  <input
+                    id="new_email"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email_password" className="block text-sm font-medium text-zeedo-orange mb-1">
+                    Senha atual
+                  </label>
+                  <input
+                    id="email_password"
+                    type="password"
+                    value={emailPassword}
+                    onChange={(e) => setEmailPassword(e.target.value)}
+                    className="input-field"
+                    required
+                  />
+                </div>
+                {emailMessage && (
+                  <p className={`text-sm ${emailMessage.type === "ok" ? "text-green-600" : "text-red-500"}`}>
+                    {emailMessage.text}
+                  </p>
+                )}
+                <button type="submit" disabled={changingEmail} className="btn-primary">
+                  {changingEmail ? "Enviando…" : "Enviar link de confirmação"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

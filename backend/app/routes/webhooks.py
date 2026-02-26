@@ -85,6 +85,22 @@ async def telegram_webhook(request: Request):
     if user_id:
         try:
             supabase = get_supabase()
+            # Verifica se o chat_id já está em uso por outro usuário
+            existing = supabase.table("telegram_configs").select("user_id").eq("chat_id", str(chat_id)).limit(1).execute()
+            if existing.data and len(existing.data) > 0:
+                existing_user_id = existing.data[0].get("user_id")
+                if existing_user_id != user_id:
+                    # Chat já em uso por outro usuário - envia mensagem de erro
+                    requests.post(
+                        f"https://api.telegram.org/bot{token}/sendMessage",
+                        json={
+                            "chat_id": chat_id,
+                            "text": "❌ Este chat do Telegram já está conectado a outra conta Zeedo.\n\nPara conectar aqui, desconecte o Telegram na outra conta primeiro.",
+                        },
+                        timeout=5,
+                    )
+                    return {"ok": True}
+            
             supabase.table("telegram_configs").upsert(
                 {
                     "user_id": user_id,

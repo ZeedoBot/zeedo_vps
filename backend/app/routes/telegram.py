@@ -79,3 +79,11 @@ def telegram_status(user_id: str = Depends(get_current_user_id)):
     row = r.data[0]
     cid = (row.get("chat_id") or "")[:4] + "***" if row.get("chat_id") else None
     return {"connected": True, "chat_id_masked": cid}
+
+
+@router.delete("/disconnect")
+def disconnect_telegram(user_id: str = Depends(get_current_user_id)):
+    """Desconecta o Telegram do usuário."""
+    supabase = get_supabase()
+    supabase.table("telegram_configs").delete().eq("user_id", user_id).execute()
+    return {"success": True, "message": "Telegram desconectado com sucesso"}
