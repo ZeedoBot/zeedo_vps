@@ -283,7 +283,15 @@ export default function BotPage() {
                 max={limits.target_loss_max}
                 step={1}
                 value={targetLoss}
-                onChange={(e) => setTargetLoss(Number(e.target.value) || limits.target_loss_min)}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? "" : Number(e.target.value);
+                  setTargetLoss(val === "" ? limits.target_loss_min : clampValue(Number(val), limits.target_loss_min, limits.target_loss_max));
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === "") {
+                    setTargetLoss(limits.target_loss_min);
+                  }
+                }}
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
@@ -306,7 +314,15 @@ export default function BotPage() {
                 max={limits.max_positions}
                 step={1}
                 value={maxPositions}
-                onChange={(e) => setMaxPositions(Math.min(Number(e.target.value) || 1, limits.max_positions))}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? "" : Number(e.target.value);
+                  setMaxPositions(val === "" ? 1 : clampValue(Number(val), 1, limits.max_positions));
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === "") {
+                    setMaxPositions(1);
+                  }
+                }}
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
@@ -324,9 +340,15 @@ export default function BotPage() {
                 max={limits.max_single_position_usd}
                 step={limits.max_single_position_usd <= 10 ? 1 : 100}
                 value={maxSinglePosition}
-                onChange={(e) =>
-                  setMaxSinglePosition(Math.min(Number(e.target.value) || 0, limits.max_single_position_usd))
-                }
+                onChange={(e) => {
+                  const val = e.target.value === "" ? "" : Number(e.target.value);
+                  setMaxSinglePosition(val === "" ? 0 : Math.min(Number(val), limits.max_single_position_usd));
+                }}
+                onBlur={(e) => {
+                  if (e.target.value === "") {
+                    setMaxSinglePosition(0);
+                  }
+                }}
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
