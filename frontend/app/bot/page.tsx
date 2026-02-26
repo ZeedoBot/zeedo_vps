@@ -285,30 +285,57 @@ export default function BotPage() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
+          variants={staggerContainer}
           transition={{ duration: 0.5 }}
         >
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl">
-              Você não tem tempo para fazer trades?
-              <br />
-              Operar manualmente drena sua energia?
-            </h2>
-            <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Eu criei o Zeedo com a missão de resolver os dois maiores problemas de um trader: falta de tempo e emocional.
-            </p>
-            <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Ficar grudado no gráfico, tomando decisões com emoção, perdendo noites de sono... isso não é sustentável. O Zeedo assume o trabalho operacional para você, executando uma estratégia baseada em um setup validado desde 2021, rodando 24 horas por dia, sem parar (a não ser que você mande).
-            </p>
-            <h3 className="mt-10 text-xl font-bold sm:text-2xl">
-              Mas o Zeedo é só para Traders?
-            </h3>
-            <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Não. O Zeedo ao mesmo tempo é a solução para iniciantes ou até para quem nunca fez um trade na vida e não sabe como começar.
-            </p>
-            <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Por se tratar de uma automação que analisa o gráfico em tempo real, entra e sai automaticamente dos trades e ainda alerta você na palma da sua mão sobre cada decisão, então você não necessita experiência. Você ainda pode usar os sinais para estudar e aprimorar sua própria estratégia no futuro.
-            </p>
+          <div className="mx-auto max-w-3xl space-y-8">
+            {/* Bloco 1: O problema */}
+            <motion.div
+              variants={staggerItem}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+              className="relative overflow-hidden rounded-xl border-l-4 border-zeedo-orange bg-zeedo-orange/5 px-6 py-8 shadow-lg transition-shadow hover:shadow-xl dark:bg-zeedo-orange/10"
+            >
+              <div className="absolute top-0 right-0 h-24 w-24 translate-x-8 -translate-y-8 rounded-full bg-zeedo-orange/10 dark:bg-zeedo-orange/20" />
+              <div className="relative text-center">
+                <h2 className="text-2xl font-bold sm:text-3xl">
+                  Você não tem tempo para fazer trades?
+                  <br />
+                  <span className="text-zeedo-orange">Operar manualmente drena sua energia?</span>
+                </h2>
+                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Eu criei o Zeedo com a missão de resolver os dois maiores problemas de um trader: falta de tempo e emocional.
+                </p>
+                <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Ficar grudado no gráfico, tomando decisões com emoção, perdendo noites de sono... isso não é sustentável. O Zeedo assume o trabalho operacional para você, executando uma estratégia baseada em um setup validado desde 2021, rodando 24 horas por dia, sem parar (a não ser que você mande).
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Bloco 2: Mas o Zeedo é só para Traders? */}
+            <motion.div
+              variants={staggerItem}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+              className="relative overflow-hidden rounded-xl border border-zeedo-orange/30 bg-zeedo-black/5 px-6 py-8 shadow-lg transition-shadow hover:border-zeedo-orange/50 hover:shadow-xl dark:bg-white/5"
+            >
+              <div className="absolute bottom-0 left-0 h-20 w-20 -translate-x-6 translate-y-6 rounded-full bg-zeedo-orange/10 dark:bg-zeedo-orange/20" />
+              <div className="relative text-center">
+                <h3 className="text-xl font-bold sm:text-2xl">
+                  <span className="inline-block rounded-lg bg-zeedo-orange/20 px-3 py-1 text-zeedo-orange">Mas o Zeedo é só para Traders?</span>
+                </h3>
+                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Não. O Zeedo ao mesmo tempo é a solução para iniciantes ou até para quem nunca fez um trade na vida e não sabe como começar.
+                </p>
+                <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Por se tratar de uma automação que analisa o gráfico em tempo real, entra e sai automaticamente dos trades e ainda alerta você na palma da sua mão sobre cada decisão, então você não necessita experiência. Você ainda pode usar os sinais para estudar e aprimorar sua própria estratégia no futuro.
+                </p>
+              </div>
+            </motion.div>
           </div>
         </motion.section>
 
@@ -485,12 +512,12 @@ export default function BotPage() {
                             <span className="ml-2 text-gray-600 dark:text-gray-400">15m</span>
                           </div>
                           <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">$5 por trade</span>
-                          </div>
-                          <div className="text-sm">
                             <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
                             <span className="ml-2 text-gray-600 dark:text-gray-400">1</span>
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
+                            <span className="ml-2 text-gray-600 dark:text-gray-400">$5 por trade</span>
                           </div>
                         </>
                       )}

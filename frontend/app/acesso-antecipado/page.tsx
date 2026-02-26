@@ -72,7 +72,27 @@ const FAQ: { q: string; a: ReactNode }[] = [
         <br /><br />
         Além disso, a API utilizada não possui permissão para realizar saques. O Zeedo só pode abrir e fechar operações dentro das regras que você definir.
         <br /><br />
-        Você mantém controle total sobre limites de perda, tamanho das posições, exposição ao risco e capital utilizado. Seu saldo continua sob seu controle.
+        Você mantém controle total sobre:
+        <ul className="list-disc ml-4 mt-1 space-y-0.5">
+          <li>Limites de perda</li>
+          <li>Tamanho das posições</li>
+          <li>Exposição ao risco</li>
+          <li>Capital utilizado</li>
+        </ul>
+        <br />
+        Seu saldo continua sob seu controle.
+        <br /><br />
+        Se você ainda tem receio, recomendamos utilizar uma carteira &quot;virgem&quot;, onde você adiciona apenas o valor destinado à margem dos trades.
+      </>
+    ),
+  },
+  {
+    q: "Posso cancelar a qualquer momento?",
+    a: (
+      <>
+        Sim. Você pode cancelar a recorrência da assinatura a qualquer momento, evitando a próxima cobrança. Não existe fidelidade forçada além do período do plano já contratado.
+        <br /><br />
+        Além disso, oferecemos garantia incondicional de 7 dias. Se dentro dos primeiros 7 dias você decidir que o Zeedo não é para você, basta solicitar o cancelamento e receberá o reembolso.
       </>
     ),
   },
@@ -80,8 +100,8 @@ const FAQ: { q: string; a: ReactNode }[] = [
 
 const STEPS = [
   {
-    title: "Cadastre-se",
-    desc: "Preencha o formulário de acesso antecipado e garanta seu lugar na fila.",
+    title: "Crie sua conta",
+    desc: "Cadastre-se em segundos e escolha o plano que faz sentido para você.",
     icon: "1",
   },
   {
@@ -113,14 +133,14 @@ const BENEFITS = [
   },
   {
     title: "Controle total",
-    desc: "Target loss, exposição máxima e segunda entrada, tudo configurável por você.",
+    desc: "Target loss, exposição máxima e segunda entrada , tudo configurável por você.",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
     ),
   },
   {
     title: "Alertas no Telegram",
-    desc: "Entradas, parciais, stops e PnL, tudo no seu celular, em tempo real.",
+    desc: "Entradas, parciais, stops e PnL , tudo no seu celular, em tempo real.",
     icon: (
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     ),
@@ -278,12 +298,12 @@ export default function AcessoAntecipadoPage() {
                 transition={{ duration: 0.6 }}
               >
                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-                  <span className="text-zeedo-black dark:text-zeedo-white">Acesso Antecipado</span>
+                  <span className="text-zeedo-black dark:text-zeedo-white">Você vive a vida.</span>
                   <br />
-                  <span className="text-zeedo-orange">Garanta seu lugar.</span>
+                  <span className="text-zeedo-orange">O Zeedo vive o mercado.</span>
                 </h1>
                 <p className="mt-6 max-w-xl text-lg text-zeedo-black/70 dark:text-zeedo-white/70 sm:text-xl lg:mx-0 mx-auto">
-                  Seja um dos primeiros a usar o Zeedo. Bot de trading automatizado, sem emoção, sem cansaço.
+                  Bot de trading automatizado. Sem emoção, sem cansaço. Apenas a matemática trabalhando por você.
                 </p>
                 <div className="mt-10 flex justify-center lg:justify-start">
                   <a
@@ -322,18 +342,57 @@ export default function AcessoAntecipadoPage() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
+          variants={staggerContainer}
           transition={{ duration: 0.5 }}
         >
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl">
-              Você não tem tempo para fazer trades?
-              <br />
-              Operar manualmente drena sua energia?
-            </h2>
-            <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
-              O Zeedo foi criado para resolver os dois maiores problemas de um trader: falta de tempo e emocional. Deixe a matemática trabalhar por você.
-            </p>
+          <div className="mx-auto max-w-3xl space-y-8">
+            {/* Bloco 1: O problema */}
+            <motion.div
+              variants={staggerItem}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+              className="relative overflow-hidden rounded-xl border-l-4 border-zeedo-orange bg-zeedo-orange/5 px-6 py-8 shadow-lg transition-shadow hover:shadow-xl dark:bg-zeedo-orange/10"
+            >
+              <div className="absolute top-0 right-0 h-24 w-24 translate-x-8 -translate-y-8 rounded-full bg-zeedo-orange/10 dark:bg-zeedo-orange/20" />
+              <div className="relative text-center">
+                <h2 className="text-2xl font-bold sm:text-3xl">
+                  Você não tem tempo para fazer trades?
+                  <br />
+                  <span className="text-zeedo-orange">Operar manualmente drena sua energia?</span>
+                </h2>
+                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Eu criei o Zeedo com a missão de resolver os dois maiores problemas de um trader: falta de tempo e emocional.
+                </p>
+                <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Ficar grudado no gráfico, tomando decisões com emoção, perdendo noites de sono... isso não é sustentável. O Zeedo assume o trabalho operacional para você, executando uma estratégia baseada em um setup validado desde 2021, rodando 24 horas por dia, sem parar (a não ser que você mande).
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Bloco 2: Mas o Zeedo é só para Traders? */}
+            <motion.div
+              variants={staggerItem}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-40px" }}
+              whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+              className="relative overflow-hidden rounded-xl border border-zeedo-orange/30 bg-zeedo-black/5 px-6 py-8 shadow-lg transition-shadow hover:border-zeedo-orange/50 hover:shadow-xl dark:bg-white/5"
+            >
+              <div className="absolute bottom-0 left-0 h-20 w-20 -translate-x-6 translate-y-6 rounded-full bg-zeedo-orange/10 dark:bg-zeedo-orange/20" />
+              <div className="relative text-center">
+                <h3 className="text-xl font-bold sm:text-2xl">
+                  <span className="inline-block rounded-lg bg-zeedo-orange/20 px-3 py-1 text-zeedo-orange">Mas o Zeedo é só para Traders?</span>
+                </h3>
+                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Não. O Zeedo ao mesmo tempo é a solução para iniciantes ou até para quem nunca fez um trade na vida e não sabe como começar.
+                </p>
+                <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Por se tratar de uma automação que analisa o gráfico em tempo real, entra e sai automaticamente dos trades e ainda alerta você na palma da sua mão sobre cada decisão, então você não necessita experiência. Você ainda pode usar os sinais para estudar e aprimorar sua própria estratégia no futuro.
+                </p>
+              </div>
+            </motion.div>
           </div>
         </motion.section>
 
@@ -348,10 +407,14 @@ export default function AcessoAntecipadoPage() {
         >
           <div className="mx-auto max-w-4xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl">
-              Automatize / Configure / Relaxe
+              Automatize
+              <br />
+              Configure
+              <br />
+              Relaxe
             </h2>
             <p className="mx-auto mt-6 max-w-2xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
-              O Zeedo trabalha 24 horas por dia com sinais e gerenciamento de risco definido por você. Você recebe alertas no Telegram e acompanha tudo pelo celular.
+              O Zeedo trabalha com uma combinação de sinais: divergências, padrões de candlestick, volume e níveis de Fibonacci. Mas você não precisa saber isso, deixe com o Zeedo que ele identifica os setups, executa e te notifica, sempre com gerenciamento de risco definido por você.
             </p>
             <motion.div
               className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
@@ -576,10 +639,10 @@ export default function AcessoAntecipadoPage() {
         >
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold sm:text-4xl">
-              Pronto para garantir seu acesso?
+              Pronto para deixar o Zeedo trabalhar por você?
             </h2>
             <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Cadastre-se e seja um dos primeiros a operar com o Zeedo.
+              Crie sua conta em segundos e comece a operar com disciplina e automatização.
             </p>
             <div className="mt-8 flex justify-center">
               <EarlyAccessForm />
