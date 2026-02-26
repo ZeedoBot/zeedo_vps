@@ -61,13 +61,15 @@ def login_with_email_or_username(body: LoginBody):
 
 @router.get("/me")
 def get_me(user_id: str = Depends(get_current_user_id)):
-    """Retorna dados do usuário logado (id, email, username do public.users)."""
+    """Retorna dados do usuário logado (id, email, username do public.users). Inclui trial_expires_at quando em trial Pro."""
     supabase = get_supabase()
     r = supabase.table("users").select("id, email, username, subscription_status, subscription_tier, created_at").eq("id", user_id).limit(1).execute()
     if not r.data or len(r.data) == 0:
         return {"id": user_id, "email": None, "username": None}
     row = r.data[0]
-    return {
+    status = (row.get("subscription_status") or "").lower()
+    tier = (row.get("subscription_tier") or "").lower()
+    out = {
         "id": row["id"],
         "email": row.get("email"),
         "username": row.get("username"),
@@ -75,6 +77,11 @@ def get_me(user_id: str = Depends(get_current_user_id)):
         "subscription_tier": row.get("subscription_tier"),
         "created_at": row.get("created_at"),
     }
+    if status == "trial" and tier == "pro":
+        tc = supabase.table("trial_claims").select("expires_at, status").eq("user_id", user_id).limit(1).execute()
+        if tc.data and len(tc.data) > 0 and tc.data[0].get("status") == "active":
+            out["trial_expires_at"] = tc.data[0].get("expires_at")
+    return out
 
 
 @router.get("/health")

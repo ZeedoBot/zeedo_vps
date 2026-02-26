@@ -58,18 +58,8 @@ export default function DashboardLayout({
           email: session.user?.email ?? me.email,
           username: me.username ?? undefined,
         });
-        if (status === "trial" && tier === "pro") {
-          try {
-            const trial = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/trial/status`,
-              { headers: { Authorization: `Bearer ${session.access_token}` } }
-            ).then((r) => r.json());
-            if (trial.status === "active" && trial.trial?.expires_at) {
-              setTrialDaysLeft(daysUntil(trial.trial.expires_at));
-            }
-          } catch {
-            /* ignore */
-          }
+        if (status === "trial" && tier === "pro" && me.trial_expires_at) {
+          setTrialDaysLeft(daysUntil(me.trial_expires_at));
         }
       } catch {
         setUser({ email: session.user?.email ?? undefined });
