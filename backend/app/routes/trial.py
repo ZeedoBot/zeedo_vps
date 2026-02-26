@@ -3,10 +3,13 @@ Trial Pro 30 dias: ativação via CPF, termina em 30 dias ou $50 de lucro.
 Cada CPF e cada usuário só podem ativar 1 vez.
 """
 import hashlib
+import logging
 import re
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
@@ -98,35 +101,53 @@ def claim_trial(body: TrialClaimBody, user_id: str = Depends(get_current_user_id
     cpf_h = _cpf_hash(body.cpf)
     supabase = get_supabase()
 
-    existing_user = supabase.table("trial_claims").select("id").eq("user_id", user_id).limit(1).execute()
-    if existing_user.data and len(existing_user.data) > 0:
-        raise HTTPException(status_code=400, detail="Você já utilizou o trial. Cada usuário pode ativar apenas uma vez.")
+    try:
+        # Garante que o usuário existe em public.users (evita FK violation)
+        user_row = supabase.table("users").select("id").eq("id", user_id).limit(1).execute()
+        if not user_row.data or len(user_row.data) == 0:
+            logger.warning("Usuário %s não encontrado em public.users ao ativar trial", user_id)
+            raise HTTPException(
+                status_code=404,
+                detail="Usuário não encontrado. Faça logout, entre novamente e tente outra vez.",
+            )
 
-    existing_cpf = supabase.table("trial_claims").select("id").eq("cpf_hash", cpf_h).limit(1).execute()
-    if existing_cpf.data and len(existing_cpf.data) > 0:
+        existing_user = supabase.table("trial_claims").select("id").eq("user_id", user_id).limit(1).execute()
+        if existing_user.data and len(existing_user.data) > 0:
+            raise HTTPException(status_code=400, detail="Você já utilizou o trial. Cada usuário pode ativar apenas uma vez.")
+
+        existing_cpf = supabase.table("trial_claims").select("id").eq("cpf_hash", cpf_h).limit(1).execute()
+        if existing_cpf.data and len(existing_cpf.data) > 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Este CPF já foi utilizado para ativar um trial. Cada CPF pode ser usado apenas uma vez.",
+            )
+
+        started = datetime.utcnow()
+        expires = started + timedelta(days=TRIAL_DAYS)
+
+        supabase.table("trial_claims").insert({
+            "user_id": user_id,
+            "cpf_hash": cpf_h,
+            "started_at": started.isoformat(),
+            "expires_at": expires.isoformat(),
+            "status": "active",
+        }).execute()
+
+        supabase.table("users").update({
+            "subscription_status": "trial",
+            "subscription_tier": "pro",
+        }).eq("id", user_id).execute()
+
+        return {
+            "success": True,
+            "message": f"Trial Pro ativado por {TRIAL_DAYS} dias ou até atingir ${TRIAL_PROFIT_LIMIT_USD} de lucro.",
+            "expires_at": expires.isoformat(),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Erro ao ativar trial Pro: %s", e)
         raise HTTPException(
-            status_code=400,
-            detail="Este CPF já foi utilizado para ativar um trial. Cada CPF pode ser usado apenas uma vez.",
+            status_code=500,
+            detail="Erro ao ativar o trial. Verifique se sua conta está correta e tente novamente.",
         )
-
-    started = datetime.utcnow()
-    expires = started + timedelta(days=TRIAL_DAYS)
-
-    supabase.table("trial_claims").insert({
-        "user_id": user_id,
-        "cpf_hash": cpf_h,
-        "started_at": started.isoformat(),
-        "expires_at": expires.isoformat(),
-        "status": "active",
-    }).execute()
-
-    supabase.table("users").update({
-        "subscription_status": "trial",
-        "subscription_tier": "pro",
-    }).eq("id", user_id).execute()
-
-    return {
-        "success": True,
-        "message": f"Trial Pro ativado por {TRIAL_DAYS} dias ou até atingir ${TRIAL_PROFIT_LIMIT_USD} de lucro.",
-        "expires_at": expires.isoformat(),
-    }
