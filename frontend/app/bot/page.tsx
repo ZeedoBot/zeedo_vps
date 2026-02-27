@@ -568,7 +568,7 @@ export default function BotPage() {
                           </div>
                           <div className="text-sm">
                             <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">$5 por trade</span>
+                            <span className="ml-2 text-gray-600 dark:text-gray-400">$10 por trade</span>
                           </div>
                         </>
                       )}
