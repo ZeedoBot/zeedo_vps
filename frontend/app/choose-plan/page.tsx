@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const PLANS = [
   { id: "basic", name: "Basic", price: 49, color: "green" },
   { id: "pro", name: "Pro", price: 79, color: "blue" },
-  { id: "satoshi", name: "Satoshi", price: 199, color: "purple" },
+  { id: "satoshi", name: "Satoshi", price: 299, color: "purple" },
 ] as const;
 
 export default function ChoosePlanPage() {
@@ -197,6 +197,7 @@ export default function ChoosePlanPage() {
                         <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
                           <li>Segunda entrada automática</li>
                           <li>Only Long/Short</li>
+                          <li>Mentoria Individual Mensal</li>
                         </ul>
                       </div>
                     </>

@@ -32,7 +32,7 @@ const PLANS = [
   {
     id: "satoshi",
     name: "Satoshi",
-    price: 199,
+    price: 299,
     recommended: false,
     features: [
       "Ativos: Todos disponíveis",
@@ -40,6 +40,7 @@ const PLANS = [
       "Trades simultâneos: Ilimitado",
       "Segunda entrada automática",
       "Função Only",
+      "Mentoria Individual Mensal",
     ],
     cta: "Começar",
   },
@@ -621,6 +622,7 @@ export default function BotPage() {
                             <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
                               <li>Segunda entrada automática</li>
                               <li>Only Long/Short</li>
+                              <li>Mentoria Individual Mensal</li>
                             </ul>
                           </div>
                         </>
