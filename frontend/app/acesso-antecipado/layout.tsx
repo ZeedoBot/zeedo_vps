@@ -4,6 +4,10 @@ export const metadata: Metadata = {
   title: "Acesso Antecipado – Zeedo",
   description:
     "Garanta seu acesso antecipado ao Zeedo. Bot de trading automatizado para Hyperliquid. Seja um dos primeiros.",
+  icons: {
+    icon: "/zeedo-logo.png?v=4",
+    apple: "/zeedo-logo.png?v=4",
+  },
   openGraph: {
     title: "Acesso Antecipado – Zeedo",
     description: "Garanta seu acesso antecipado ao Zeedo. Cadastre-se e seja avisado assim que estivermos prontos.",

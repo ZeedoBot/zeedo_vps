@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   description: "Você vive a vida. O Zeedo vive o mercado. Sem emoção, sem cansaço. Apenas a matemática trabalhando por você.",
   icons: {
     icon: "/zeedo-logo.png?v=4",
+    apple: "/zeedo-logo.png?v=4",
   },
 };
 
