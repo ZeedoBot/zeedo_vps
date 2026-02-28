@@ -16,6 +16,8 @@ type PlanLimits = {
   allowed_timeframes: string[];
   allowed_trade_modes: string[];
   allowed_entry2?: boolean;
+  can_customize_targets?: boolean;
+  can_customize_stop?: boolean;
 };
 
 type BotConfig = {
@@ -27,6 +29,15 @@ type BotConfig = {
   target_loss_usd: number;
   max_single_pos_exposure: number;
   max_positions: number;
+  stop_multiplier?: number;
+  entry2_multiplier?: number;
+  entry2_adjust_last_target?: boolean;
+  target1_level?: number;
+  target1_percent?: number;
+  target2_level?: number;
+  target2_percent?: number;
+  target3_level?: number;
+  target3_percent?: number;
   plan_limits?: PlanLimits;
 };
 
@@ -47,6 +58,17 @@ export default function BotPage() {
   const [maxPositions, setMaxPositions] = useState<number | "">(2);
   const [maxSinglePosition, setMaxSinglePosition] = useState<number | "">(1250);
   const [entry2Enabled, setEntry2Enabled] = useState(true);
+  
+  // Estados para alvos e stop customizados
+  const [stopMultiplier, setStopMultiplier] = useState<number | "">(1.8);
+  const [entry2Multiplier, setEntry2Multiplier] = useState<number | "">(1.414);
+  const [entry2AdjustLastTarget, setEntry2AdjustLastTarget] = useState(true);
+  const [target1Level, setTarget1Level] = useState<number | "">(0.618);
+  const [target1Percent, setTarget1Percent] = useState<number | "">(50);
+  const [target2Level, setTarget2Level] = useState<number | "">(0);
+  const [target2Percent, setTarget2Percent] = useState<number | "">(0);
+  const [target3Level, setTarget3Level] = useState<number | "">(0);
+  const [target3Percent, setTarget3Percent] = useState<number | "">(0);
 
   const limits = config?.plan_limits;
 
@@ -66,6 +88,17 @@ export default function BotPage() {
         const maxSingle = data.max_single_pos_exposure ?? 1250;
         setMaxSinglePosition(pl ? Math.min(maxSingle, pl.max_single_position_usd) : maxSingle);
         setEntry2Enabled(data.entry2_enabled ?? true);
+        
+        // Carrega alvos e stop customizados
+        setStopMultiplier(data.stop_multiplier ?? 1.8);
+        setEntry2Multiplier(data.entry2_multiplier ?? 1.414);
+        setEntry2AdjustLastTarget(data.entry2_adjust_last_target ?? true);
+        setTarget1Level(data.target1_level ?? 0.618);
+        setTarget1Percent(data.target1_percent ?? 100);
+        setTarget2Level(data.target2_level ?? 0);
+        setTarget2Percent(data.target2_percent ?? 0);
+        setTarget3Level(data.target3_level ?? 0);
+        setTarget3Percent(data.target3_percent ?? 0);
       } finally {
         setLoading(false);
       }
@@ -101,6 +134,40 @@ export default function BotPage() {
       if (limits?.allowed_entry2) {
         payload.entry2_enabled = entry2Enabled;
       }
+      
+      // Adiciona alvos e stop customizados se o plano permitir
+      if (limits?.can_customize_stop) {
+        if (typeof stopMultiplier === "number") {
+          payload.stop_multiplier = stopMultiplier;
+        }
+        if (typeof entry2Multiplier === "number") {
+          payload.entry2_multiplier = entry2Multiplier;
+        }
+        payload.entry2_adjust_last_target = entry2AdjustLastTarget;
+      }
+      if (limits?.can_customize_targets) {
+        if (typeof target1Level === "number") payload.target1_level = target1Level;
+        if (typeof target1Percent === "number") payload.target1_percent = target1Percent;
+        
+        // Alvo 2 é opcional
+        if (typeof target2Level === "number" && target2Level > 0 && typeof target2Percent === "number" && target2Percent > 0) {
+          payload.target2_level = target2Level;
+          payload.target2_percent = target2Percent;
+        } else {
+          payload.target2_level = null;
+          payload.target2_percent = 0;
+        }
+        
+        // Alvo 3 é opcional
+        if (typeof target3Level === "number" && target3Level > 0 && typeof target3Percent === "number" && target3Percent > 0) {
+          payload.target3_level = target3Level;
+          payload.target3_percent = target3Percent;
+        } else {
+          payload.target3_level = null;
+          payload.target3_percent = 0;
+        }
+      }
+      
       await apiPut(
         "/bot/config",
         payload,
@@ -371,6 +438,339 @@ export default function BotPage() {
               </p>
             </div>
           </div>
+
+          {/* Alvos e Stop Customizados (apenas Pro e Satoshi) */}
+          {(limits?.can_customize_targets || limits?.can_customize_stop) && (
+            <>
+              <hr className="border-zeedo-orange/20" />
+              <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">Alvos e Stop Loss</h3>
+              
+              {limits?.can_customize_stop && (
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="stop_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
+                      Stop Loss (Multiplicador Fibonacci)
+                    </label>
+                    <input
+                      id="stop_multiplier"
+                      type="text"
+                      inputMode="decimal"
+                      value={stopMultiplier}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        if (val === "") {
+                          setStopMultiplier("");
+                          return;
+                        }
+                        const num = Number(val);
+                        if (!isNaN(num)) {
+                          setStopMultiplier(clampValue(num, 1.0, 3.0));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (stopMultiplier === "") {
+                          setStopMultiplier(1.8);
+                        }
+                      }}
+                      className="input-field max-w-xs"
+                    />
+                    <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                      Padrão: 1.8 (stop em -1.8 fib). Intervalo: 1.0 – 3.0
+                    </p>
+                  </div>
+
+                  {limits?.allowed_entry2 && (
+                    <>
+                      <div>
+                        <label htmlFor="entry2_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
+                          Entrada 2 (Multiplicador Fibonacci)
+                        </label>
+                        <input
+                          id="entry2_multiplier"
+                          type="text"
+                          inputMode="decimal"
+                          value={entry2Multiplier}
+                          onChange={(e) => {
+                            const val = e.target.value.trim();
+                            if (val === "") {
+                              setEntry2Multiplier("");
+                              return;
+                            }
+                            const num = Number(val);
+                            if (!isNaN(num)) {
+                              setEntry2Multiplier(clampValue(num, 0.619, 5.0));
+                            }
+                          }}
+                          onBlur={() => {
+                            if (entry2Multiplier === "") {
+                              setEntry2Multiplier(1.414);
+                            }
+                          }}
+                          className="input-field max-w-xs"
+                        />
+                        <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                          Padrão: 1.414 (entrada 2 em -1.414 fib). Intervalo: 0.619 – 5.0
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <span className="text-sm font-medium text-zeedo-black dark:text-zeedo-white">
+                            Ajustar último alvo para 0.0 ao pegar entrada 2
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setEntry2AdjustLastTarget(!entry2AdjustLastTarget)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              entry2AdjustLastTarget ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+                                entry2AdjustLastTarget ? "translate-x-6" : "translate-x-1"
+                              }`}
+                            />
+                          </button>
+                        </label>
+                        <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                          Quando ativado, se a entrada 2 executar, o último alvo será ajustado para 0.0 (retorno ao setup) para saída rápida em caso de reversão.
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {limits?.can_customize_targets && (
+                <div className="space-y-4">
+                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+                    Configure os alvos de take profit. Alvo 1 é obrigatório. Alvos 2 e 3 são opcionais (deixe em 0 para desativar). A soma dos percentuais deve ser 100%.
+                  </p>
+                  
+                  {/* Alvo 1 - OBRIGATÓRIO */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="target1_level" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 1 (Nível Fib) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="target1_level"
+                        type="text"
+                        inputMode="decimal"
+                        value={target1Level}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget1Level("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget1Level(clampValue(num, 0, 5));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target1Level === "") {
+                            setTarget1Level(0.618);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                        Ex: 0.618
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor="target1_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 1 (%) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="target1_percent"
+                        type="text"
+                        inputMode="numeric"
+                        value={target1Percent}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget1Percent("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget1Percent(clampValue(num, 0, 100));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target1Percent === "") {
+                            setTarget1Percent(50);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                        1 – 100% (obrigatório)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Alvo 2 - OPCIONAL */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="target2_level" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 2 (Nível Fib) - Opcional
+                      </label>
+                      <input
+                        id="target2_level"
+                        type="text"
+                        inputMode="decimal"
+                        value={target2Level}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget2Level("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget2Level(clampValue(num, 0, 5));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target2Level === "") {
+                            setTarget2Level(0);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                        Ex: 1.0 (deixe 0 para desativar)
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor="target2_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 2 (%) - Opcional
+                      </label>
+                      <input
+                        id="target2_percent"
+                        type="text"
+                        inputMode="numeric"
+                        value={target2Percent}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget2Percent("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget2Percent(clampValue(num, 0, 100));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target2Percent === "") {
+                            setTarget2Percent(0);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                        0 – 100% (deixe 0 para desativar)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Alvo 3 - OPCIONAL */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="target3_level" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 3 (Nível Fib) - Opcional
+                      </label>
+                      <input
+                        id="target3_level"
+                        type="text"
+                        inputMode="decimal"
+                        value={target3Level}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget3Level("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget3Level(clampValue(num, 0, 5));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target3Level === "") {
+                            setTarget3Level(0);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                        Ex: 1.618 (deixe 0 para desativar)
+                      </p>
+                    </div>
+                    <div>
+                      <label htmlFor="target3_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 3 (%)
+                      </label>
+                      <input
+                        id="target3_percent"
+                        type="text"
+                        inputMode="numeric"
+                        value={target3Percent}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget3Percent("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget3Percent(clampValue(num, 0, 100));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target3Percent === "") {
+                            setTarget3Percent(0);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                        0 – 100%
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Validação visual da soma */}
+                  <div className="rounded-lg bg-zeedo-orange/10 p-3">
+                    <p className="text-sm font-medium text-zeedo-black dark:text-zeedo-white">
+                      Soma dos alvos: {
+                        (typeof target1Percent === "number" ? target1Percent : 0) +
+                        (typeof target2Percent === "number" ? target2Percent : 0) +
+                        (typeof target3Percent === "number" ? target3Percent : 0)
+                      }%
+                    </p>
+                    {(typeof target1Percent === "number" ? target1Percent : 0) <= 0 && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        ⚠️ Alvo 1 é obrigatório e deve ter percentual maior que 0%
+                      </p>
+                    )}
+                    {((typeof target1Percent === "number" ? target1Percent : 0) +
+                      (typeof target2Percent === "number" ? target2Percent : 0) +
+                      (typeof target3Percent === "number" ? target3Percent : 0)) !== 100 && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        ⚠️ A soma deve ser exatamente 100%
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
           <button type="submit" disabled={saving} className="btn-primary">
             {saving ? "Salvando…" : "Salvar configurações"}

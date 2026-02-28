@@ -257,7 +257,10 @@ class SupabaseStorage(StorageBase):
             return {}
         try:
             user_id = user_id or self._user_id
-            query = self._client.table(TABLE_CONFIG).select("symbols, timeframes, trade_mode")
+            query = self._client.table(TABLE_CONFIG).select(
+                "symbols, timeframes, trade_mode, stop_multiplier, entry2_multiplier, entry2_adjust_last_target, "
+                "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent"
+            )
             
             if user_id:
                 query = query.eq("user_id", user_id)
@@ -269,7 +272,16 @@ class SupabaseStorage(StorageBase):
             return {
                 "symbols": row.get("symbols") or [],
                 "timeframes": row.get("timeframes") or [],
-                "trade_mode": row.get("trade_mode") or "BOTH"
+                "trade_mode": row.get("trade_mode") or "BOTH",
+                "stop_multiplier": row.get("stop_multiplier", 1.8),
+                "entry2_multiplier": row.get("entry2_multiplier", 1.414),
+                "entry2_adjust_last_target": row.get("entry2_adjust_last_target", True),
+                "target1_level": row.get("target1_level", 0.618),
+                "target1_percent": row.get("target1_percent", 100),
+                "target2_level": row.get("target2_level"),
+                "target2_percent": row.get("target2_percent", 0),
+                "target3_level": row.get("target3_level"),
+                "target3_percent": row.get("target3_percent", 0),
             }
         except Exception as e:
             logging.error(f"Supabase get_config: {e}")

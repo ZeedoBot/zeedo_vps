@@ -40,6 +40,8 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
         "allowed_timeframes": row.get("allowed_timeframes") or ["15m"],
         "allowed_trade_modes": row.get("allowed_trade_modes") or ["BOTH"],
         "allowed_entry2": bool(row.get("allowed_entry2", False)),
+        "can_customize_targets": bool(row.get("can_customize_targets", False)),
+        "can_customize_stop": bool(row.get("can_customize_stop", False)),
     }
 
 
@@ -53,6 +55,15 @@ class BotConfigUpdate(BaseModel):
     max_global_exposure: Optional[float] = None
     max_single_pos_exposure: Optional[float] = None
     max_positions: Optional[int] = None
+    stop_multiplier: Optional[float] = Field(None, ge=1.0, le=3.0)
+    entry2_multiplier: Optional[float] = Field(None, ge=0.619, le=5.0)
+    entry2_adjust_last_target: Optional[bool] = None
+    target1_level: Optional[float] = Field(None, ge=0.0, le=5.0)
+    target1_percent: Optional[int] = Field(None, ge=1, le=100)
+    target2_level: Optional[float] = Field(None, ge=0.0, le=5.0)
+    target2_percent: Optional[int] = Field(None, ge=0, le=100)
+    target3_level: Optional[float] = Field(None, ge=0.0, le=5.0)
+    target3_percent: Optional[int] = Field(None, ge=0, le=100)
 
 
 @router.get("/config")
@@ -65,7 +76,9 @@ def get_config(user_id: str = Depends(get_current_user_id)):
     limits = _get_plan_limits(supabase, user_id)
     r = supabase.table("bot_config").select(
         "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, "
-        "target_loss_usd, max_global_exposure, max_single_pos_exposure, max_positions, updated_at"
+        "target_loss_usd, max_global_exposure, max_single_pos_exposure, max_positions, "
+        "stop_multiplier, entry2_multiplier, entry2_adjust_last_target, "
+        "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent, updated_at"
     ).eq("user_id", user_id).limit(1).execute()
     out = {
         "bot_enabled": False,
@@ -77,6 +90,15 @@ def get_config(user_id: str = Depends(get_current_user_id)):
         "max_global_exposure": 5000.0,
         "max_single_pos_exposure": 2500.0,
         "max_positions": 2,
+        "stop_multiplier": 1.8,
+        "entry2_multiplier": 1.414,
+        "entry2_adjust_last_target": True,
+        "target1_level": 0.618,
+        "target1_percent": 100,
+        "target2_level": None,
+        "target2_percent": 0,
+        "target3_level": None,
+        "target3_percent": 0,
     }
     if r.data and len(r.data) > 0:
         out.update(r.data[0])
@@ -125,6 +147,37 @@ def update_config(
     if body.trade_mode is not None:
         if body.trade_mode not in limits["allowed_trade_modes"]:
             raise HTTPException(400, f"Modo {body.trade_mode} não permitido no plano {limits['plan']}")
+    
+    # Validação de alvos e stop customizados (apenas Pro e Satoshi)
+    can_customize_targets = limits.get("can_customize_targets", False)
+    can_customize_stop = limits.get("can_customize_stop", False)
+    
+    if body.stop_multiplier is not None and not can_customize_stop:
+        raise HTTPException(400, "Customização de stop loss disponível apenas nos planos Pro e Satoshi.")
+    
+    if body.entry2_multiplier is not None and not can_customize_stop:
+        raise HTTPException(400, "Customização da entrada 2 disponível apenas nos planos Pro e Satoshi.")
+    
+    if any([body.target1_level is not None, body.target1_percent is not None, 
+            body.target2_level is not None, body.target2_percent is not None,
+            body.target3_level is not None, body.target3_percent is not None]) and not can_customize_targets:
+        raise HTTPException(400, "Customização de alvos disponível apenas nos planos Pro e Satoshi.")
+    
+    # Validação de consistência dos alvos (soma deve ser 100%)
+    if any([body.target1_percent is not None, body.target2_percent is not None, body.target3_percent is not None]):
+        # Busca valores atuais
+        current = supabase.table("bot_config").select("target1_percent, target2_percent, target3_percent").eq("user_id", user_id).limit(1).execute()
+        t1 = body.target1_percent if body.target1_percent is not None else (current.data[0].get("target1_percent", 50) if current.data else 50)
+        t2 = body.target2_percent if body.target2_percent is not None else (current.data[0].get("target2_percent", 50) if current.data else 50)
+        t3 = body.target3_percent if body.target3_percent is not None else (current.data[0].get("target3_percent", 0) if current.data else 0)
+        
+        # Alvo 1 é obrigatório (deve ter percentual > 0)
+        if t1 <= 0:
+            raise HTTPException(400, "Alvo 1 é obrigatório e deve ter percentual maior que 0%")
+        
+        total = t1 + t2 + t3
+        if total != 100:
+            raise HTTPException(400, f"A soma dos percentuais dos alvos deve ser 100% (atual: {total}%)")
 
     # Só permite ligar o bot se carteira E telegram estiverem conectados
     if body.bot_enabled is True:

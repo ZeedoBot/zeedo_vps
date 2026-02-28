@@ -170,6 +170,7 @@ export default function ChoosePlanPage() {
                         <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
                           <li>Segunda entrada automática</li>
                           <li>Only Long/Short</li>
+                          <li>Alvos e Stop Personalizados</li>
                         </ul>
                       </div>
                     </>
@@ -197,6 +198,7 @@ export default function ChoosePlanPage() {
                         <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
                           <li>Segunda entrada automática</li>
                           <li>Only Long/Short</li>
+                          <li>Alvos e Stop Personalizados</li>
                           <li>Mentoria Individual Mensal</li>
                         </ul>
                       </div>

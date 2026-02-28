@@ -76,13 +76,14 @@ LOOKBACK_DIVERGENCE = 35
 MIN_PIVOT_DIST = 4           
 LOCAL_LOW_WINDOW = 4    #MENOR CORPO DOS ÚLTIMOS 4
 
-# ALVOS DE FIBO (apenas 2 alvos)
+# ALVOS DE FIBO (customizáveis por plano Pro/Satoshi)
 FIB_LEVELS = [
-    (0.618, 0.50),  # Alvo 1 (0.618)
-    (1.0, 0.50),    # Alvo 2 (1.0)
+    (0.618, 0.50),  # Alvo 1 (0.618) - 50%
+    (1.0, 0.50),    # Alvo 2 (1.0) - 50%
 ]
-FIB_STOP_LEVEL = 1.8
-FIB_ENTRY2_LEVEL = 1.414
+FIB_STOP_LEVEL = 1.8  # Padrão: -1.8 fib
+FIB_ENTRY2_LEVEL = 1.414  # Padrão: -1.414 fib (customizável: 0.619-5.0)
+ENTRY2_ADJUST_LAST_TARGET = True  # Se true, último alvo vai para 0.0 quando entrada 2 executar
 
 # ENTRADA 2 (Pro/Enterprise): plano permite e usuário pode ativar/desativar
 ENTRY2_ALLOWED = True   # Definido por plan (basic=False, pro/satoshi=True)
@@ -129,8 +130,8 @@ def tg_send(msg):
         logging.error(f"Erro Telegram: {e}")
 
 def load_config(storage):
-    """Carrega config do storage (local ou Supabase) e atualiza SYMBOLS, TIMEFRAMES, TRADE_MODE."""
-    global SYMBOLS, TIMEFRAMES, TRADE_MODE
+    """Carrega config do storage (local ou Supabase) e atualiza SYMBOLS, TIMEFRAMES, TRADE_MODE, alvos e stop."""
+    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY2_ADJUST_LAST_TARGET
     config = storage.get_config()
     if config:
         if "symbols" in config and config["symbols"]:
@@ -138,6 +139,28 @@ def load_config(storage):
         if "timeframes" in config and config["timeframes"]:
             TIMEFRAMES = config["timeframes"]
         TRADE_MODE = config.get("trade_mode", "BOTH")
+        
+        # Carrega alvos customizados (alvo 1 obrigatório, alvos 2 e 3 opcionais)
+        t1_level = config.get("target1_level", 0.618)
+        t1_pct = config.get("target1_percent", 100) / 100.0
+        t2_level = config.get("target2_level")
+        t2_pct = config.get("target2_percent", 0) / 100.0
+        t3_level = config.get("target3_level")
+        t3_pct = config.get("target3_percent", 0) / 100.0
+        
+        # Reconstrói FIB_LEVELS (alvo 1 sempre presente)
+        FIB_LEVELS = [(t1_level, t1_pct)]
+        if t2_level is not None and t2_level > 0 and t2_pct > 0:
+            FIB_LEVELS.append((t2_level, t2_pct))
+        if t3_level is not None and t3_level > 0 and t3_pct > 0:
+            FIB_LEVELS.append((t3_level, t3_pct))
+        
+        # Carrega stop e entrada 2 customizados
+        FIB_STOP_LEVEL = config.get("stop_multiplier", 1.8)
+        FIB_ENTRY2_LEVEL = config.get("entry2_multiplier", 1.414)
+        ENTRY2_ADJUST_LAST_TARGET = config.get("entry2_adjust_last_target", True)
+        
+        logging.info(f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada2: -{FIB_ENTRY2_LEVEL}")
 
 def get_precision(meta, coin):
     if not meta:
@@ -540,7 +563,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
 
 def place_trade_entry(exchange, symbol, side, qty, entry_px):
     """
-    Coloca ordem LIMIT para primeira entrada no nível -0.618 da fib do setup.
+    Coloca ordem LIMIT para primeira entrada no nível -0.618 da fib do setup (fixo).
     Simplificado: não usa mais STOP LIMIT, apenas LIMIT direto.
     """
     is_buy = True if side == "long" else False
@@ -556,15 +579,23 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         return None, None
 
 def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, entry2_filled=False):
-    """Coloca TP1 (0.618) e TP2. Se entry2_filled, TP2 vai para 0.0 (anchor = setup_high/setup_low)."""
+    """Coloca TPs customizados. Se entry2_filled E ENTRY2_ADJUST_LAST_TARGET=true, último TP vai para 0.0."""
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
 
     start_px = anchor_px if anchor_px else entry_px
     is_buy_tp = False if side == "long" else True
-    fib_levels = [(0.618, 0.50), (0.0, 0.50)] if entry2_filled else FIB_LEVELS
-    logging.info(f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}" + (" | TP2→0.0 (2ª entrada)" if entry2_filled else ""))
+    
+    # Se entry2_filled E usuário quer ajustar, último alvo vai para 0.0 (retorno ao setup)
+    if entry2_filled and ENTRY2_ADJUST_LAST_TARGET and len(FIB_LEVELS) >= 1:
+        fib_levels = list(FIB_LEVELS)
+        # Mantém todos os alvos, mas o último vai para 0.0
+        fib_levels[-1] = (0.0, fib_levels[-1][1])
+    else:
+        fib_levels = FIB_LEVELS
+    
+    logging.info(f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}" + (f" | Último TP→0.0 (entrada 2)" if (entry2_filled and ENTRY2_ADJUST_LAST_TARGET) else ""))
 
     for idx, (fib_mult, pct) in enumerate(fib_levels, start=1):
         qty_tp = round_sz(total_qty * pct, sz_dec)
@@ -976,7 +1007,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 res, trade_id = place_trade_entry(exchange, sym, sig["side"], final_qty, entry_px)
                 signal_ts_sec = sig["signal_ts"] / 1000
                 if res:
-                    # 1ª entrada: -0.618. 2ª entrada (se permitido): -1.414. Apenas 2 entradas.
+                    # 1ª entrada: -0.618 (fixo). 2ª entrada (se permitido): -1.414. Apenas 2 entradas.
                     qty_entry_1 = final_qty  # 1ª entrada
                     qty_entry_2 = final_qty + second_qty  # 1ª + 2ª (apenas se ENTRY2_ALLOWED e ENTRY2_ENABLED)
                     tracker_data = {
@@ -1029,7 +1060,8 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
         order_symbols = {o["coin"] for o in all_open_orders if not o["reduceOnly"]}
         now = time.time()
 
-        # Se o preço tocar no 0.618 (alvo 1), cancela ordens ativas. 0 da fibo = setup_high/setup_low; alvo 0.618 = anchor ± 0.618*tech_base.
+        # Se o preço tocar no alvo 1, cancela ordens ativas
+        target1_fib = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618  # Usa primeiro alvo configurado
         for sym in list(entry_tracker.keys()):
             mem = entry_tracker.get(sym, {})
             if mem.get("alvo1_cancel_done"):
@@ -1045,12 +1077,12 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 continue
             cancel = False
             if side == "long" and setup_high is not None:
-                level_0618 = setup_high + (tech_base * 0.618)
-                if curr_price >= level_0618:
+                level_target1 = setup_high + (tech_base * target1_fib)
+                if curr_price >= level_target1:
                     cancel = True
             elif side == "short" and setup_low is not None:
-                level_0618 = setup_low - (tech_base * 0.618)
-                if curr_price <= level_0618:
+                level_target1 = setup_low - (tech_base * target1_fib)
+                if curr_price <= level_target1:
                     cancel = True
             if not cancel:
                 continue
@@ -1058,7 +1090,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 if o["coin"] == sym and not o.get("reduceOnly"):
                     try:
                         exchange.cancel(sym, o["oid"])
-                        logging.info(f"⏹️ Ordem {sym} cancelada: preço atingiu alvo 1 (0.618)")
+                        logging.info(f"⏹️ Ordem {sym} cancelada: preço atingiu alvo 1 ({target1_fib})")
                     except Exception as e:
                         logging.error(f"Erro ao cancelar ordem {sym}: {e}")
             
@@ -1247,40 +1279,43 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 breakeven_moved = mem_data.get('breakeven_moved', False)
                 pnl_realized = mem_data.get("pnl_realized", 0)
                 
+                # Usa o primeiro alvo configurado para trailing stop
+                target1_fib = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
+                
                 # Usa o mesmo anchor do TP1 (setup_high/setup_low) para garantir que breakeven e TP1 sejam no mesmo preço
                 if side == "long":
                     if setup_high is not None:
-                        trigger_0618 = setup_high + (base * 0.618)  # Mesmo cálculo do TP1
+                        trigger_target1 = setup_high + (base * target1_fib)  # Mesmo cálculo do TP1
                     else:
-                        trigger_0618 = entry + (base * 0.618)  # Fallback se não tiver setup_high
+                        trigger_target1 = entry + (base * target1_fib)  # Fallback se não tiver setup_high
                     stop_entry = entry * 1.0002 
                     
-                    # Trailing: Quando TP1 executa (pnl_realized > 0) OU preço >= 0.618 -> Breakeven
+                    # Trailing: Quando TP1 executa (pnl_realized > 0) OU preço >= alvo 1 -> Breakeven
                     # Garante que ajusta mesmo se o preço já passou do nível
-                    if not breakeven_moved and (pnl_realized > 0 or curr_price >= trigger_0618):
+                    if not breakeven_moved and (pnl_realized > 0 or curr_price >= trigger_target1):
                         if current_sl_px < entry: 
                             new_sl = stop_entry
-                            logging.info(f"🛡️ Trailing 0.618: Stop movido para Break-Even (mesmo preço do TP1)")
+                            logging.info(f"🛡️ Trailing Alvo 1 ({target1_fib}): Stop movido para Break-Even")
                             tg_send(
-                                f"🛡️ Trade Protegido: Break-Even (0.618)\n"
+                                f"🛡️ Trade Protegido: Break-Even (Alvo 1)\n"
                                 f"{side.upper()} {sym} {mem_data.get('tf')}\n"
                                 f"Novo Stop: {new_sl:.4f}"
                             )
 
                 else: # Short
                     if setup_low is not None:
-                        trigger_0618 = setup_low - (base * 0.618)  # Mesmo cálculo do TP1
+                        trigger_target1 = setup_low - (base * target1_fib)  # Mesmo cálculo do TP1
                     else:
-                        trigger_0618 = entry - (base * 0.618)  # Fallback se não tiver setup_low
+                        trigger_target1 = entry - (base * target1_fib)  # Fallback se não tiver setup_low
                     stop_entry = entry * 0.9998 
                     
-                    # Trailing: Quando TP1 executa (pnl_realized > 0) OU preço <= 0.618 -> Breakeven
-                    if not breakeven_moved and (pnl_realized > 0 or curr_price <= trigger_0618):
+                    # Trailing: Quando TP1 executa (pnl_realized > 0) OU preço <= alvo 1 -> Breakeven
+                    if not breakeven_moved and (pnl_realized > 0 or curr_price <= trigger_target1):
                         if current_sl_px > entry:
                             new_sl = stop_entry
-                            logging.info(f"🛡️ Trailing 0.618: Stop movido para Break-Even")
+                            logging.info(f"🛡️ Trailing Alvo 1 ({target1_fib}): Stop movido para Break-Even")
                             tg_send(
-                                f"🛡️ Trade Protegido: Break-Even (0.618)\n"
+                                f"🛡️ Trade Protegido: Break-Even (Alvo 1)\n"
                                 f"{side.upper()} {sym} {mem_data.get('tf')}\n"
                                 f"Novo Stop: {new_sl:.4f}"
                             )
@@ -1289,7 +1324,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     exchange.cancel(sym, sl_order["oid"])
                     new_sl = round_px(new_sl)
                     
-                    # Quando move para breakeven, a entrada 2 já foi cancelada (alvo 0.618 atingido)
+                    # Quando move para breakeven, a entrada 2 já foi cancelada (alvo 1 atingido)
                     # Portanto, usa apenas a quantidade atual da posição
                     stop_qty = abs(size)
                     
