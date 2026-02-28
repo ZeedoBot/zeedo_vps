@@ -495,10 +495,10 @@ export default function BotPage() {
                     </svg>
                     <div>
                       <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                        ⚠️ Atenção
+                        Atenção
                       </p>
                       <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
-                        Se você é iniciante e não assistiu as aulas, não altere nada aqui. As configurações padrão já estão otimizadas.
+                        Se você é iniciante e não assistiu as aulas, não altere nada aqui.
                       </p>
                     </div>
                   </div>
@@ -633,14 +633,16 @@ export default function BotPage() {
 
               {showAdvanced && limits?.can_customize_targets && (
                 <div className="space-y-4">
-                  <h3 className="text-base font-semibold text-zeedo-orange">
-                    Alvos de Realização
-                  </h3>
-                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-tight">
-                    Alvo 1 é obrigatório.<br />
-                    Alvos 2 e 3 são opcionais (deixe em 0 para desativar).<br />
-                    A soma dos percentuais deve ser 100%.
-                  </p>
+                  <div>
+                    <h3 className="text-base font-semibold text-zeedo-orange mb-1">
+                      Alvos de Realização
+                    </h3>
+                    <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-tight">
+                      Alvo 1 é obrigatório.<br />
+                      Alvos 2 e 3 são opcionais (deixe em 0 para desativar).<br />
+                      A soma dos percentuais deve ser 100%.
+                    </p>
+                  </div>
                   
                   {/* Alvo 1 - OBRIGATÓRIO */}
                   <div className="grid grid-cols-2 gap-4">
