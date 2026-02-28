@@ -112,8 +112,9 @@ export default function BotPage() {
   }
 
   // Normaliza entrada decimal: aceita vírgula ou ponto
-  function normalizeDecimalInput(val: string): string {
-    return val.replace(',', '.');
+  function normalizeDecimalInput(val: string | number): string {
+    const str = typeof val === 'number' ? val.toString() : val;
+    return str.replace(',', '.');
   }
 
   // Valida se é um número decimal válido (aceita vírgula ou ponto)
