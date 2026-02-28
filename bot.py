@@ -142,9 +142,9 @@ def load_config(storage):
         
         # Carrega alvos customizados (alvo 1 obrigatório, alvos 2 e 3 opcionais)
         t1_level = config.get("target1_level", 0.618)
-        t1_pct = config.get("target1_percent", 100) / 100.0
-        t2_level = config.get("target2_level")
-        t2_pct = config.get("target2_percent", 0) / 100.0
+        t1_pct = config.get("target1_percent", 50) / 100.0
+        t2_level = config.get("target2_level", 1.0)
+        t2_pct = config.get("target2_percent", 50) / 100.0
         t3_level = config.get("target3_level")
         t3_pct = config.get("target3_percent", 0) / 100.0
         

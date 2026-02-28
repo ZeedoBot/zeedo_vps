@@ -26,9 +26,9 @@ Permitir que traders avançados (Pro/Satoshi) personalizem sua estratégia de sa
 - `entry2_multiplier` (FLOAT, padrão: 1.414): Multiplicador fibonacci da entrada 2
 - `entry2_adjust_last_target` (BOOLEAN, padrão: true): Se último alvo ajusta para 0.0 após entrada 2
 - `target1_level` (FLOAT, padrão: 0.618): Nível fib do alvo 1 (OBRIGATÓRIO)
-- `target1_percent` (INT, padrão: 100): % da posição a sair no alvo 1 (OBRIGATÓRIO)
-- `target2_level` (FLOAT, padrão: NULL): Nível fib do alvo 2 (OPCIONAL)
-- `target2_percent` (INT, padrão: 0): % da posição a sair no alvo 2 (OPCIONAL)
+- `target1_percent` (INT, padrão: 50): % da posição a sair no alvo 1 (OBRIGATÓRIO)
+- `target2_level` (FLOAT, padrão: 1.0): Nível fib do alvo 2 (OPCIONAL)
+- `target2_percent` (INT, padrão: 50): % da posição a sair no alvo 2 (OPCIONAL)
 - `target3_level` (FLOAT, padrão: NULL): Nível fib do alvo 3 (OPCIONAL)
 - `target3_percent` (INT, padrão: 0): % da posição a sair no alvo 3 (OPCIONAL)
 
@@ -69,8 +69,8 @@ Permitir que traders avançados (Pro/Satoshi) personalizem sua estratégia de sa
   - stop=1.8
   - entry2=1.414
   - entry2_adjust_last_target=true
-  - target1=0.618 (100%)
-  - target2=NULL (0%)
+  - target1=0.618 (50%)
+  - target2=1.0 (50%)
   - target3=NULL (0%)
 
 ### 4. Bot Engine (`bot.py`)
@@ -104,8 +104,10 @@ Permitir que traders avançados (Pro/Satoshi) personalizem sua estratégia de sa
 - `stopMultiplier`, `entry2Multiplier`, `entry2AdjustLastTarget`
 - `target1Level`, `target1Percent`, `target2Level`, `target2Percent`, `target3Level`, `target3Percent`
 
-**Nova seção na UI: "Alvos e Stop Loss"**
+**Nova seção na UI: "Configurações Avançadas"**
 - Visível apenas para planos Pro e Satoshi
+- **Seção colapsável**: Oculta por padrão, usuário clica para expandir
+- **Aviso para iniciantes**: "Se você é iniciante e não assistiu as aulas, não altere nada aqui. As configurações padrão já estão otimizadas."
 - Campo para **Stop Loss** (multiplicador fibonacci, 1.0-3.0)
 - Campo para **Entrada 2** (multiplicador fibonacci, 0.619-5.0) - visível apenas se entrada 2 permitida
 - Toggle para **ajustar último alvo para 0.0** após entrada 2 executar
@@ -133,8 +135,8 @@ Permitir que traders avançados (Pro/Satoshi) personalizem sua estratégia de sa
 - Stop Loss: -1.8 fib
 - Entrada 2: -1.414 fib
 - Ajustar último alvo após entrada 2: Ativado
-- **Alvo 1: 0.618 fib (100% da posição)** ← OBRIGATÓRIO
-- Alvo 2: Desativado
+- **Alvo 1: 0.618 fib (50% da posição)** ← OBRIGATÓRIO
+- **Alvo 2: 1.0 fib (50% da posição)**
 - Alvo 3: Desativado
 
 **Plano Basic:**
@@ -171,9 +173,9 @@ Nesse momento, o stop é movido para o preço de entrada (breakeven).
 - Stop: -1.5 fib
 - Entrada 2: -1.2 fib
 
-### Padrão (Novo)
-- Alvo 1: 0.618 fib (100%)
-- Alvo 2: Desativado
+### Padrão (Atual)
+- Alvo 1: 0.618 fib (50%)
+- Alvo 2: 1.0 fib (50%)
 - Alvo 3: Desativado
 - Stop: -1.8 fib
 - Entrada 2: -1.414 fib
@@ -232,11 +234,11 @@ Nesse momento, o stop é movido para o preço de entrada (breakeven).
 
 3. **Alvo 1 obrigatório**: Deve sempre ter um nível e percentual > 0. Alvos 2 e 3 são opcionais.
 
-4. **Compatibilidade**: Usuários existentes foram atualizados para o novo padrão (alvo 1 = 100%, alvos 2 e 3 desativados).
+4. **Compatibilidade**: Usuários existentes foram atualizados para o padrão (alvo 1 = 50%, alvo 2 = 50%, alvo 3 desativado).
 
 5. **Reload do bot**: Após alterar configurações, o bot será reiniciado em até 30 segundos (se estiver ligado) para aplicar as mudanças.
 
-6. **Logs**: O bot exibe no log de inicialização: `📊 Alvos: [(0.618, 1.0)], Stop: -1.8, Entrada2: -1.414`
+6. **Logs**: O bot exibe no log de inicialização: `📊 Alvos: [(0.618, 0.5), (1.0, 0.5)], Stop: -1.8, Entrada2: -1.414`
 
 ## Testes Recomendados
 

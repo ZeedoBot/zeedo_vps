@@ -94,9 +94,9 @@ def get_config(user_id: str = Depends(get_current_user_id)):
         "entry2_multiplier": 1.414,
         "entry2_adjust_last_target": True,
         "target1_level": 0.618,
-        "target1_percent": 100,
-        "target2_level": None,
-        "target2_percent": 0,
+        "target1_percent": 50,
+        "target2_level": 1.0,
+        "target2_percent": 50,
         "target3_level": None,
         "target3_percent": 0,
     }

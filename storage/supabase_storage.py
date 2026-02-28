@@ -277,9 +277,9 @@ class SupabaseStorage(StorageBase):
                 "entry2_multiplier": row.get("entry2_multiplier", 1.414),
                 "entry2_adjust_last_target": row.get("entry2_adjust_last_target", True),
                 "target1_level": row.get("target1_level", 0.618),
-                "target1_percent": row.get("target1_percent", 100),
-                "target2_level": row.get("target2_level"),
-                "target2_percent": row.get("target2_percent", 0),
+                "target1_percent": row.get("target1_percent", 50),
+                "target2_level": row.get("target2_level", 1.0),
+                "target2_percent": row.get("target2_percent", 50),
                 "target3_level": row.get("target3_level"),
                 "target3_percent": row.get("target3_percent", 0),
             }

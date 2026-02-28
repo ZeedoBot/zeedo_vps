@@ -60,6 +60,7 @@ export default function BotPage() {
   const [entry2Enabled, setEntry2Enabled] = useState(true);
   
   // Estados para alvos e stop customizados
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [stopMultiplier, setStopMultiplier] = useState<number | "">(1.8);
   const [entry2Multiplier, setEntry2Multiplier] = useState<number | "">(1.414);
   const [entry2AdjustLastTarget, setEntry2AdjustLastTarget] = useState(true);
@@ -94,9 +95,9 @@ export default function BotPage() {
         setEntry2Multiplier(data.entry2_multiplier ?? 1.414);
         setEntry2AdjustLastTarget(data.entry2_adjust_last_target ?? true);
         setTarget1Level(data.target1_level ?? 0.618);
-        setTarget1Percent(data.target1_percent ?? 100);
-        setTarget2Level(data.target2_level ?? 0);
-        setTarget2Percent(data.target2_percent ?? 0);
+        setTarget1Percent(data.target1_percent ?? 50);
+        setTarget2Level(data.target2_level ?? 1.0);
+        setTarget2Percent(data.target2_percent ?? 50);
         setTarget3Level(data.target3_level ?? 0);
         setTarget3Percent(data.target3_percent ?? 0);
       } finally {
@@ -439,13 +440,50 @@ export default function BotPage() {
             </div>
           </div>
 
-          {/* Alvos e Stop Customizados (apenas Pro e Satoshi) */}
+          {/* Configurações Avançadas (apenas Pro e Satoshi) */}
           {(limits?.can_customize_targets || limits?.can_customize_stop) && (
             <>
               <hr className="border-zeedo-orange/20" />
-              <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">Alvos e Stop Loss</h3>
               
-              {limits?.can_customize_stop && (
+              {/* Botão para expandir/colapsar */}
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex w-full items-center justify-between rounded-lg bg-zeedo-orange/5 p-4 hover:bg-zeedo-orange/10 transition-colors"
+              >
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">
+                  Configurações Avançadas
+                </h3>
+                <svg
+                  className={`h-5 w-5 text-zeedo-orange transition-transform ${showAdvanced ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* Aviso para iniciantes */}
+              {showAdvanced && (
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
+                  <div className="flex gap-3">
+                    <svg className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                        ⚠️ Atenção
+                      </p>
+                      <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                        Se você é iniciante e não assistiu as aulas, não altere nada aqui. As configurações padrão já estão otimizadas.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {showAdvanced && limits?.can_customize_stop && (
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="stop_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
@@ -541,7 +579,7 @@ export default function BotPage() {
                 </div>
               )}
 
-              {limits?.can_customize_targets && (
+              {showAdvanced && limits?.can_customize_targets && (
                 <div className="space-y-4">
                   <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
                     Configure os alvos de take profit. Alvo 1 é obrigatório. Alvos 2 e 3 são opcionais (deixe em 0 para desativar). A soma dos percentuais deve ser 100%.
