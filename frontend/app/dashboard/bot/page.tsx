@@ -111,6 +111,17 @@ export default function BotPage() {
     return Math.min(Math.max(val, min), max);
   }
 
+  // Normaliza entrada decimal: aceita vírgula ou ponto
+  function normalizeDecimalInput(val: string): string {
+    return val.replace(',', '.');
+  }
+
+  // Valida se é um número decimal válido (aceita vírgula ou ponto)
+  function isValidDecimal(val: string): boolean {
+    if (val === "" || val === "." || val === "," || val === "0." || val === "0,") return true;
+    return /^\d*[.,]?\d*$/.test(val);
+  }
+
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     if (!limits) return;
@@ -138,23 +149,27 @@ export default function BotPage() {
       
       // Adiciona alvos e stop customizados se o plano permitir
       if (limits?.can_customize_stop) {
-        const stopNum = typeof stopMultiplier === "string" ? parseFloat(stopMultiplier) : stopMultiplier;
+        const stopNormalized = typeof stopMultiplier === "string" ? normalizeDecimalInput(stopMultiplier) : stopMultiplier.toString();
+        const stopNum = parseFloat(stopNormalized);
         if (!isNaN(stopNum)) {
           payload.stop_multiplier = stopNum;
         }
-        const entry2Num = typeof entry2Multiplier === "string" ? parseFloat(entry2Multiplier) : entry2Multiplier;
+        const entry2Normalized = typeof entry2Multiplier === "string" ? normalizeDecimalInput(entry2Multiplier) : entry2Multiplier.toString();
+        const entry2Num = parseFloat(entry2Normalized);
         if (!isNaN(entry2Num)) {
           payload.entry2_multiplier = entry2Num;
         }
         payload.entry2_adjust_last_target = entry2AdjustLastTarget;
       }
       if (limits?.can_customize_targets) {
-        const t1Level = typeof target1Level === "string" ? parseFloat(target1Level) : target1Level;
+        const t1Normalized = typeof target1Level === "string" ? normalizeDecimalInput(target1Level) : target1Level.toString();
+        const t1Level = parseFloat(t1Normalized);
         if (!isNaN(t1Level)) payload.target1_level = t1Level;
         if (typeof target1Percent === "number") payload.target1_percent = target1Percent;
         
         // Alvo 2 é opcional
-        const t2Level = typeof target2Level === "string" ? parseFloat(target2Level) : target2Level;
+        const t2Normalized = typeof target2Level === "string" ? normalizeDecimalInput(target2Level) : target2Level.toString();
+        const t2Level = parseFloat(t2Normalized);
         if (!isNaN(t2Level) && t2Level > 0 && typeof target2Percent === "number" && target2Percent > 0) {
           payload.target2_level = t2Level;
           payload.target2_percent = target2Percent;
@@ -164,7 +179,8 @@ export default function BotPage() {
         }
         
         // Alvo 3 é opcional
-        const t3Level = typeof target3Level === "string" ? parseFloat(target3Level) : target3Level;
+        const t3Normalized = typeof target3Level === "string" ? normalizeDecimalInput(target3Level) : target3Level.toString();
+        const t3Level = parseFloat(t3Normalized);
         if (!isNaN(t3Level) && t3Level > 0 && typeof target3Percent === "number" && target3Percent > 0) {
           payload.target3_level = t3Level;
           payload.target3_percent = target3Percent;
@@ -525,15 +541,16 @@ export default function BotPage() {
                       value={stopMultiplier}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                        if (isValidDecimal(val)) {
                           setStopMultiplier(val);
                         }
                       }}
                       onBlur={() => {
-                        if (stopMultiplier === "" || stopMultiplier === ".") {
+                        const normalized = normalizeDecimalInput(stopMultiplier);
+                        if (normalized === "" || normalized === ".") {
                           setStopMultiplier("1.8");
                         } else {
-                          const num = Number(stopMultiplier);
+                          const num = Number(normalized);
                           if (!isNaN(num)) {
                             setStopMultiplier(clampValue(num, 1.0, 3.0).toString());
                           } else {
@@ -561,15 +578,16 @@ export default function BotPage() {
                           value={entry2Multiplier}
                           onChange={(e) => {
                             const val = e.target.value;
-                            if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                            if (isValidDecimal(val)) {
                               setEntry2Multiplier(val);
                             }
                           }}
                           onBlur={() => {
-                            if (entry2Multiplier === "" || entry2Multiplier === ".") {
+                            const normalized = normalizeDecimalInput(entry2Multiplier);
+                            if (normalized === "" || normalized === ".") {
                               setEntry2Multiplier("1.414");
                             } else {
-                              const num = Number(entry2Multiplier);
+                              const num = Number(normalized);
                               if (!isNaN(num)) {
                                 setEntry2Multiplier(clampValue(num, 0.618, 5.0).toString());
                               } else {
@@ -614,16 +632,12 @@ export default function BotPage() {
 
               {showAdvanced && limits?.can_customize_targets && (
                 <div className="space-y-4">
-                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
-                    Configure os alvos de realização.
-                  </p>
-                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
-                    Alvo 1 é obrigatório.
-                  </p>
-                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
-                    Alvos 2 e 3 são opcionais (deixe em 0 para desativar).
-                  </p>
-                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+                  <h3 className="text-base font-semibold text-zeedo-orange">
+                    Alvos de Realização
+                  </h3>
+                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-tight">
+                    Alvo 1 é obrigatório.<br />
+                    Alvos 2 e 3 são opcionais (deixe em 0 para desativar).<br />
                     A soma dos percentuais deve ser 100%.
                   </p>
                   
@@ -640,15 +654,16 @@ export default function BotPage() {
                         value={target1Level}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                          if (isValidDecimal(val)) {
                             setTarget1Level(val);
                           }
                         }}
                         onBlur={() => {
-                          if (target1Level === "" || target1Level === ".") {
+                          const normalized = normalizeDecimalInput(target1Level);
+                          if (normalized === "" || normalized === ".") {
                             setTarget1Level("0.618");
                           } else {
-                            const num = Number(target1Level);
+                            const num = Number(normalized);
                             if (!isNaN(num)) {
                               setTarget1Level(clampValue(num, 0, 5).toString());
                             } else {
@@ -699,7 +714,7 @@ export default function BotPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="target2_level" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 2 (Nível Fib) - Opcional
+                        Alvo 2 (Nível Fib)
                       </label>
                       <input
                         id="target2_level"
@@ -708,15 +723,16 @@ export default function BotPage() {
                         value={target2Level}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                          if (isValidDecimal(val)) {
                             setTarget2Level(val);
                           }
                         }}
                         onBlur={() => {
-                          if (target2Level === "" || target2Level === ".") {
+                          const normalized = normalizeDecimalInput(target2Level);
+                          if (normalized === "" || normalized === ".") {
                             setTarget2Level("1.0");
                           } else {
-                            const num = Number(target2Level);
+                            const num = Number(normalized);
                             if (!isNaN(num)) {
                               setTarget2Level(clampValue(num, 0, 5).toString());
                             } else {
@@ -732,7 +748,7 @@ export default function BotPage() {
                     </div>
                     <div>
                       <label htmlFor="target2_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 2 (%) - Opcional
+                        Alvo 2 (%)
                       </label>
                       <input
                         id="target2_percent"
@@ -767,7 +783,7 @@ export default function BotPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="target3_level" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 3 (Nível Fib) - Opcional
+                        Alvo 3 (Nível Fib)
                       </label>
                       <input
                         id="target3_level"
@@ -776,15 +792,16 @@ export default function BotPage() {
                         value={target3Level}
                         onChange={(e) => {
                           const val = e.target.value;
-                          if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                          if (isValidDecimal(val)) {
                             setTarget3Level(val);
                           }
                         }}
                         onBlur={() => {
-                          if (target3Level === "" || target3Level === ".") {
+                          const normalized = normalizeDecimalInput(target3Level);
+                          if (normalized === "" || normalized === ".") {
                             setTarget3Level("0");
                           } else {
-                            const num = Number(target3Level);
+                            const num = Number(normalized);
                             if (!isNaN(num)) {
                               setTarget3Level(clampValue(num, 0, 5).toString());
                             } else {
