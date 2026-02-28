@@ -61,14 +61,14 @@ export default function BotPage() {
   
   // Estados para alvos e stop customizados
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [stopMultiplier, setStopMultiplier] = useState<number | "">(1.8);
-  const [entry2Multiplier, setEntry2Multiplier] = useState<number | "">(1.414);
+  const [stopMultiplier, setStopMultiplier] = useState<number | string>("1.8");
+  const [entry2Multiplier, setEntry2Multiplier] = useState<number | string>("1.414");
   const [entry2AdjustLastTarget, setEntry2AdjustLastTarget] = useState(true);
-  const [target1Level, setTarget1Level] = useState<number | "">(0.618);
+  const [target1Level, setTarget1Level] = useState<number | string>("0.618");
   const [target1Percent, setTarget1Percent] = useState<number | "">(50);
-  const [target2Level, setTarget2Level] = useState<number | "">(0);
-  const [target2Percent, setTarget2Percent] = useState<number | "">(0);
-  const [target3Level, setTarget3Level] = useState<number | "">(0);
+  const [target2Level, setTarget2Level] = useState<number | string>("1.0");
+  const [target2Percent, setTarget2Percent] = useState<number | "">(50);
+  const [target3Level, setTarget3Level] = useState<number | string>("0");
   const [target3Percent, setTarget3Percent] = useState<number | "">(0);
 
   const limits = config?.plan_limits;
@@ -91,14 +91,14 @@ export default function BotPage() {
         setEntry2Enabled(data.entry2_enabled ?? true);
         
         // Carrega alvos e stop customizados
-        setStopMultiplier(data.stop_multiplier ?? 1.8);
-        setEntry2Multiplier(data.entry2_multiplier ?? 1.414);
+        setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
+        setEntry2Multiplier((data.entry2_multiplier ?? 1.414).toString());
         setEntry2AdjustLastTarget(data.entry2_adjust_last_target ?? true);
-        setTarget1Level(data.target1_level ?? 0.618);
+        setTarget1Level((data.target1_level ?? 0.618).toString());
         setTarget1Percent(data.target1_percent ?? 50);
-        setTarget2Level(data.target2_level ?? 1.0);
+        setTarget2Level((data.target2_level ?? 1.0).toString());
         setTarget2Percent(data.target2_percent ?? 50);
-        setTarget3Level(data.target3_level ?? 0);
+        setTarget3Level((data.target3_level ?? 0).toString());
         setTarget3Percent(data.target3_percent ?? 0);
       } finally {
         setLoading(false);
@@ -138,21 +138,25 @@ export default function BotPage() {
       
       // Adiciona alvos e stop customizados se o plano permitir
       if (limits?.can_customize_stop) {
-        if (typeof stopMultiplier === "number") {
-          payload.stop_multiplier = stopMultiplier;
+        const stopNum = typeof stopMultiplier === "string" ? parseFloat(stopMultiplier) : stopMultiplier;
+        if (!isNaN(stopNum)) {
+          payload.stop_multiplier = stopNum;
         }
-        if (typeof entry2Multiplier === "number") {
-          payload.entry2_multiplier = entry2Multiplier;
+        const entry2Num = typeof entry2Multiplier === "string" ? parseFloat(entry2Multiplier) : entry2Multiplier;
+        if (!isNaN(entry2Num)) {
+          payload.entry2_multiplier = entry2Num;
         }
         payload.entry2_adjust_last_target = entry2AdjustLastTarget;
       }
       if (limits?.can_customize_targets) {
-        if (typeof target1Level === "number") payload.target1_level = target1Level;
+        const t1Level = typeof target1Level === "string" ? parseFloat(target1Level) : target1Level;
+        if (!isNaN(t1Level)) payload.target1_level = t1Level;
         if (typeof target1Percent === "number") payload.target1_percent = target1Percent;
         
         // Alvo 2 é opcional
-        if (typeof target2Level === "number" && target2Level > 0 && typeof target2Percent === "number" && target2Percent > 0) {
-          payload.target2_level = target2Level;
+        const t2Level = typeof target2Level === "string" ? parseFloat(target2Level) : target2Level;
+        if (!isNaN(t2Level) && t2Level > 0 && typeof target2Percent === "number" && target2Percent > 0) {
+          payload.target2_level = t2Level;
           payload.target2_percent = target2Percent;
         } else {
           payload.target2_level = null;
@@ -160,8 +164,9 @@ export default function BotPage() {
         }
         
         // Alvo 3 é opcional
-        if (typeof target3Level === "number" && target3Level > 0 && typeof target3Percent === "number" && target3Percent > 0) {
-          payload.target3_level = target3Level;
+        const t3Level = typeof target3Level === "string" ? parseFloat(target3Level) : target3Level;
+        if (!isNaN(t3Level) && t3Level > 0 && typeof target3Percent === "number" && target3Percent > 0) {
+          payload.target3_level = t3Level;
           payload.target3_percent = target3Percent;
         } else {
           payload.target3_level = null;
@@ -488,14 +493,14 @@ export default function BotPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setStopMultiplier(1.8);
-                    setEntry2Multiplier(1.414);
+                    setStopMultiplier("1.8");
+                    setEntry2Multiplier("1.414");
                     setEntry2AdjustLastTarget(true);
-                    setTarget1Level(0.618);
+                    setTarget1Level("0.618");
                     setTarget1Percent(50);
-                    setTarget2Level(1.0);
+                    setTarget2Level("1.0");
                     setTarget2Percent(50);
-                    setTarget3Level(0);
+                    setTarget3Level("0");
                     setTarget3Percent(0);
                   }}
                   className="flex items-center gap-2 rounded-lg border border-zeedo-orange/30 bg-zeedo-orange/5 px-4 py-2 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
@@ -521,18 +526,18 @@ export default function BotPage() {
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
-                          setStopMultiplier(val === "" ? "" : val);
+                          setStopMultiplier(val);
                         }
                       }}
                       onBlur={() => {
                         if (stopMultiplier === "" || stopMultiplier === ".") {
-                          setStopMultiplier(1.8);
+                          setStopMultiplier("1.8");
                         } else {
                           const num = Number(stopMultiplier);
                           if (!isNaN(num)) {
-                            setStopMultiplier(clampValue(num, 1.0, 3.0));
+                            setStopMultiplier(clampValue(num, 1.0, 3.0).toString());
                           } else {
-                            setStopMultiplier(1.8);
+                            setStopMultiplier("1.8");
                           }
                         }
                       }}
@@ -557,18 +562,18 @@ export default function BotPage() {
                           onChange={(e) => {
                             const val = e.target.value;
                             if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
-                              setEntry2Multiplier(val === "" ? "" : val);
+                              setEntry2Multiplier(val);
                             }
                           }}
                           onBlur={() => {
                             if (entry2Multiplier === "" || entry2Multiplier === ".") {
-                              setEntry2Multiplier(1.414);
+                              setEntry2Multiplier("1.414");
                             } else {
                               const num = Number(entry2Multiplier);
                               if (!isNaN(num)) {
-                                setEntry2Multiplier(clampValue(num, 0.618, 5.0));
+                                setEntry2Multiplier(clampValue(num, 0.618, 5.0).toString());
                               } else {
-                                setEntry2Multiplier(1.414);
+                                setEntry2Multiplier("1.414");
                               }
                             }
                           }}
@@ -636,18 +641,18 @@ export default function BotPage() {
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
-                            setTarget1Level(val === "" ? "" : val);
+                            setTarget1Level(val);
                           }
                         }}
                         onBlur={() => {
                           if (target1Level === "" || target1Level === ".") {
-                            setTarget1Level(0.618);
+                            setTarget1Level("0.618");
                           } else {
                             const num = Number(target1Level);
                             if (!isNaN(num)) {
-                              setTarget1Level(clampValue(num, 0, 5));
+                              setTarget1Level(clampValue(num, 0, 5).toString());
                             } else {
-                              setTarget1Level(0.618);
+                              setTarget1Level("0.618");
                             }
                           }
                         }}
@@ -704,18 +709,18 @@ export default function BotPage() {
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
-                            setTarget2Level(val === "" ? "" : val);
+                            setTarget2Level(val);
                           }
                         }}
                         onBlur={() => {
                           if (target2Level === "" || target2Level === ".") {
-                            setTarget2Level(1.0);
+                            setTarget2Level("1.0");
                           } else {
                             const num = Number(target2Level);
                             if (!isNaN(num)) {
-                              setTarget2Level(clampValue(num, 0, 5));
+                              setTarget2Level(clampValue(num, 0, 5).toString());
                             } else {
-                              setTarget2Level(1.0);
+                              setTarget2Level("1.0");
                             }
                           }
                         }}
@@ -772,18 +777,18 @@ export default function BotPage() {
                         onChange={(e) => {
                           const val = e.target.value;
                           if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
-                            setTarget3Level(val === "" ? "" : val);
+                            setTarget3Level(val);
                           }
                         }}
                         onBlur={() => {
                           if (target3Level === "" || target3Level === ".") {
-                            setTarget3Level(0);
+                            setTarget3Level("0");
                           } else {
                             const num = Number(target3Level);
                             if (!isNaN(num)) {
-                              setTarget3Level(clampValue(num, 0, 5));
+                              setTarget3Level(clampValue(num, 0, 5).toString());
                             } else {
-                              setTarget3Level(0);
+                              setTarget3Level("0");
                             }
                           }
                         }}
