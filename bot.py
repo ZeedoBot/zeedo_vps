@@ -1170,7 +1170,16 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             if not has_sl and not is_manual:
                 logging.info(f"🛡️ Pânico: Posição sem Stop em {sym}! Colocando...")
                 stop_px = planned_stop if planned_stop else round_px(entry * (1 - FALLBACK_STOP_PCT) if side == "long" else entry * (1 + FALLBACK_STOP_PCT))
-                exchange.order(sym, not (side=="long"), size, stop_px, {"trigger": {"triggerPx": stop_px, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
+                
+                # Se segunda entrada automática está ativada, stop cobre AMBAS as entradas desde o início
+                stop_qty = size
+                if not mem_data.get('entry2_placed', True):  # Se entrada 2 ainda não foi colocada/executada
+                    entry2_qty = mem_data.get('entry2_qty', 0)
+                    if entry2_qty > 0:
+                        stop_qty = size + entry2_qty  # Quantidade total (entrada 1 + entrada 2)
+                        logging.info(f"🛡️ Stop com proteção para 2 entradas: {stop_qty} (atual: {size} + futura: {entry2_qty})")
+                
+                exchange.order(sym, not (side=="long"), stop_qty, stop_px, {"trigger": {"triggerPx": stop_px, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
                 if sym in entry_tracker:
                     entry_tracker[sym]['planned_stop'] = stop_px
                     storage.save_entry_tracker(entry_tracker)
@@ -1279,7 +1288,12 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 if new_sl:
                     exchange.cancel(sym, sl_order["oid"])
                     new_sl = round_px(new_sl)
-                    exchange.order(sym, False if side == "long" else True, abs(size), new_sl, {"trigger": {"triggerPx": new_sl, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
+                    
+                    # Quando move para breakeven, a entrada 2 já foi cancelada (alvo 0.618 atingido)
+                    # Portanto, usa apenas a quantidade atual da posição
+                    stop_qty = abs(size)
+                    
+                    exchange.order(sym, False if side == "long" else True, stop_qty, new_sl, {"trigger": {"triggerPx": new_sl, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
                     if sym in entry_tracker:
                         entry_tracker[sym]['planned_stop'] = new_sl
                         entry_tracker[sym]['breakeven_moved'] = True

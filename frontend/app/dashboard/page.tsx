@@ -390,7 +390,7 @@ export default function DashboardPage() {
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
             Curva de Crescimento
           </h2>
-          <div className="h-64 rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
+          <div className="h-64 rounded-xl border border-zeedo-orange/20 bg-white dark:bg-zeedo-black p-4">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={metrics.growthData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
                 <defs>
@@ -422,26 +422,26 @@ export default function DashboardPage() {
           </h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {bySide.length > 0 && (
-              <div className="rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
+              <div className="rounded-xl border border-zeedo-orange/20 bg-white dark:bg-zeedo-black p-4">
                 <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-3">Performance por Lado</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={bySide} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                    <BarChart data={bySide} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
                       <defs>
-                        <linearGradient id="barGradPosSide" x1="0" y1="0" x2="1" y2="0">
+                        <linearGradient id="barGradPosSide" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
                           <stop offset="100%" stopColor="#22c55e" stopOpacity={0.6} />
                         </linearGradient>
-                        <linearGradient id="barGradNegSide" x1="0" y1="0" x2="1" y2="0">
+                        <linearGradient id="barGradNegSide" x1="0" y1="1" x2="0" y2="0">
                           <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
                           <stop offset="100%" stopColor="#ef4444" stopOpacity={0.9} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" horizontal={false} />
-                      <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
-                      <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" vertical={false} />
+                      <XAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <YAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
                       <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
-                      <Bar dataKey="pnl" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                      <Bar dataKey="pnl" radius={[4, 4, 0, 0]} maxBarSize={60}>
                         {bySide.map((entry, i) => (
                           <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosSide)" : "url(#barGradNegSide)"} />
                         ))}
@@ -472,26 +472,26 @@ export default function DashboardPage() {
               </div>
             )}
             {byTf.length > 0 && (
-              <div className="rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
+              <div className="rounded-xl border border-zeedo-orange/20 bg-white dark:bg-zeedo-black p-4">
                 <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-3">Performance por Timeframe</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={byTf} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                    <BarChart data={byTf} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
                       <defs>
-                        <linearGradient id="barGradPosTf" x1="0" y1="0" x2="1" y2="0">
+                        <linearGradient id="barGradPosTf" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
                           <stop offset="100%" stopColor="#22c55e" stopOpacity={0.6} />
                         </linearGradient>
-                        <linearGradient id="barGradNegTf" x1="0" y1="0" x2="1" y2="0">
+                        <linearGradient id="barGradNegTf" x1="0" y1="1" x2="0" y2="0">
                           <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
                           <stop offset="100%" stopColor="#ef4444" stopOpacity={0.9} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" horizontal={false} />
-                      <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
-                      <YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" vertical={false} />
+                      <XAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <YAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
                       <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
-                      <Bar dataKey="pnl" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                      <Bar dataKey="pnl" radius={[4, 4, 0, 0]} maxBarSize={60}>
                         {byTf.map((entry, i) => (
                           <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosTf)" : "url(#barGradNegTf)"} />
                         ))}
@@ -522,26 +522,26 @@ export default function DashboardPage() {
               </div>
             )}
             {byToken.length > 0 && (
-              <div className="rounded-xl border border-zeedo-orange/20 bg-zeedo-black/40 dark:bg-white/5 p-4 backdrop-blur-sm">
+              <div className="rounded-xl border border-zeedo-orange/20 bg-white dark:bg-zeedo-black p-4">
                 <h3 className="font-medium text-zeedo-black dark:text-zeedo-white mb-3">Performance por Token</h3>
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={byToken} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                    <BarChart data={byToken} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
                       <defs>
-                        <linearGradient id="barGradPosToken" x1="0" y1="0" x2="1" y2="0">
+                        <linearGradient id="barGradPosToken" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="#22c55e" stopOpacity={0.9} />
                           <stop offset="100%" stopColor="#22c55e" stopOpacity={0.6} />
                         </linearGradient>
-                        <linearGradient id="barGradNegToken" x1="0" y1="0" x2="1" y2="0">
+                        <linearGradient id="barGradNegToken" x1="0" y1="1" x2="0" y2="0">
                           <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6} />
                           <stop offset="100%" stopColor="#ef4444" stopOpacity={0.9} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" horizontal={false} />
-                      <XAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
-                      <YAxis type="category" dataKey="name" width={50} tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" vertical={false} />
+                      <XAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
+                      <YAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
                       <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
-                      <Bar dataKey="pnl" radius={[0, 4, 4, 0]} maxBarSize={28}>
+                      <Bar dataKey="pnl" radius={[4, 4, 0, 0]} maxBarSize={60}>
                         {byToken.map((entry, i) => (
                           <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosToken)" : "url(#barGradNegToken)"} />
                         ))}

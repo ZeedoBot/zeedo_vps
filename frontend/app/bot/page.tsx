@@ -659,19 +659,27 @@ export default function BotPage() {
         >
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-2xl font-bold sm:text-3xl">
-              Junte-se à comunidade
+              Me siga nas redes sociais
             </h2>
             <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-              Acompanhe conteúdos diários, dicas e novidades no Telegram e no TikTok.
+              Acompanhe conteúdos diários, dicas e novidades no Instagram, TikTok e X.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <a
-                href="https://t.me/+YXF26gnIg5U4MTc5"
+                href="https://instagram.com/azevedocrypto"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
               >
-                <span>💬</span> Comunidade Telegram
+                <span>📷</span> @azevedocrypto
+              </a>
+              <a
+                href="https://instagram.com/zeedobot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+              >
+                <span>📷</span> @zeedobot
               </a>
               <a
                 href="https://www.tiktok.com/@zeedobot"
@@ -680,6 +688,14 @@ export default function BotPage() {
                 className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
               >
                 <span>🎵</span> TikTok
+              </a>
+              <a
+                href="https://x.com/zeedobot"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+              >
+                <span>𝕏</span> X (Twitter)
               </a>
             </div>
           </div>
