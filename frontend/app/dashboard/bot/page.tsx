@@ -482,12 +482,36 @@ export default function BotPage() {
                   </div>
                 </div>
               )}
+
+              {/* Botão Redefinir Padrão */}
+              {showAdvanced && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStopMultiplier(1.8);
+                    setEntry2Multiplier(1.414);
+                    setEntry2AdjustLastTarget(true);
+                    setTarget1Level(0.618);
+                    setTarget1Percent(50);
+                    setTarget2Level(1.0);
+                    setTarget2Percent(50);
+                    setTarget3Level(0);
+                    setTarget3Percent(0);
+                  }}
+                  className="flex items-center gap-2 rounded-lg border border-zeedo-orange/30 bg-zeedo-orange/5 px-4 py-2 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Redefinir Padrão
+                </button>
+              )}
               
               {showAdvanced && limits?.can_customize_stop && (
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="stop_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
-                      Stop Loss (Multiplicador Fibonacci)
+                      Stop Loss
                     </label>
                     <input
                       id="stop_multiplier"
@@ -495,25 +519,27 @@ export default function BotPage() {
                       inputMode="decimal"
                       value={stopMultiplier}
                       onChange={(e) => {
-                        const val = e.target.value.trim();
-                        if (val === "") {
-                          setStopMultiplier("");
-                          return;
-                        }
-                        const num = Number(val);
-                        if (!isNaN(num)) {
-                          setStopMultiplier(clampValue(num, 1.0, 3.0));
+                        const val = e.target.value;
+                        if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                          setStopMultiplier(val === "" ? "" : val);
                         }
                       }}
                       onBlur={() => {
-                        if (stopMultiplier === "") {
+                        if (stopMultiplier === "" || stopMultiplier === ".") {
                           setStopMultiplier(1.8);
+                        } else {
+                          const num = Number(stopMultiplier);
+                          if (!isNaN(num)) {
+                            setStopMultiplier(clampValue(num, 1.0, 3.0));
+                          } else {
+                            setStopMultiplier(1.8);
+                          }
                         }
                       }}
                       className="input-field max-w-xs"
                     />
                     <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                      Padrão: 1.8 (stop em -1.8 fib). Intervalo: 1.0 – 3.0
+                      Stop Padrão: 1.8 | Intervalo: 1.0 a 3.0
                     </p>
                   </div>
 
@@ -521,7 +547,7 @@ export default function BotPage() {
                     <>
                       <div>
                         <label htmlFor="entry2_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
-                          Entrada 2 (Multiplicador Fibonacci)
+                          Entrada 2
                         </label>
                         <input
                           id="entry2_multiplier"
@@ -529,32 +555,34 @@ export default function BotPage() {
                           inputMode="decimal"
                           value={entry2Multiplier}
                           onChange={(e) => {
-                            const val = e.target.value.trim();
-                            if (val === "") {
-                              setEntry2Multiplier("");
-                              return;
-                            }
-                            const num = Number(val);
-                            if (!isNaN(num)) {
-                              setEntry2Multiplier(clampValue(num, 0.619, 5.0));
+                            const val = e.target.value;
+                            if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                              setEntry2Multiplier(val === "" ? "" : val);
                             }
                           }}
                           onBlur={() => {
-                            if (entry2Multiplier === "") {
+                            if (entry2Multiplier === "" || entry2Multiplier === ".") {
                               setEntry2Multiplier(1.414);
+                            } else {
+                              const num = Number(entry2Multiplier);
+                              if (!isNaN(num)) {
+                                setEntry2Multiplier(clampValue(num, 0.618, 5.0));
+                              } else {
+                                setEntry2Multiplier(1.414);
+                              }
                             }
                           }}
                           className="input-field max-w-xs"
                         />
                         <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                          Padrão: 1.414 (entrada 2 em -1.414 fib). Intervalo: 0.619 – 5.0
+                          Entrada 2 Padrão: 1.414 | Intervalo: 0.618 a 5.0
                         </p>
                       </div>
 
                       <div>
                         <label className="flex items-center gap-3 cursor-pointer">
                           <span className="text-sm font-medium text-zeedo-black dark:text-zeedo-white">
-                            Ajustar último alvo para 0.0 ao pegar entrada 2
+                            Ajustar alvo após entrada 2?
                           </span>
                           <button
                             type="button"
@@ -571,7 +599,7 @@ export default function BotPage() {
                           </button>
                         </label>
                         <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                          Quando ativado, se a entrada 2 executar, o último alvo será ajustado para 0.0 (retorno ao setup) para saída rápida em caso de reversão.
+                          Se ativado: Ao pegar a entrada 2, o último alvo será ajustado para um alvo mais acessível.
                         </p>
                       </div>
                     </>
@@ -582,7 +610,16 @@ export default function BotPage() {
               {showAdvanced && limits?.can_customize_targets && (
                 <div className="space-y-4">
                   <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
-                    Configure os alvos de take profit. Alvo 1 é obrigatório. Alvos 2 e 3 são opcionais (deixe em 0 para desativar). A soma dos percentuais deve ser 100%.
+                    Configure os alvos de realização.
+                  </p>
+                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+                    Alvo 1 é obrigatório.
+                  </p>
+                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+                    Alvos 2 e 3 são opcionais (deixe em 0 para desativar).
+                  </p>
+                  <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+                    A soma dos percentuais deve ser 100%.
                   </p>
                   
                   {/* Alvo 1 - OBRIGATÓRIO */}
@@ -597,19 +634,21 @@ export default function BotPage() {
                         inputMode="decimal"
                         value={target1Level}
                         onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val === "") {
-                            setTarget1Level("");
-                            return;
-                          }
-                          const num = Number(val);
-                          if (!isNaN(num)) {
-                            setTarget1Level(clampValue(num, 0, 5));
+                          const val = e.target.value;
+                          if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                            setTarget1Level(val === "" ? "" : val);
                           }
                         }}
                         onBlur={() => {
-                          if (target1Level === "") {
+                          if (target1Level === "" || target1Level === ".") {
                             setTarget1Level(0.618);
+                          } else {
+                            const num = Number(target1Level);
+                            if (!isNaN(num)) {
+                              setTarget1Level(clampValue(num, 0, 5));
+                            } else {
+                              setTarget1Level(0.618);
+                            }
                           }
                         }}
                         className="input-field"
@@ -663,19 +702,21 @@ export default function BotPage() {
                         inputMode="decimal"
                         value={target2Level}
                         onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val === "") {
-                            setTarget2Level("");
-                            return;
-                          }
-                          const num = Number(val);
-                          if (!isNaN(num)) {
-                            setTarget2Level(clampValue(num, 0, 5));
+                          const val = e.target.value;
+                          if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                            setTarget2Level(val === "" ? "" : val);
                           }
                         }}
                         onBlur={() => {
-                          if (target2Level === "") {
-                            setTarget2Level(0);
+                          if (target2Level === "" || target2Level === ".") {
+                            setTarget2Level(1.0);
+                          } else {
+                            const num = Number(target2Level);
+                            if (!isNaN(num)) {
+                              setTarget2Level(clampValue(num, 0, 5));
+                            } else {
+                              setTarget2Level(1.0);
+                            }
                           }
                         }}
                         className="input-field"
@@ -729,19 +770,21 @@ export default function BotPage() {
                         inputMode="decimal"
                         value={target3Level}
                         onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val === "") {
-                            setTarget3Level("");
-                            return;
-                          }
-                          const num = Number(val);
-                          if (!isNaN(num)) {
-                            setTarget3Level(clampValue(num, 0, 5));
+                          const val = e.target.value;
+                          if (val === "" || val === "." || val === "0." || /^\d*\.?\d*$/.test(val)) {
+                            setTarget3Level(val === "" ? "" : val);
                           }
                         }}
                         onBlur={() => {
-                          if (target3Level === "") {
+                          if (target3Level === "" || target3Level === ".") {
                             setTarget3Level(0);
+                          } else {
+                            const num = Number(target3Level);
+                            if (!isNaN(num)) {
+                              setTarget3Level(clampValue(num, 0, 5));
+                            } else {
+                              setTarget3Level(0);
+                            }
                           }
                         }}
                         className="input-field"
@@ -778,7 +821,7 @@ export default function BotPage() {
                         className="input-field"
                       />
                       <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                        0 – 100%
+                        0 – 100% (deixe 0 para desativar)
                       </p>
                     </div>
                   </div>

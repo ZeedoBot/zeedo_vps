@@ -108,6 +108,7 @@ Permitir que traders avançados (Pro/Satoshi) personalizem sua estratégia de sa
 - Visível apenas para planos Pro e Satoshi
 - **Seção colapsável**: Oculta por padrão, usuário clica para expandir
 - **Aviso para iniciantes**: "Se você é iniciante e não assistiu as aulas, não altere nada aqui. As configurações padrão já estão otimizadas."
+- **Botão "Redefinir Padrão"**: Restaura todos os valores para os padrões originais
 - Campo para **Stop Loss** (multiplicador fibonacci, 1.0-3.0)
 - Campo para **Entrada 2** (multiplicador fibonacci, 0.619-5.0) - visível apenas se entrada 2 permitida
 - Toggle para **ajustar último alvo para 0.0** após entrada 2 executar
@@ -115,6 +116,7 @@ Permitir que traders avançados (Pro/Satoshi) personalizem sua estratégia de sa
   - **Alvo 1**: OBRIGATÓRIO (marcado com *)
   - **Alvo 2**: OPCIONAL (pode deixar em 0)
   - **Alvo 3**: OPCIONAL (pode deixar em 0)
+- **Inputs decimais corrigidos**: Permite digitar ponto/vírgula para valores como 0.618, 1.5, etc.
 - Validação visual em tempo real: mostra soma dos percentuais
 - Alertas:
   - Se alvo 1 está zerado (obrigatório)

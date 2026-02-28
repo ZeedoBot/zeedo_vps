@@ -56,7 +56,7 @@ class BotConfigUpdate(BaseModel):
     max_single_pos_exposure: Optional[float] = None
     max_positions: Optional[int] = None
     stop_multiplier: Optional[float] = Field(None, ge=1.0, le=3.0)
-    entry2_multiplier: Optional[float] = Field(None, ge=0.619, le=5.0)
+    entry2_multiplier: Optional[float] = Field(None, ge=0.618, le=5.0)
     entry2_adjust_last_target: Optional[bool] = None
     target1_level: Optional[float] = Field(None, ge=0.0, le=5.0)
     target1_percent: Optional[int] = Field(None, ge=1, le=100)

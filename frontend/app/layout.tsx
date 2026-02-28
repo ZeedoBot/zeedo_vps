@@ -6,8 +6,15 @@ export const metadata: Metadata = {
   title: "Zeedo – Dashboard",
   description: "Você vive a vida. O Zeedo vive o mercado. Sem emoção, sem cansaço. Apenas a matemática trabalhando por você.",
   icons: {
-    icon: "/zeedo-logo.png?v=4",
-    apple: "/zeedo-logo.png?v=4",
+    icon: "/zeedo-logo.png?v=5",
+    apple: [
+      { url: "/apple-touch-icon.png?v=5", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Zeedo",
   },
 };
 
