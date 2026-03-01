@@ -132,7 +132,14 @@ class InstanceManager:
             return False
         
         # Compara campos relevantes
-        relevant_fields = ['symbols', 'timeframes', 'trade_mode', 'bot_enabled']
+        relevant_fields = [
+            'symbols', 'timeframes', 'trade_mode', 'bot_enabled',
+            # Configurações avançadas
+            'stop_multiplier', 'entry2_multiplier', 'entry2_adjust_last_target',
+            'target1_level', 'target1_percent',
+            'target2_level', 'target2_percent',
+            'target3_level', 'target3_percent'
+        ]
         for field in relevant_fields:
             if old_config.get(field) != new_config.get(field):
                 return True
