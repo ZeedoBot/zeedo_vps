@@ -11,6 +11,7 @@ const mainNav = [
   { href: "/dashboard/trades", label: "Trades" },
   { href: "/dashboard/wallet", label: "Carteira" },
   { href: "/dashboard/telegram", label: "Telegram" },
+  { href: "/dashboard/curso", label: "Curso" },
   { href: "/dashboard/bot", label: "Configurações do Bot" },
 ];
 
