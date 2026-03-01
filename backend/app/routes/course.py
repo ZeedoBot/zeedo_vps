@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
-from app.auth import get_current_user
+from backend.app.dependencies import get_current_user_id
 
 router = APIRouter(prefix="/course", tags=["course"])
 
@@ -25,14 +25,13 @@ class MarkCompletedRequest(BaseModel):
 
 
 @router.get("/lessons", response_model=List[LessonResponse])
-async def get_lessons(user=Depends(get_current_user)):
+async def get_lessons(user_id: str = Depends(get_current_user_id)):
     """
     Retorna todas as aulas do curso com o progresso do usuário.
     """
-    from app.db import get_supabase
+    from backend.app.db import get_supabase
     
     supabase = get_supabase()
-    user_id = user["id"]
     
     try:
         # Busca todas as aulas
@@ -76,14 +75,13 @@ async def get_lessons(user=Depends(get_current_user)):
 
 
 @router.get("/lessons/{lesson_id}", response_model=LessonResponse)
-async def get_lesson(lesson_id: int, user=Depends(get_current_user)):
+async def get_lesson(lesson_id: int, user_id: str = Depends(get_current_user_id)):
     """
     Retorna uma aula específica com o progresso do usuário.
     """
-    from app.db import get_supabase
+    from backend.app.db import get_supabase
     
     supabase = get_supabase()
-    user_id = user["id"]
     
     try:
         # Busca a aula
@@ -123,14 +121,13 @@ async def get_lesson(lesson_id: int, user=Depends(get_current_user)):
 
 
 @router.post("/progress")
-async def mark_lesson_progress(request: MarkCompletedRequest, user=Depends(get_current_user)):
+async def mark_lesson_progress(request: MarkCompletedRequest, user_id: str = Depends(get_current_user_id)):
     """
     Marca uma aula como concluída ou não concluída.
     """
-    from app.db import get_supabase
+    from backend.app.db import get_supabase
     
     supabase = get_supabase()
-    user_id = user["id"]
     
     try:
         # Verifica se a aula existe
@@ -178,14 +175,13 @@ async def mark_lesson_progress(request: MarkCompletedRequest, user=Depends(get_c
 
 
 @router.get("/progress/stats")
-async def get_progress_stats(user=Depends(get_current_user)):
+async def get_progress_stats(user_id: str = Depends(get_current_user_id)):
     """
     Retorna estatísticas de progresso do usuário no curso.
     """
-    from app.db import get_supabase
+    from backend.app.db import get_supabase
     
     supabase = get_supabase()
-    user_id = user["id"]
     
     try:
         # Total de aulas
