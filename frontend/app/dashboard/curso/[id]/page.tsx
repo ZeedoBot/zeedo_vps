@@ -30,7 +30,8 @@ export default function LessonPage() {
 
   async function loadLesson() {
     try {
-      const supabase = await import("@/utils/supabase/client").then(m => m.createClient());
+      const { createClient } = await import("@/lib/supabase");
+      const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
@@ -69,7 +70,8 @@ export default function LessonPage() {
 
   async function markAsCompleted() {
     try {
-      const supabase = await import("@/utils/supabase/client").then(m => m.createClient());
+      const { createClient } = await import("@/lib/supabase");
+      const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token || !lesson) {
