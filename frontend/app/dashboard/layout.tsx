@@ -11,12 +11,12 @@ const mainNav = [
   { href: "/dashboard/trades", label: "Trades" },
   { href: "/dashboard/wallet", label: "Carteira" },
   { href: "/dashboard/telegram", label: "Telegram" },
-  { href: "/dashboard/curso", label: "Curso" },
   { href: "/dashboard/bot", label: "Configurações do Bot" },
 ];
 
 const userMenuNav = [
   { href: "/choose-plan", label: "Alterar Plano" },
+  { href: "/dashboard/curso", label: "Curso" },
   { href: "/dashboard/profile", label: "Perfil" },
 ];
 

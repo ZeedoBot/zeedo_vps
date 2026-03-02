@@ -622,6 +622,16 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         if hasattr(storage, 'get_user_created_at_timestamp_ms'):
             min_ts_ms = storage.get_user_created_at_timestamp_ms()
 
+        # Busca saldo atual da conta para calcular PNL % correto
+        account_value = 0.0
+        try:
+            clearing_state = info.user_state(wallet)
+            if clearing_state:
+                margin = clearing_state.get("marginSummary", {}) or {}
+                account_value = float(margin.get("accountValue", 0) or 0)
+        except Exception as e:
+            logging.warning(f"Erro ao buscar accountValue: {e}")
+
         user_fills = info.user_fills(wallet)
         if not user_fills:
             return
@@ -739,6 +749,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             fill_safe['side'] = side
             fill_safe['oid'] = oid
             fill_safe['num_fills'] = len(fills)
+            fill_safe['account_value_at_trade'] = account_value if account_value > 0 else None
             
             trades_db.append(fill_safe)
             new_trades.append(fill_safe)

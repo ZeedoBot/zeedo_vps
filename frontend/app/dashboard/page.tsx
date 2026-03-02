@@ -113,7 +113,11 @@ function computeMetrics(trades: Trade[], balance: number) {
   const avgWin = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
   const avgLoss = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
   const payoff = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0;
-  const pnlPct = balance > 0 ? (totalPnl / balance) * 100 : 0;
+  
+  // Calcula Lucro % baseado no capital inicial estimado (saldo atual - lucro total)
+  // Se não houver saldo ou der negativo, usa saldo atual como base
+  const initialCapital = balance - totalPnl;
+  const pnlPct = initialCapital > 0 ? (totalPnl / initialCapital) * 100 : (balance > 0 ? (totalPnl / balance) * 100 : 0);
 
   const sortedTrades = [...trades].sort((a, b) => a.time - b.time);
   const growthData: { time: number; date: string; balance: number }[] = [];
@@ -612,7 +616,12 @@ export default function DashboardPage() {
                 {[...metrics.grouped]
                   .sort((a, b) => b.time - a.time)
                   .map((t) => {
-                    const pnlPct = balance > 0 ? (t.pnl / balance) * 100 : 0;
+                    // Usa pnl_pct da API (baseado no saldo no momento do trade)
+                    // Se não disponível, calcula usando saldo atual (fallback para trades antigos)
+                    const pnlPct = t.pnl_pct !== undefined && t.pnl_pct !== null 
+                      ? t.pnl_pct 
+                      : (balance > 0 ? (t.pnl / balance) * 100 : 0);
+                    
                     return (
                       <tr key={t.id}>
                         <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">
@@ -631,7 +640,7 @@ export default function DashboardPage() {
                           ${t.pnl.toFixed(2)}
                         </td>
                         <td className={`px-4 py-2 text-sm text-right ${t.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
-                          {pnlPct.toFixed(2)}%
+                          {pnlPct !== null && pnlPct !== undefined ? pnlPct.toFixed(2) : "-"}%
                         </td>
                       </tr>
                     );
