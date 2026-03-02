@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase";
 
 interface Lesson {
@@ -119,15 +118,17 @@ export default function CursoPage() {
                 {/* Thumbnail */}
                 <div className="relative aspect-video bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20 flex items-center justify-center overflow-hidden">
                   {/* Imagem de fundo */}
-                  {lesson.thumbnail && lesson.thumbnail !== '/zeedo-logo.png' && (
-                    <Image 
+                  {lesson.thumbnail && lesson.thumbnail !== '/zeedo-logo.png' ? (
+                    <img 
                       src={lesson.thumbnail} 
                       alt={lesson.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Erro ao carregar imagem:', lesson.thumbnail);
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
-                  )}
+                  ) : null}
                   <div className="absolute inset-0 bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors z-10" />
                   
                   {/* Play Button */}
