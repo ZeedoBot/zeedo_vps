@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase";
 
 interface Lesson {
@@ -116,19 +117,21 @@ export default function CursoPage() {
             >
               <div className="card p-0 overflow-hidden hover:scale-105 transition-transform duration-200">
                 {/* Thumbnail */}
-                <div className="relative aspect-video bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20 flex items-center justify-center">
+                <div className="relative aspect-video bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20 flex items-center justify-center overflow-hidden">
                   {/* Imagem de fundo */}
-                  {lesson.thumbnail && (
-                    <img 
+                  {lesson.thumbnail && lesson.thumbnail !== '/zeedo-logo.png' && (
+                    <Image 
                       src={lesson.thumbnail} 
                       alt={lesson.title}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   )}
-                  <div className="absolute inset-0 bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors" />
+                  <div className="absolute inset-0 bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors z-10" />
                   
                   {/* Play Button */}
-                  <div className="relative z-10 w-16 h-16 rounded-full bg-zeedo-orange flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="relative z-20 w-16 h-16 rounded-full bg-zeedo-orange flex items-center justify-center group-hover:scale-110 transition-transform">
                     <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M8 5v14l11-7z" />
                     </svg>
@@ -136,7 +139,7 @@ export default function CursoPage() {
                   
                   {/* Badge de Concluído */}
                   {lesson.completed && (
-                    <div className="absolute top-3 right-3 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
+                    <div className="absolute top-3 right-3 bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 z-20">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
@@ -145,12 +148,12 @@ export default function CursoPage() {
                   )}
                   
                   {/* Duração */}
-                  <div className="absolute bottom-3 right-3 bg-zeedo-black/80 text-white text-xs font-semibold px-2 py-1 rounded">
+                  <div className="absolute bottom-3 right-3 bg-zeedo-black/80 text-white text-xs font-semibold px-2 py-1 rounded z-20">
                     {lesson.duration}
                   </div>
                   
                   {/* Número da Aula */}
-                  <div className="absolute top-3 left-3 bg-zeedo-orange text-white text-xs font-bold px-2 py-1 rounded">
+                  <div className="absolute top-3 left-3 bg-zeedo-orange text-white text-xs font-bold px-2 py-1 rounded z-20">
                     Aula {lesson.order}
                   </div>
                 </div>
