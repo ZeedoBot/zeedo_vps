@@ -117,6 +117,14 @@ export default function CursoPage() {
               <div className="card p-0 overflow-hidden hover:scale-105 transition-transform duration-200">
                 {/* Thumbnail */}
                 <div className="relative aspect-video bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20 flex items-center justify-center">
+                  {/* Imagem de fundo */}
+                  {lesson.thumbnail && (
+                    <img 
+                      src={lesson.thumbnail} 
+                      alt={lesson.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors" />
                   
                   {/* Play Button */}
