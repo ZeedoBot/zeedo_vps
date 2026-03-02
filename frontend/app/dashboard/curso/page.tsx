@@ -30,10 +30,12 @@ export default function CursoPage() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.access_token) {
+        console.error("Não autenticado - sem token");
         throw new Error("Não autenticado");
       }
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      console.log("Buscando aulas de:", `${API_URL}/course/lessons`);
       
       // Busca aulas da API
       const response = await fetch(`${API_URL}/course/lessons`, {
@@ -42,11 +44,16 @@ export default function CursoPage() {
         },
       });
 
+      console.log("Status da resposta:", response.status);
+
       if (!response.ok) {
-        throw new Error("Erro ao carregar aulas");
+        const errorText = await response.text();
+        console.error("Erro na resposta:", errorText);
+        throw new Error(`Erro ao carregar aulas: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log("Aulas carregadas:", data.length, data);
       setLessons(data);
       
       // Calcula progresso

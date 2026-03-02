@@ -29,7 +29,7 @@ async def get_lessons(user_id: str = Depends(get_current_user_id)):
     """
     Retorna todas as aulas do curso com o progresso do usuário.
     """
-    from backend.app.db import get_supabase
+    from backend.app.services.supabase_client import get_supabase
     
     supabase = get_supabase()
     
@@ -79,7 +79,7 @@ async def get_lesson(lesson_id: int, user_id: str = Depends(get_current_user_id)
     """
     Retorna uma aula específica com o progresso do usuário.
     """
-    from backend.app.db import get_supabase
+    from backend.app.services.supabase_client import get_supabase
     
     supabase = get_supabase()
     
@@ -125,7 +125,7 @@ async def mark_lesson_progress(request: MarkCompletedRequest, user_id: str = Dep
     """
     Marca uma aula como concluída ou não concluída.
     """
-    from backend.app.db import get_supabase
+    from backend.app.services.supabase_client import get_supabase
     
     supabase = get_supabase()
     
@@ -179,7 +179,7 @@ async def get_progress_stats(user_id: str = Depends(get_current_user_id)):
     """
     Retorna estatísticas de progresso do usuário no curso.
     """
-    from backend.app.db import get_supabase
+    from backend.app.services.supabase_client import get_supabase
     
     supabase = get_supabase()
     
