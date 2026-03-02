@@ -171,25 +171,25 @@ export default function CursoPage() {
                 className="group flex-none w-[calc(33.333%-0.5rem)] md:w-[280px] lg:w-[320px] snap-start"
               >
                 <div className="overflow-hidden hover:scale-105 transition-transform duration-200 rounded-lg">
-                  {/* Thumbnail - 16:9 REAL */}
-                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+                  {/* Thumbnail - 16:9 FORÇADO */}
+                  <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
                     {/* Imagem de fundo */}
                     {lesson.thumbnail && lesson.thumbnail !== '/zeedo-logo.png' ? (
                       <img 
                         src={lesson.thumbnail} 
                         alt={lesson.title}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute top-0 left-0 w-full h-full object-cover"
                         onError={(e) => {
                           console.error('Erro ao carregar imagem:', lesson.thumbnail);
                           e.currentTarget.style.display = 'none';
                         }}
                       />
                     ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20" />
+                      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20" />
                     )}
-                    <div className="absolute inset-0 bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors z-10" />
+                    <div className="absolute top-0 left-0 w-full h-full bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors z-10" />
                     
-                    <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
                       
                       {/* Play Button */}
                       <div className="relative z-20 w-10 h-10 md:w-16 md:h-16 rounded-full bg-zeedo-orange flex items-center justify-center group-hover:scale-110 transition-transform">
