@@ -27,10 +27,12 @@ UPDATE course_lessons SET thumbnail = '/curso/aula-7.jpg' WHERE lesson_order = 7
 ## 🎨 Especificações das imagens:
 
 - **Formato**: JPG ou PNG
-- **Tamanho recomendado**: 1280x720px (16:9)
+- **Tamanho recomendado**: 1280x720px (16:9) - **OBRIGATÓRIO formato horizontal**
 - **Tamanho mínimo**: 640x360px
 - **Peso máximo**: 500KB por imagem
 - **Estilo**: Use a paleta Zeedo (laranja #FF6B35, preto, branco)
+
+⚠️ **IMPORTANTE:** As capas DEVEM ter proporção 16:9 (formato horizontal/paisagem) para aparecerem corretamente no layout estilo Netflix com scroll horizontal.
 
 ## 📝 Aulas:
 

@@ -19,4 +19,13 @@ body {
   .card {
     @apply rounded-xl border border-zeedo-orange/20 bg-transparent p-6 dark:border-zeedo-orange/20;
   }
+  
+  /* Esconde scrollbar mas mantém funcionalidade */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

@@ -108,22 +108,25 @@ export default function CursoPage() {
         <div className="hidden md:block absolute bottom-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mb-24" />
       </div>
 
-      {/* Grid de Aulas */}
+      {/* Grid de Aulas - Estilo Netflix */}
       <div>
         <h2 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
           Aulas do Curso
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {lessons.map((lesson) => (
-            <Link
-              key={lesson.id}
-              href={`/dashboard/curso/${lesson.id}`}
-              className="group"
-            >
-              <div className="card p-0 overflow-hidden hover:scale-105 transition-transform duration-200">
-                {/* Thumbnail */}
-                <div className="relative aspect-video bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20 flex items-center justify-center overflow-hidden">
+        {/* Container com scroll horizontal */}
+        <div className="relative -mx-4 md:mx-0">
+          <div className="flex gap-4 overflow-x-auto pb-4 px-4 md:px-0 snap-x snap-mandatory scrollbar-hide">
+            {lessons.map((lesson) => (
+              <Link
+                key={lesson.id}
+                href={`/dashboard/curso/${lesson.id}`}
+                className="group flex-none w-[280px] md:w-[320px] snap-start"
+              >
+                <div className="card p-0 overflow-hidden hover:scale-105 transition-transform duration-200">
+                  {/* Thumbnail - 16:9 */}
+                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                    <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20 flex items-center justify-center overflow-hidden">
                   {/* Imagem de fundo */}
                   {lesson.thumbnail && lesson.thumbnail !== '/zeedo-logo.png' ? (
                     <img 
@@ -164,20 +167,22 @@ export default function CursoPage() {
                   <div className="absolute top-3 left-3 bg-zeedo-orange text-white text-xs font-bold px-2 py-1 rounded z-20">
                     Aula {lesson.order}
                   </div>
-                </div>
+                    </div>
+                  </div>
                 
-                {/* Informações */}
-                <div className="p-4">
-                  <h3 className="font-semibold text-zeedo-black dark:text-zeedo-white mb-2 group-hover:text-zeedo-orange transition-colors">
-                    {lesson.title}
-                  </h3>
-                  <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 line-clamp-2">
-                    {lesson.description}
-                  </p>
+                  {/* Informações */}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-zeedo-black dark:text-zeedo-white mb-2 group-hover:text-zeedo-orange transition-colors">
+                      {lesson.title}
+                    </h3>
+                    <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 line-clamp-2">
+                      {lesson.description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
