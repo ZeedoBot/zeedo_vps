@@ -56,6 +56,7 @@ type Trade = {
   pnl_usd: number;
   size_usd: number;
   time: number;
+  pnl_pct?: number | null;
 };
 
 type Position = {
