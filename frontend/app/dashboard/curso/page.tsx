@@ -71,34 +71,34 @@ export default function CursoPage() {
   return (
     <div className="space-y-8">
       {/* Header do Curso */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-zeedo-orange to-orange-600 p-8 text-white">
+      <div className="relative overflow-hidden rounded-xl md:rounded-2xl bg-gradient-to-r from-zeedo-orange to-orange-600 p-4 md:p-8 text-white">
         <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-2">Curso Introdutório Zeedo</h1>
-          <p className="text-white/90 mb-4">
+          <h1 className="text-xl md:text-3xl font-bold mb-1 md:mb-2">Curso Introdutório Zeedo</h1>
+          <p className="text-sm md:text-base text-white/90 mb-3 md:mb-4">
             Aprenda tudo sobre trading automatizado e como usar a plataforma Zeedo
           </p>
           
           {/* Barra de Progresso */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
+          <div className="space-y-1.5 md:space-y-2">
+            <div className="flex items-center justify-between text-xs md:text-sm">
               <span>Seu progresso</span>
               <span className="font-semibold">{progress}%</span>
             </div>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-1.5 md:h-2 bg-white/20 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-white transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-sm text-white/80">
+            <p className="text-xs md:text-sm text-white/80">
               {lessons.filter(l => l.completed).length} de {lessons.length} aulas concluídas
             </p>
           </div>
         </div>
         
-        {/* Padrão decorativo */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
-        <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mb-24" />
+        {/* Padrão decorativo - escondido no mobile */}
+        <div className="hidden md:block absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
+        <div className="hidden md:block absolute bottom-0 right-0 w-48 h-48 bg-white/10 rounded-full -mr-24 -mb-24" />
       </div>
 
       {/* Grid de Aulas */}
