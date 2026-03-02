@@ -89,16 +89,19 @@ function truncateAddress(addr: string): string {
 }
 
 function groupTradesById(trades: Trade[]) {
-  const map = new Map<string, { pnl: number; token: string; side: string; tf: string; time: number }>();
+  const map = new Map<string, { pnl: number; token: string; side: string; tf: string; time: number; pnl_pct?: number | null }>();
   for (const t of trades) {
     const key = t.trade_id !== "-" ? t.trade_id : t.oid;
     const existing = map.get(key);
     const pnl = t.pnl_usd;
     if (!existing) {
-      map.set(key, { pnl, token: t.token, side: t.side, tf: t.tf, time: t.time });
+      map.set(key, { pnl, token: t.token, side: t.side, tf: t.tf, time: t.time, pnl_pct: t.pnl_pct });
     } else {
       existing.pnl += pnl;
-      if (t.time > existing.time) existing.time = t.time;
+      if (t.time > existing.time) {
+        existing.time = t.time;
+        existing.pnl_pct = t.pnl_pct;
+      }
     }
   }
   return Array.from(map.entries()).map(([id, v]) => ({ id, ...v }));
