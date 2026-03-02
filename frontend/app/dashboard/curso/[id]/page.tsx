@@ -171,7 +171,7 @@ export default function LessonPage() {
 
       {/* Informações da Aula */}
       <div className="card">
-        <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
               <span className="inline-block bg-zeedo-orange text-white text-xs font-bold px-2 py-1 rounded">
@@ -186,10 +186,10 @@ export default function LessonPage() {
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-bold text-zeedo-black dark:text-zeedo-white mb-2">
+            <h1 className="text-xl md:text-2xl font-bold text-zeedo-black dark:text-zeedo-white mb-2">
               {lesson.title}
             </h1>
-            <p className="text-zeedo-black/70 dark:text-zeedo-white/70">
+            <p className="text-sm md:text-base text-zeedo-black/70 dark:text-zeedo-white/70">
               {lesson.description}
             </p>
           </div>
@@ -197,7 +197,7 @@ export default function LessonPage() {
           {!completed && (
             <button
               onClick={markAsCompleted}
-              className="btn-primary whitespace-nowrap"
+              className="btn-primary w-full md:w-auto md:whitespace-nowrap"
             >
               Marcar como concluída
             </button>
@@ -205,44 +205,44 @@ export default function LessonPage() {
         </div>
 
         {/* Navegação entre aulas */}
-        <div className="flex items-center justify-between pt-4 border-t border-zeedo-black/10 dark:border-white/10">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-4 border-t border-zeedo-black/10 dark:border-white/10">
           {previousLesson ? (
             <Link
               href={`/dashboard/curso/${previousLesson.id}`}
               className="flex items-center gap-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60 hover:text-zeedo-orange transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <div className="text-left">
+              <div className="text-left min-w-0">
                 <div className="text-xs">Aula anterior</div>
-                <div className="font-medium">{previousLesson.title}</div>
+                <div className="font-medium truncate">{previousLesson.title}</div>
               </div>
             </Link>
           ) : (
-            <div />
+            <div className="hidden md:block" />
           )}
 
           {nextLesson ? (
             <Link
               href={`/dashboard/curso/${nextLesson.id}`}
-              className="flex items-center gap-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60 hover:text-zeedo-orange transition-colors"
+              className="flex items-center gap-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60 hover:text-zeedo-orange transition-colors md:ml-auto"
             >
-              <div className="text-right">
+              <div className="text-left md:text-right min-w-0 flex-1">
                 <div className="text-xs">Próxima aula</div>
-                <div className="font-medium">{nextLesson.title}</div>
+                <div className="font-medium truncate">{nextLesson.title}</div>
               </div>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
           ) : (
             <Link
               href="/dashboard/curso"
-              className="flex items-center gap-2 text-sm text-zeedo-orange hover:underline"
+              className="flex items-center gap-2 text-sm text-zeedo-orange hover:underline md:ml-auto"
             >
               <span>Voltar ao curso</span>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
