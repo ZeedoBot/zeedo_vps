@@ -118,10 +118,12 @@ function computeMetrics(trades: Trade[], balance: number) {
   const avgLoss = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
   const payoff = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0;
   
-  // Calcula Lucro % baseado no capital inicial estimado (saldo atual - lucro total)
-  // Se não houver saldo ou der negativo, usa saldo atual como base
-  const initialCapital = balance - totalPnl;
-  const pnlPct = initialCapital > 0 ? (totalPnl / initialCapital) * 100 : (balance > 0 ? (totalPnl / balance) * 100 : 0);
+  // Calcula Lucro % Total somando os PNL % individuais de cada trade
+  // Isso garante que depósitos/saques não distorçam o resultado
+  const tradesWithPct = grouped.filter(t => t.pnl_pct !== undefined && t.pnl_pct !== null);
+  const pnlPct = tradesWithPct.length > 0 
+    ? tradesWithPct.reduce((sum, t) => sum + (t.pnl_pct || 0), 0)
+    : (balance > 0 ? (totalPnl / balance) * 100 : 0); // Fallback para trades sem pnl_pct
 
   const sortedTrades = [...trades].sort((a, b) => a.time - b.time);
   const growthData: { time: number; date: string; balance: number }[] = [];
