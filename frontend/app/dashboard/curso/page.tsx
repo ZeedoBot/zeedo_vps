@@ -19,10 +19,36 @@ export default function CursoPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
   useEffect(() => {
     loadLessons();
   }, []);
+
+  // Verifica se pode scrollar para os lados
+  const checkScroll = () => {
+    const container = document.getElementById('lessons-scroll');
+    if (container) {
+      setCanScrollLeft(container.scrollLeft > 0);
+      setCanScrollRight(
+        container.scrollLeft < container.scrollWidth - container.clientWidth - 10
+      );
+    }
+  };
+
+  useEffect(() => {
+    const container = document.getElementById('lessons-scroll');
+    if (container) {
+      checkScroll();
+      container.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+      return () => {
+        container.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+  }, [lessons]);
 
   async function loadLessons() {
     try {
@@ -115,36 +141,28 @@ export default function CursoPage() {
         </h2>
         
         {/* Container com scroll horizontal e setas */}
-        <div className="relative group/carousel">
-          {/* Seta Esquerda - apenas desktop */}
-          <button
-            onClick={() => {
-              const container = document.getElementById('lessons-scroll');
-              if (container) container.scrollBy({ left: -300, behavior: 'smooth' });
-            }}
-            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-zeedo-black/80 hover:bg-zeedo-black text-white p-3 rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-
-          {/* Seta Direita - apenas desktop */}
-          <button
-            onClick={() => {
-              const container = document.getElementById('lessons-scroll');
-              if (container) container.scrollBy({ left: 300, behavior: 'smooth' });
-            }}
-            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-zeedo-black/80 hover:bg-zeedo-black text-white p-3 rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+        <div className="relative flex items-center gap-4">
+          {/* Seta Esquerda - apenas desktop e quando pode scrollar */}
+          {canScrollLeft && (
+            <button
+              onClick={() => {
+                const container = document.getElementById('lessons-scroll');
+                if (container) {
+                  container.scrollBy({ left: -400, behavior: 'smooth' });
+                  setTimeout(checkScroll, 300);
+                }
+              }}
+              className="hidden md:flex shrink-0 z-10 text-zeedo-orange hover:text-orange-600 transition-colors"
+            >
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+              </svg>
+            </button>
+          )}
 
           <div 
             id="lessons-scroll"
-            className="flex gap-2 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide"
+            className="flex gap-2 md:gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide flex-1"
           >
             {lessons.map((lesson) => (
               <Link
@@ -154,20 +172,22 @@ export default function CursoPage() {
               >
                 <div className="overflow-hidden hover:scale-105 transition-transform duration-200 rounded-lg">
                   {/* Thumbnail - 16:9 REAL */}
-                  <div className="relative w-full bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20 overflow-hidden" style={{ paddingBottom: '56.25%' }}>
+                  <div className="relative w-full overflow-hidden bg-zeedo-black" style={{ aspectRatio: '16/9' }}>
                     <div className="absolute inset-0 flex items-center justify-center">
                       {/* Imagem de fundo */}
                       {lesson.thumbnail && lesson.thumbnail !== '/zeedo-logo.png' ? (
                         <img 
                           src={lesson.thumbnail} 
                           alt={lesson.title}
-                          className="absolute inset-0 w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                           onError={(e) => {
                             console.error('Erro ao carregar imagem:', lesson.thumbnail);
                             e.currentTarget.style.display = 'none';
                           }}
                         />
-                      ) : null}
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20" />
+                      )}
                       <div className="absolute inset-0 bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors z-10" />
                       
                       {/* Play Button */}
@@ -212,6 +232,24 @@ export default function CursoPage() {
               </Link>
             ))}
           </div>
+
+          {/* Seta Direita - apenas desktop e quando pode scrollar */}
+          {canScrollRight && (
+            <button
+              onClick={() => {
+                const container = document.getElementById('lessons-scroll');
+                if (container) {
+                  container.scrollBy({ left: 400, behavior: 'smooth' });
+                  setTimeout(checkScroll, 300);
+                }
+              }}
+              className="hidden md:flex shrink-0 z-10 text-zeedo-orange hover:text-orange-600 transition-colors"
+            >
+              <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
