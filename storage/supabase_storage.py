@@ -375,7 +375,7 @@ class SupabaseStorage(StorageBase):
             uid = user_id or self._user_id
             if not uid:
                 return 0
-            r = self._client.table(TABLE_BLOCKED).select("id, symbol, side, entry_px, stop_real, tech_base, target1_level, created_at").eq("user_id", uid).execute()
+            r = self._client.table(TABLE_BLOCKED).select("id, symbol, side, entry_px, stop_real, tech_base, setup_high, setup_low, target1_level, created_at").eq("user_id", uid).execute()
             if not r.data:
                 return 0
             import time as _time
@@ -397,20 +397,30 @@ class SupabaseStorage(StorageBase):
                 px = float(all_mids.get(sym, 0) or 0)
                 if px <= 0:
                     continue
-                entry = float(row.get("entry_px", 0))
                 stop = float(row.get("stop_real", 0))
                 tech = float(row.get("tech_base", 0) or 0)
+                setup_high = float(row.get("setup_high", 0) or 0)
+                setup_low = float(row.get("setup_low", 0) or 0)
                 t1 = float(row.get("target1_level", 0.618) or 0.618)
                 side = (row.get("side") or "long").lower()
                 expired = False
+                # Stop: sempre verifica
                 if side == "long":
-                    tp1 = entry + (tech * t1)
-                    if px >= tp1 or px <= stop:
+                    if px <= stop:
                         expired = True
+                    else:
+                        # TP1 = setup_high + (tech_base × 0.618) — alvo 1 para long
+                        tp1 = setup_high + (tech * t1)
+                        if px >= tp1:
+                            expired = True
                 else:
-                    tp1 = entry - (tech * t1)
-                    if px <= tp1 or px >= stop:
+                    if px >= stop:
                         expired = True
+                    else:
+                        # TP1 = setup_low - (tech_base × 0.618) — alvo 1 para short
+                        tp1 = setup_low - (tech * t1)
+                        if px <= tp1:
+                            expired = True
                 if expired:
                     to_delete.append(row.get("id"))
             for bid in to_delete:

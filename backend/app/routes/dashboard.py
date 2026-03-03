@@ -390,7 +390,11 @@ def execute_blocked_trade(
     supabase = get_supabase()
     r = supabase.table("blocked_trades").select("*").eq("id", body.id).eq("user_id", user_id).limit(1).execute()
     if not r.data or len(r.data) == 0:
-        raise HTTPException(status_code=404, detail="Trade bloqueado não encontrado ou já acionado.")
+        logger.warning(f"execute-blocked-trade: trade id={body.id} user={user_id} não encontrado")
+        raise HTTPException(
+            status_code=404,
+            detail="Trade bloqueado não encontrado ou já acionado. Se o preço atingiu TP1 ou o stop, o trade foi expirado automaticamente."
+        )
 
     row = r.data[0]
     symbol = (row.get("symbol") or "").strip().upper()
