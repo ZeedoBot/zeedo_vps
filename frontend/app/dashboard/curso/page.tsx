@@ -170,53 +170,43 @@ export default function CursoPage() {
                 href={`/dashboard/curso/${lesson.id}`}
                 className="group flex-none w-[calc(33.333%-0.5rem)] md:w-[280px] lg:w-[320px] snap-start"
               >
-                <div className="overflow-hidden hover:scale-105 transition-transform duration-200 rounded-lg">
-                  {/* Thumbnail - 16:9 FORÇADO */}
-                  <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
-                    {/* Imagem de fundo */}
+                <div className="overflow-hidden hover:scale-105 transition-transform duration-200 rounded-lg cursor-pointer">
+                  {/* Thumbnail - 9:16 (16 altura : 9 largura) */}
+                  <div className="relative w-full aspect-[9/16] overflow-hidden bg-zeedo-black">
+                    {/* Imagem - clicável, preenche 16:9 */}
                     {lesson.thumbnail && lesson.thumbnail !== '/zeedo-logo.png' ? (
                       <img 
                         src={lesson.thumbnail} 
                         alt={lesson.title}
-                        className="absolute top-0 left-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                         onError={(e) => {
                           console.error('Erro ao carregar imagem:', lesson.thumbnail);
                           e.currentTarget.style.display = 'none';
                         }}
                       />
                     ) : (
-                      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-zeedo-orange/20 to-orange-600/20" />
                     )}
-                    <div className="absolute top-0 left-0 w-full h-full bg-zeedo-black/40 group-hover:bg-zeedo-black/20 transition-colors z-10" />
+                    <div className="absolute inset-0 bg-zeedo-black/30 group-hover:bg-zeedo-black/10 transition-colors" />
                     
-                    <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
-                      
-                      {/* Play Button */}
-                      <div className="relative z-20 w-10 h-10 md:w-16 md:h-16 rounded-full bg-zeedo-orange flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg className="w-5 h-5 md:w-8 md:h-8 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
+                    {/* Badge de Concluído */}
+                    {lesson.completed && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full flex items-center gap-1 z-10">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
+                        <span className="hidden md:inline">Concluída</span>
                       </div>
-                      
-                      {/* Badge de Concluído */}
-                      {lesson.completed && (
-                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-1.5 py-0.5 md:px-2 md:py-1 rounded-full flex items-center gap-1 z-20">
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          <span className="hidden md:inline">Concluída</span>
-                        </div>
-                      )}
-                      
-                      {/* Duração */}
-                      <div className="absolute bottom-2 right-2 bg-zeedo-black/80 text-white text-xs font-semibold px-1.5 py-0.5 md:px-2 md:py-1 rounded z-20">
-                        {lesson.duration}
-                      </div>
-                      
-                      {/* Número da Aula */}
-                      <div className="absolute top-2 left-2 bg-zeedo-orange text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded z-20">
-                        Aula {lesson.order}
-                      </div>
+                    )}
+                    
+                    {/* Duração */}
+                    <div className="absolute bottom-2 right-2 bg-zeedo-black/80 text-white text-xs font-semibold px-1.5 py-0.5 md:px-2 md:py-1 rounded z-10">
+                      {lesson.duration}
+                    </div>
+                    
+                    {/* Número da Aula */}
+                    <div className="absolute top-2 left-2 bg-zeedo-orange text-white text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded z-10">
+                      Aula {lesson.order}
                     </div>
                   </div>
                 
