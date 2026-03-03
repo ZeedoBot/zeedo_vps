@@ -228,10 +228,12 @@ export default function TradesPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
-            🚫 Trades Não Acionados
+            🚫 Trades Bloqueados: Ativação Manual
           </h2>
           <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 mb-4">
-            Sinais bloqueados por LSR, ativo forte/fraco 24h, high/low extremo ou limite de trades. Expira se o preço atingir o alvo 1 ou o stop. Você pode acionar manualmente se quiser.
+            Recomendação: Todos trades aqui estão de acordo com o setup, porém tem algum indicador adicional que bloqueou o trade.
+            <em className="block mt-2">Isso não significa que é trade ruim.</em>
+            Faça sua própria análise, se entender que é uma boa entrada, você pode acionar manualmente com um clique.
           </p>
           {overview?.blocked_trades && overview.blocked_trades.length > 0 ? (
             <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
