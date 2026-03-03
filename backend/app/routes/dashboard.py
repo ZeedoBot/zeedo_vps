@@ -52,11 +52,29 @@ def _fetch_hyperliquid_balance(wallet: str) -> float:
         return 0.0
 
 
+def _get_user_created_at_ms(user_id: str) -> int | None:
+    """Retorna created_at do usuário em ms. None = sem filtro."""
+    try:
+        supabase = get_supabase()
+        r = supabase.table("users").select("created_at").eq("id", user_id).limit(1).execute()
+        if not r.data or len(r.data) == 0:
+            return None
+        created = r.data[0].get("created_at")
+        if not created:
+            return None
+        from datetime import datetime
+        dt = datetime.fromisoformat(str(created).replace("Z", "+00:00")) if isinstance(created, str) else created
+        return int(dt.timestamp() * 1000)
+    except Exception:
+        return None
+
+
 def _fetch_trades(user_id: str) -> list[dict]:
     supabase = get_supabase()
     r = supabase.table("trades_database").select("trade_id, symbol, side, tf, oid, raw, pnl_usd, closed_at, account_value_at_trade").eq("user_id", user_id).order("closed_at", desc=False).execute()
     if not r.data:
         return []
+    min_ts_ms = _get_user_created_at_ms(user_id)
     out = []
     for row in r.data:
         raw = row.get("raw") or {}
@@ -68,7 +86,11 @@ def _fetch_trades(user_id: str) -> list[dict]:
                 ts = int(dt.timestamp() * 1000)
             except Exception:
                 pass
-        
+
+        # Filtra: apenas trades após criação da conta no Zeedo
+        if min_ts_ms is not None and ts > 0 and ts < min_ts_ms:
+            continue
+
         # Calcula PNL % baseado no saldo da conta no momento do trade
         pnl_usd = float(row.get("pnl_usd", 0) or 0)
         account_value = row.get("account_value_at_trade")

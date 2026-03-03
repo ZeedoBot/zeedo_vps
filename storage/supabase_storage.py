@@ -344,6 +344,7 @@ class SupabaseStorage(StorageBase):
         try:
             uid = user_id or self._user_id
             if not uid:
+                logging.warning("save_blocked_trade: user_id ausente, não foi possível salvar")
                 return
             record = {
                 "user_id": uid,
@@ -362,8 +363,9 @@ class SupabaseStorage(StorageBase):
                 "target1_level": float(data.get("target1_level", 0.618) or 0.618),
             }
             self._client.table(TABLE_BLOCKED).insert(record).execute()
+            logging.info(f"blocked_trade salvo: {data.get('symbol')} {data.get('tf')} ({data.get('reason')})")
         except Exception as e:
-            logging.error(f"Supabase save_blocked_trade: {e}")
+            logging.error(f"Supabase save_blocked_trade: {e}", exc_info=True)
 
     def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 0.618) -> int:
         """Remove blocked_trades expirados (preço atingiu TP1 ou Stop). Retorna quantidade removida."""
@@ -373,11 +375,24 @@ class SupabaseStorage(StorageBase):
             uid = user_id or self._user_id
             if not uid:
                 return 0
-            r = self._client.table(TABLE_BLOCKED).select("*").eq("user_id", uid).execute()
+            r = self._client.table(TABLE_BLOCKED).select("id, symbol, side, entry_px, stop_real, tech_base, target1_level, created_at").eq("user_id", uid).execute()
             if not r.data:
                 return 0
+            import time as _time
+            now_sec = _time.time()
+            grace_minutes = 5  # Não expira trades criados há menos de 5 min
             to_delete = []
             for row in r.data:
+                created = row.get("created_at")
+                if created:
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(str(created).replace("Z", "+00:00")) if isinstance(created, str) else created
+                        age_sec = now_sec - dt.timestamp()
+                        if age_sec < grace_minutes * 60:
+                            continue  # Mantém; muito recente
+                    except Exception:
+                        pass
                 sym = row.get("symbol", "")
                 px = float(all_mids.get(sym, 0) or 0)
                 if px <= 0:
