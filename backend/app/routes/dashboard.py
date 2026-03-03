@@ -27,6 +27,10 @@ class ClosePositionBody(BaseModel):
     pct: float = Field(100.0, ge=1.0, le=100.0)
 
 
+class ExecuteBlockedTradeBody(BaseModel):
+    id: str = Field(..., description="UUID do trade bloqueado")
+
+
 def _get_wallet_address(user_id: str) -> str | None:
     supabase = get_supabase()
     r = supabase.table("trading_accounts").select("wallet_address").eq("user_id", user_id).eq("is_active", True).limit(1).execute()
@@ -180,11 +184,33 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
             t["status"] = "pendente"
             pending_positions.append(t)
 
+    blocked = []
+    try:
+        supabase = get_supabase()
+        bt = supabase.table("blocked_trades").select("id, symbol, tf, side, entry_px, entry2_px, stop_real, qty, reason, created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
+        if bt.data:
+            for row in bt.data:
+                blocked.append({
+                    "id": str(row.get("id", "")),
+                    "symbol": row.get("symbol", ""),
+                    "tf": row.get("tf", "-"),
+                    "side": row.get("side", ""),
+                    "entry_px": float(row.get("entry_px", 0)),
+                    "entry2_px": float(row.get("entry2_px", 0)),
+                    "stop_real": float(row.get("stop_real", 0)),
+                    "qty": float(row.get("qty", 0)),
+                    "reason": row.get("reason", ""),
+                    "created_at": row.get("created_at"),
+                })
+    except Exception as e:
+        logger.warning(f"Erro ao buscar blocked_trades: {e}")
+
     return {
         "balance": balance,
         "trades": trades,
         "open_positions": active_positions,
         "pending_positions": pending_positions,
+        "blocked_trades": blocked,
         "logs": logs,
     }
 
@@ -307,3 +333,168 @@ def close_position(
         "message": f"Posição {symbol} fechada ({body.pct:.0f}%).",
         "filled": filled,
     }
+
+
+@router.get("/blocked-trades")
+def get_blocked_trades(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
+    """Lista trades bloqueados (não acionados) do usuário."""
+    supabase = get_supabase()
+    r = supabase.table("blocked_trades").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+    if not r.data:
+        return {"blocked_trades": []}
+    out = []
+    for row in r.data:
+        out.append({
+            "id": str(row.get("id", "")),
+            "symbol": row.get("symbol", ""),
+            "tf": row.get("tf", "-"),
+            "side": row.get("side", ""),
+            "entry_px": float(row.get("entry_px", 0)),
+            "entry2_px": float(row.get("entry2_px", 0)),
+            "stop_real": float(row.get("stop_real", 0)),
+            "qty": float(row.get("qty", 0)),
+            "reason": row.get("reason", ""),
+            "created_at": row.get("created_at"),
+        })
+    return {"blocked_trades": out}
+
+
+@router.post("/execute-blocked-trade")
+def execute_blocked_trade(
+    body: ExecuteBlockedTradeBody,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Aciona manualmente um trade bloqueado: coloca ordem limit e adiciona ao bot_tracker."""
+    supabase = get_supabase()
+    r = supabase.table("blocked_trades").select("*").eq("id", body.id).eq("user_id", user_id).limit(1).execute()
+    if not r.data or len(r.data) == 0:
+        raise HTTPException(status_code=404, detail="Trade bloqueado não encontrado ou já acionado.")
+
+    row = r.data[0]
+    symbol = (row.get("symbol") or "").strip().upper()
+    side = (row.get("side") or "long").lower()
+    tf = row.get("tf") or "-"
+    entry_px = float(row.get("entry_px", 0))
+    entry2_px = float(row.get("entry2_px", 0))
+    stop_real = float(row.get("stop_real", 0))
+    qty = float(row.get("qty", 0))
+    signal_ts = int(row.get("signal_ts", 0))
+    tech_base = float(row.get("tech_base", 0) or 0)
+    setup_high = float(row.get("setup_high", 0) or 0)
+    setup_low = float(row.get("setup_low", 0) or 0)
+
+    if not symbol or entry_px <= 0 or qty <= 0:
+        raise HTTPException(status_code=400, detail="Dados do trade inválidos.")
+
+    # Busca conta e chave
+    acc = supabase.table("trading_accounts").select(
+        "wallet_address, encrypted_private_key, encryption_salt, network"
+    ).eq("user_id", user_id).eq("is_active", True).limit(1).execute()
+    if not acc.data or len(acc.data) == 0:
+        raise HTTPException(status_code=400, detail="Conecte a carteira antes de acionar trades.")
+
+    acc_row = acc.data[0]
+    wallet = acc_row.get("wallet_address")
+    enc_key = acc_row.get("encrypted_private_key")
+    salt = acc_row.get("encryption_salt")
+    if not enc_key or not salt:
+        raise HTTPException(status_code=400, detail="Chave da carteira não encontrada. Reconecte a carteira.")
+
+    _root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(_root) not in sys.path:
+        sys.path.insert(0, str(_root))
+    from auth.encryption import EncryptionManager
+    key = (get_settings().encryption_master_key or "").strip().strip("[]")
+    if not key:
+        raise HTTPException(status_code=500, detail="Servidor não configurado.")
+    enc = EncryptionManager(master_key=key)
+    try:
+        private_key = enc.decrypt_private_key(enc_key, salt, user_id)
+    except Exception:
+        logger.exception("Erro ao descriptografar chave")
+        raise HTTPException(status_code=500, detail="Erro ao acessar carteira.")
+
+    # Entry2: busca config
+    cfg = supabase.table("bot_config").select("entry2_enabled").eq("user_id", user_id).limit(1).execute()
+    entry2_enabled = True
+    if cfg.data and len(cfg.data) > 0:
+        entry2_enabled = bool(cfg.data[0].get("entry2_enabled", True))
+
+    from hyperliquid.exchange import Exchange
+    from hyperliquid.utils import constants
+    import time
+    is_mainnet = (acc_row.get("network") or "mainnet") == "mainnet"
+    base_url = constants.MAINNET_API_URL if is_mainnet else constants.TESTNET_API_URL
+    account = Account.from_key(private_key)
+    exchange = Exchange(account, base_url, account_address=wallet)
+
+    # round price for exchange
+    entry_px_rounded = round(entry_px, 5)
+    is_buy = side == "long"
+    try:
+        res = exchange.order(symbol, is_buy, qty, entry_px_rounded, {"limit": {"tif": "Gtc"}}, reduce_only=False)
+    except Exception as e:
+        logger.exception(f"Erro order execute-blocked-trade {symbol}: {e}")
+        raise HTTPException(status_code=502, detail=f"Erro ao colocar ordem: {str(e)}")
+
+    statuses = (res.get("response") or {}).get("data") or {}
+    statuses = statuses.get("statuses") or []
+    for st in statuses:
+        if st.get("error"):
+            raise HTTPException(status_code=400, detail=f"Hyperliquid: {st['error']}")
+
+    trade_id = f"{symbol}-{int(time.time())}"
+    second_qty = qty if entry2_enabled else 0
+    qty_entry_1 = qty
+    qty_entry_2 = qty + second_qty
+
+    tracker_data = {
+        "side": side,
+        "tf": tf,
+        "placed_at": time.time(),
+        "signal_ts": signal_ts / 1000.0,
+        "planned_stop": stop_real,
+        "tech_base": tech_base,
+        "setup_high": setup_high,
+        "setup_low": setup_low,
+        "entry_px": entry_px,
+        "qty": qty,
+        "qty_entry_1": qty_entry_1,
+        "qty_entry_2": qty_entry_2,
+        "trade_id": trade_id,
+        "pnl_realized": 0.0,
+        "last_size": 0.0,
+    }
+    if entry2_enabled:
+        tracker_data["entry2_px"] = entry2_px
+        tracker_data["entry2_qty"] = second_qty
+        tracker_data["entry2_placed"] = False
+    else:
+        tracker_data["entry2_placed"] = True
+
+    supabase.table("bot_tracker").upsert({
+        "user_id": user_id,
+        "symbol": symbol,
+        "data": tracker_data,
+    }, on_conflict="user_id,symbol").execute()
+
+    if signal_ts > 0:
+        hist = supabase.table("bot_history").select("symbol, timeframe, last_signal_ts").eq("user_id", user_id).execute()
+        hist_map = {}
+        if hist.data:
+            for h in hist.data:
+                s, t = h.get("symbol"), h.get("timeframe")
+                if s and t:
+                    hist_map[f"{s}_{t}"] = h.get("last_signal_ts", 0)
+        key = f"{symbol}_{tf}"
+        if signal_ts > hist_map.get(key, 0):
+            supabase.table("bot_history").upsert({
+                "user_id": user_id,
+                "symbol": symbol,
+                "timeframe": tf,
+                "last_signal_ts": signal_ts,
+            }, on_conflict="user_id,symbol,timeframe").execute()
+
+    supabase.table("blocked_trades").delete().eq("id", body.id).eq("user_id", user_id).execute()
+
+    return {"success": True, "message": f"Trade {symbol} acionado. Ordem limit colocada na entrada 1."}

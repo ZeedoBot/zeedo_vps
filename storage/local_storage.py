@@ -70,3 +70,11 @@ class LocalStorage(StorageBase):
 
     def get_config(self) -> dict:
         return _load_json(self.config_file)
+
+    def save_blocked_trade(self, data: dict, user_id: str = None) -> None:
+        """No-op: local storage não persiste blocked trades."""
+        pass
+
+    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 0.618) -> int:
+        """No-op: local storage não persiste blocked trades."""
+        return 0

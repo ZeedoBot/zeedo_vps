@@ -17,11 +17,25 @@ type Position = {
   unrealized_pnl?: number;
 };
 
+type BlockedTrade = {
+  id: string;
+  symbol: string;
+  tf: string;
+  side: string;
+  entry_px: number;
+  entry2_px: number;
+  stop_real: number;
+  qty: number;
+  reason: string;
+  created_at?: string;
+};
+
 type OverviewData = {
   balance: number;
   trades: unknown[];
   open_positions: Position[];
   pending_positions: Position[];
+  blocked_trades?: BlockedTrade[];
 };
 
 export default function TradesPage() {
@@ -31,6 +45,7 @@ export default function TradesPage() {
   const [error, setError] = useState("");
   const [closing, setClosing] = useState<string | null>(null);
   const [closePct, setClosePct] = useState<Record<string, number>>({});
+  const [executingId, setExecutingId] = useState<string | null>(null);
 
   async function load(showRefreshing = false) {
     const supabase = createClient();
@@ -52,6 +67,22 @@ export default function TradesPage() {
   useEffect(() => {
     load();
   }, []);
+
+  async function handleExecuteBlocked(id: string) {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setExecutingId(id);
+    setError("");
+    try {
+      await apiPost("/dashboard/execute-blocked-trade", { id }, session.access_token);
+      await load(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao acionar trade.");
+    } finally {
+      setExecutingId(null);
+    }
+  }
 
   async function handleClose(symbol: string) {
     const supabase = createClient();
@@ -192,6 +223,76 @@ export default function TradesPage() {
             </div>
           ) : (
             <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 py-4">Nenhuma ordem pendente.</p>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
+            🚫 Trades Não Acionados
+          </h2>
+          <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 mb-4">
+            Sinais bloqueados por LSR, ativo forte/fraco 24h, high/low extremo ou limite de trades. Expira se o preço atingir o alvo 1 ou o stop. Você pode acionar manualmente se quiser.
+          </p>
+          {overview?.blocked_trades && overview.blocked_trades.length > 0 ? (
+            <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
+              <table className="min-w-full divide-y divide-zeedo-orange/20">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Ticker</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">TF</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Motivo</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">1ª entrada</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">2ª entrada</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zeedo-orange/20">
+                  {overview.blocked_trades.map((b) => (
+                    <tr key={b.id}>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.symbol}</td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.tf}</td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.side}</td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+                        {b.reason === "LSR" && "LSR"}
+                        {b.reason === "ativo_forte_24h" && "Ativo forte 24h"}
+                        {b.reason === "ativo_fraco_24h" && "Ativo fraco 24h"}
+                        {b.reason === "high_extremo" && "High extremo"}
+                        {b.reason === "low_extremo" && "Low extremo"}
+                        {b.reason === "limite_trades" && "Limite de trades"}
+                        {!["LSR","ativo_forte_24h","ativo_fraco_24h","high_extremo","low_extremo","limite_trades"].includes(b.reason) && b.reason}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry_px?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry2_px?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.stop_real?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <a
+                            href={`https://app.hyperliquid.xyz/trade/${b.symbol}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-zeedo-orange hover:underline"
+                          >
+                            Abrir HL
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleExecuteBlocked(b.id)}
+                            disabled={executingId === b.id}
+                            className="rounded-lg bg-zeedo-orange/20 px-2 py-1 text-xs font-medium text-zeedo-orange hover:bg-zeedo-orange/30 disabled:opacity-50 dark:text-orange-400"
+                          >
+                            {executingId === b.id ? "…" : "Acionar"}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 py-4">Nenhum trade bloqueado.</p>
           )}
         </section>
       </div>

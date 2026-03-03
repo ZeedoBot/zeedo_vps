@@ -459,16 +459,19 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
             recent_high_10 = engulf_window["high"].max()
             
             if curr_high >= recent_high_10:
+                setup_high_hl = curr_hl["high"]
+                setup_low_hl = prev_hl["low"]
+                tech_base = setup_high_hl - setup_low_hl
+                trigger_hl = setup_high_hl - (tech_base * 0.618)
+                entry2_px = entry_2(setup_high_hl, setup_low_hl, "long")
+                stop_inicial = round_px(setup_high_hl - FIB_STOP_LEVEL * tech_base)
                 logging.info(f"{prefix} 🚫 Engolfo Bull ignorado (high extremo)")
-                tg_send(
-                    f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
-                    f"🚫🟢 LONG BLOQUEADO (High extremo)🚫\n"
-                    f"{symbol} | {timeframe}\n"
-                    f"Engolfo Bull ignorado por high extremo. O trade pode já ter subido muito.\n"
-                    f"Recomendação: Faça sua própria análise.\n"
-                    f"https://app.hyperliquid.xyz/trade/{symbol}"
-                )
-                return None
+                return {
+                    "take": False, "blocked": True, "reason": "high_extremo", "side": "long",
+                    "trigger": trigger_hl, "entry2_px": entry2_px, "stop_real": stop_inicial,
+                    "tech_base": tech_base, "setup_high": setup_high_hl, "setup_low": setup_low_hl,
+                    "signal_ts": signal_ts
+                }
 
             if prev_body_low <= local_min_window * 1.0003:
                 setup_high_hl = curr_hl["high"]
@@ -526,16 +529,19 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
             recent_low_10 = engulf_window["low"].min()
             
             if curr_low <= recent_low_10:
+                setup_high_hl = prev_hl["high"]
+                setup_low_hl = curr_hl["low"]
+                tech_base = setup_high_hl - setup_low_hl
+                trigger_hl = setup_low_hl + (tech_base * 0.618)
+                entry2_px = entry_2(setup_high_hl, setup_low_hl, "short")
+                stop_inicial = round_px(setup_low_hl + FIB_STOP_LEVEL * tech_base)
                 logging.info(f"{prefix} 🚫 Engolfo Bear ignorado (low extremo)")
-                tg_send(
-                    f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
-                    f"🚫🔴 SHORT BLOQUEADO (Low extremo)🚫\n"
-                    f"{symbol} | {timeframe}\n"
-                    f"Engolfo Bear ignorado por low extremo. O trade pode já ter caído muito.\n"
-                    f"Recomendação: Faça sua própria análise.\n"
-                    f"https://app.hyperliquid.xyz/trade/{symbol}"
-                )
-                return None
+                return {
+                    "take": False, "blocked": True, "reason": "low_extremo", "side": "short",
+                    "trigger": trigger_hl, "entry2_px": entry2_px, "stop_real": stop_inicial,
+                    "tech_base": tech_base, "setup_high": setup_high_hl, "setup_low": setup_low_hl,
+                    "signal_ts": signal_ts
+                }
 
             if prev_body_high >= local_max_window * 0.9997:
                 setup_high_hl = prev_hl["high"]
@@ -559,7 +565,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                     "signal_ts": signal_ts
                 }
                 logging.info(f"✅ SINAL {prefix}: SHORT (Engolfo Bearish) | {ref_info}")
-    return signal if signal["take"] else None
+    return signal if (signal.get("take") or signal.get("blocked")) else None
 
 def place_trade_entry(exchange, symbol, side, qty, entry_px):
     """
@@ -836,6 +842,42 @@ def get_24h_change_pct(info, symbol):
         logging.error(f"Erro variação 24h {symbol}: {e}")
         return None
 
+def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
+    """Monta dict para save_blocked_trade. Retorna None se qty inválido."""
+    try:
+        entry_px = round_px(sig["trigger"])
+        entry2_px = round_px(sig["entry2_px"])
+        stop_real = round_px(sig["stop_real"])
+        avg_entry = (entry_px + entry2_px) / 2
+        use_two = ENTRY2_ALLOWED and ENTRY2_ENABLED
+        risk_per_unit = abs(avg_entry - stop_real) if use_two else abs(entry_px - stop_real)
+        if risk_per_unit == 0:
+            return None
+        total_size = TARGET_LOSS_USD / risk_per_unit
+        qty_first = total_size / 2 if use_two else total_size
+        qty_second = total_size / 2 if use_two else 0
+        trade_notional = total_size * entry_px
+        limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
+        anchor_entry = avg_entry if use_two else entry_px
+        if trade_notional > limit_notional:
+            total_size = limit_notional / anchor_entry
+            qty_first = total_size / 2 if use_two else total_size
+            qty_second = total_size / 2 if use_two else 0
+        sz_dec = get_precision(meta, sym)
+        final_qty = round_sz(qty_first, sz_dec)
+        if final_qty * entry_px < 10:
+            return None
+        target1_level = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
+        return {
+            "symbol": sym, "tf": tf, "side": sig["side"],
+            "entry_px": entry_px, "entry2_px": entry2_px, "stop_real": stop_real,
+            "qty": final_qty, "reason": reason, "signal_ts": sig["signal_ts"],
+            "tech_base": sig.get("tech_base", 0), "setup_high": sig.get("setup_high", 0),
+            "setup_low": sig.get("setup_low", 0), "target1_level": target1_level,
+        }
+    except Exception:
+        return None
+
 def get_strength_blocks(info, symbols):
     changes = {}
     for sym in symbols:
@@ -851,6 +893,13 @@ def get_strength_blocks(info, symbols):
     return weakest, strongest
 
 def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_orders, history_tracker, analyzed_candles, user_state_cache, all_mids_cache, storage):
+    # Expira blocked_trades cujo preço atingiu TP1 ou Stop
+    target1_level = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
+    if hasattr(storage, "expire_blocked_trades") and all_mids_cache:
+        n = storage.expire_blocked_trades(all_mids_cache, target1_level)
+        if n > 0:
+            logging.info(f"🔄 {n} trade(s) bloqueado(s) expirado(s) (TP1/Stop atingido)")
+
     user_state = user_state_cache
     raw_positions = user_state.get("assetPositions", [])
     positions = [p["position"] for p in raw_positions if float(p["position"]["szi"]) != 0]
@@ -860,8 +909,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
     for o in all_open_orders:
         if not o["reduceOnly"]: busy_symbols.add(o["coin"])
 
-    if len(busy_symbols) >= MAX_POSITIONS:
-        return
+    # Não retorna mais aqui: continua procurando e bloqueia entrada se limite cheio
     current_exposure = 0.0
     all_mids = all_mids_cache
 
@@ -914,6 +962,31 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 analyzed_candles[candle_id] = True
                 continue
 
+            # Bloqueio high/low extremo (retornado por get_signal)
+            if sig.get("blocked") and sig.get("reason") in ("high_extremo", "low_extremo"):
+                tg_msg = (
+                    f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
+                    f"🚫{'🟢' if sig['side'] == 'long' else '🔴'} {sig['side'].upper()} BLOQUEADO ({sig['reason'].replace('_', ' ').title()})🚫\n"
+                    f"{sym} | {tf}\n"
+                    f"Recomendação: Faça sua própria análise.\n"
+                    f"https://app.hyperliquid.xyz/trade/{sym}"
+                )
+                if sig["reason"] == "high_extremo":
+                    tg_msg = tg_msg.replace("Recomendação:", "Engolfo Bull ignorado por high extremo. O trade pode já ter subido muito.\nRecomendação:")
+                else:
+                    tg_msg = tg_msg.replace("Recomendação:", "Engolfo Bear ignorado por low extremo. O trade pode já ter caído muito.\nRecomendação:")
+                tg_send(tg_msg)
+                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, sig["reason"])
+                if btd and hasattr(storage, "save_blocked_trade"):
+                    storage.save_blocked_trade(btd)
+                if sym not in history_tracker:
+                    history_tracker[sym] = {}
+                history_tracker[sym][tf] = sig["signal_ts"]
+                if hasattr(storage, "save_history_tracker"):
+                    storage.save_history_tracker(history_tracker)
+                analyzed_candles[candle_id] = True
+                continue
+
             update_lsr_cache(sym, force=True)
 
             if not lsr_allows_trade(sym, sig["side"]):
@@ -922,10 +995,18 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
                     f"🚫{'🟢' if sig['side'] == 'long' else '🔴'} {sig['side'].upper()} BLOQUEADO (LSR)🚫\n"
                     f"{sym} | {tf}\n"
-                    f"O Trade está a favor do LSR (junto com as sardinhas)!\n" 
+                    f"O Trade está a favor do LSR (junto com as sardinhas)!\n"
                     f"Recomendação: Faça sua própria análise. Se resolver entrar: Entre com uma mão mais leve ou em um ativo com LSR neutro/contrário.\n"
                     f"https://app.hyperliquid.xyz/trade/{sym}"
                 )
+                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "LSR")
+                if btd and hasattr(storage, "save_blocked_trade"):
+                    storage.save_blocked_trade(btd)
+                if sym not in history_tracker:
+                    history_tracker[sym] = {}
+                history_tracker[sym][tf] = sig["signal_ts"]
+                if hasattr(storage, "save_history_tracker"):
+                    storage.save_history_tracker(history_tracker)
                 analyzed_candles[candle_id] = True
                 continue
 
@@ -939,6 +1020,14 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     f"https://app.hyperliquid.xyz/trade/{sym}"
                 )
                 logging.info(f"[{sym} {tf}] 🚫 LONG bloqueado (Ativo fraco 24h)")
+                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "ativo_fraco_24h")
+                if btd and hasattr(storage, "save_blocked_trade"):
+                    storage.save_blocked_trade(btd)
+                if sym not in history_tracker:
+                    history_tracker[sym] = {}
+                history_tracker[sym][tf] = sig["signal_ts"]
+                if hasattr(storage, "save_history_tracker"):
+                    storage.save_history_tracker(history_tracker)
                 analyzed_candles[candle_id] = True
                 continue
 
@@ -952,6 +1041,14 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     f"https://app.hyperliquid.xyz/trade/{sym}"
                 )
                 logging.info(f"[{sym} {tf}] 🚫 SHORT bloqueado (Ativo forte 24h)")
+                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "ativo_forte_24h")
+                if btd and hasattr(storage, "save_blocked_trade"):
+                    storage.save_blocked_trade(btd)
+                if sym not in history_tracker:
+                    history_tracker[sym] = {}
+                history_tracker[sym][tf] = sig["signal_ts"]
+                if hasattr(storage, "save_history_tracker"):
+                    storage.save_history_tracker(history_tracker)
                 analyzed_candles[candle_id] = True
                 continue
 
@@ -1002,6 +1099,36 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 final_qty = round_sz(qty_first, sz_dec)
                 second_qty = round_sz(qty_second, sz_dec) if use_two_entries else 0
                 if final_qty * entry_px < 10: 
+                    analyzed_candles[candle_id] = True
+                    continue
+
+                # Limite de trades simultâneos: bloqueia entrada mas notifica
+                if len(busy_symbols) >= MAX_POSITIONS:
+                    tg_send(
+                        f"📡 NOVO SINAL DE TRADE\n"
+                        f"🚫ENTRADA NÃO ACIONADA! (Limite de trades simultâneos)\n"
+                        f"{sig['side'].upper()} {sym} | {tf}\n"
+                        f"1ª entrada: {entry_px:.4f}\n"
+                        f"2ª entrada: {entry2_px:.4f}\n"
+                        f"Stop: {stop_real:.4f}\n"
+                        f"https://app.hyperliquid.xyz/trade/{sym}\n"
+                        f"Recomendação: Analise os trades ativos/pendentes e compare qual o melhor. Você também pode dividir o capital entre os trades."
+                    )
+                    btd = {
+                        "symbol": sym, "tf": tf, "side": sig["side"],
+                        "entry_px": entry_px, "entry2_px": entry2_px, "stop_real": stop_real,
+                        "qty": final_qty, "reason": "limite_trades", "signal_ts": sig_ts,
+                        "tech_base": sig.get("tech_base", 0), "setup_high": sig.get("setup_high", 0),
+                        "setup_low": sig.get("setup_low", 0),
+                        "target1_level": FIB_LEVELS[0][0] if FIB_LEVELS else 0.618,
+                    }
+                    if hasattr(storage, "save_blocked_trade"):
+                        storage.save_blocked_trade(btd)
+                    if sym not in history_tracker:
+                        history_tracker[sym] = {}
+                    history_tracker[sym][tf] = sig_ts
+                    if hasattr(storage, "save_history_tracker"):
+                        storage.save_history_tracker(history_tracker)
                     analyzed_candles[candle_id] = True
                     continue
 

@@ -14,6 +14,7 @@ TABLE_TRACKER = "bot_tracker"
 TABLE_HISTORY = "bot_history"
 TABLE_TRADES = "trades_database"
 TABLE_CONFIG = "bot_config"
+TABLE_BLOCKED = "blocked_trades"
 
 class SupabaseStorage(StorageBase):
     """Persistência no Supabase usando tabelas normalizadas; mesma semântica que LocalStorage."""
@@ -335,3 +336,72 @@ class SupabaseStorage(StorageBase):
         except Exception as e:
             logging.error(f"Supabase get_telegram_config: {e}")
             return None
+
+    def save_blocked_trade(self, data: dict, user_id: str = None) -> None:
+        """Salva trade bloqueado para exibição e acionamento manual."""
+        if not self._client or not data or not data.get("symbol"):
+            return
+        try:
+            uid = user_id or self._user_id
+            if not uid:
+                return
+            record = {
+                "user_id": uid,
+                "symbol": data["symbol"],
+                "tf": data["tf"],
+                "side": data["side"],
+                "entry_px": float(data["entry_px"]),
+                "entry2_px": float(data["entry2_px"]),
+                "stop_real": float(data["stop_real"]),
+                "qty": float(data["qty"]),
+                "reason": data["reason"],
+                "signal_ts": int(data["signal_ts"]),
+                "tech_base": float(data.get("tech_base", 0) or 0),
+                "setup_high": float(data.get("setup_high", 0) or 0),
+                "setup_low": float(data.get("setup_low", 0) or 0),
+                "target1_level": float(data.get("target1_level", 0.618) or 0.618),
+            }
+            self._client.table(TABLE_BLOCKED).insert(record).execute()
+        except Exception as e:
+            logging.error(f"Supabase save_blocked_trade: {e}")
+
+    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 0.618) -> int:
+        """Remove blocked_trades expirados (preço atingiu TP1 ou Stop). Retorna quantidade removida."""
+        if not self._client or not all_mids:
+            return 0
+        try:
+            uid = user_id or self._user_id
+            if not uid:
+                return 0
+            r = self._client.table(TABLE_BLOCKED).select("*").eq("user_id", uid).execute()
+            if not r.data:
+                return 0
+            to_delete = []
+            for row in r.data:
+                sym = row.get("symbol", "")
+                px = float(all_mids.get(sym, 0) or 0)
+                if px <= 0:
+                    continue
+                entry = float(row.get("entry_px", 0))
+                stop = float(row.get("stop_real", 0))
+                tech = float(row.get("tech_base", 0) or 0)
+                t1 = float(row.get("target1_level", 0.618) or 0.618)
+                side = (row.get("side") or "long").lower()
+                expired = False
+                if side == "long":
+                    tp1 = entry + (tech * t1)
+                    if px >= tp1 or px <= stop:
+                        expired = True
+                else:
+                    tp1 = entry - (tech * t1)
+                    if px <= tp1 or px >= stop:
+                        expired = True
+                if expired:
+                    to_delete.append(row.get("id"))
+            for bid in to_delete:
+                if bid:
+                    self._client.table(TABLE_BLOCKED).delete().eq("id", bid).execute()
+            return len(to_delete)
+        except Exception as e:
+            logging.error(f"Supabase expire_blocked_trades: {e}")
+            return 0

@@ -84,3 +84,14 @@ class UserStorage(StorageBase):
         if hasattr(self.backend, 'get_user_created_at_timestamp_ms'):
             return self.backend.get_user_created_at_timestamp_ms(user_id=self.user_id)
         return None
+
+    def save_blocked_trade(self, data: dict) -> None:
+        """Salva trade bloqueado com user_id."""
+        if hasattr(self.backend, 'save_blocked_trade'):
+            self.backend.save_blocked_trade(data, user_id=self.user_id)
+
+    def expire_blocked_trades(self, all_mids: dict, target1_level: float = 0.618) -> int:
+        """Remove blocked_trades expirados. Retorna quantidade removida."""
+        if hasattr(self.backend, 'expire_blocked_trades'):
+            return self.backend.expire_blocked_trades(self.user_id, all_mids, target1_level)
+        return 0
