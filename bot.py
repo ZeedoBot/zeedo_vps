@@ -854,15 +854,13 @@ def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
         if risk_per_unit == 0:
             return None
         total_size = TARGET_LOSS_USD / risk_per_unit
-        qty_first = total_size / 2 if use_two else total_size
-        qty_second = total_size / 2 if use_two else 0
-        trade_notional = total_size * entry_px
         limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
         anchor_entry = avg_entry if use_two else entry_px
-        if trade_notional > limit_notional:
-            total_size = limit_notional / anchor_entry
-            qty_first = total_size / 2 if use_two else total_size
-            qty_second = total_size / 2 if use_two else 0
+        # Respeitar AMBOS: target loss E patrimônio. Usar o menor size para nunca exceder $35.
+        size_for_cap = limit_notional / anchor_entry
+        total_size = min(total_size, size_for_cap)
+        qty_first = total_size / 2 if use_two else total_size
+        qty_second = total_size / 2 if use_two else 0
         sz_dec = get_precision(meta, sym)
         final_qty = round_sz(qty_first, sz_dec)
         if final_qty * entry_px < 10:
@@ -1078,23 +1076,17 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     analyzed_candles[candle_id] = True
                     continue
                 total_size = TARGET_LOSS_USD / risk_per_unit
+                limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
+                anchor_entry = avg_entry if use_two_entries else entry_px
+                # Respeitar AMBOS: target loss E patrimônio. Usar o menor size para nunca exceder target loss.
+                size_for_cap = limit_notional / anchor_entry
+                total_size = min(total_size, size_for_cap)
                 if use_two_entries:
                     qty_first = total_size / 2
                     qty_second = total_size / 2
                 else:
                     qty_first = total_size
                     qty_second = 0
-                trade_notional = total_size * entry_px
-                limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
-                anchor_entry = avg_entry if use_two_entries else entry_px
-                if trade_notional > limit_notional:
-                    total_size = limit_notional / anchor_entry
-                    if use_two_entries:
-                        qty_first = total_size / 2
-                        qty_second = total_size / 2
-                    else:
-                        qty_first = total_size
-                        qty_second = 0
                 sz_dec = get_precision(meta, sym)
                 final_qty = round_sz(qty_first, sz_dec)
                 second_qty = round_sz(qty_second, sz_dec) if use_two_entries else 0
@@ -1481,6 +1473,20 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             
             # Detecta trade manual apenas se não há ordens pendentes do bot para este símbolo
             if sym not in entry_tracker:
+                # Antes de marcar como manual: recarrega do storage. Pode ser trade acionado via
+                # execute-blocked-trade (site) que já está em bot_tracker com tf, etc.
+                fresh_tracker = storage.get_entry_tracker() if hasattr(storage, "get_entry_tracker") else {}
+                if sym in fresh_tracker:
+                    stored = fresh_tracker[sym]
+                    # Tem tf ou estrutura de trade do bot (entry_px, planned_stop) = não é manual
+                    if stored.get("tf") or stored.get("entry_px") or stored.get("planned_stop"):
+                        entry_tracker[sym] = dict(stored)
+                        entry_tracker[sym]["last_size"] = size
+                        entry_tracker[sym]["entry"] = entry
+                        entry_tracker[sym]["entry_px"] = entry
+                        storage.save_entry_tracker(entry_tracker)
+                        continue  # Não é manual, já tratado
+
                 has_bot_orders = False
                 for o in my_orders:
                     if o["coin"] == sym:

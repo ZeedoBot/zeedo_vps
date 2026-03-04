@@ -131,14 +131,17 @@ class InstanceManager:
         if not old_config:
             return False
         
-        # Compara campos relevantes
+        # Compara campos relevantes (qualquer um alterado = reiniciar bot)
         relevant_fields = [
             'symbols', 'timeframes', 'trade_mode', 'bot_enabled',
+            # Controles de risco
+            'entry2_enabled', 'target_loss_usd', 'max_global_exposure',
+            'max_single_pos_exposure', 'max_positions',
             # Configurações avançadas
             'stop_multiplier', 'entry2_multiplier', 'entry2_adjust_last_target',
             'target1_level', 'target1_percent',
             'target2_level', 'target2_percent',
-            'target3_level', 'target3_percent'
+            'target3_level', 'target3_percent',
         ]
         for field in relevant_fields:
             if old_config.get(field) != new_config.get(field):
