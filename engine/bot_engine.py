@@ -44,6 +44,7 @@ class BotEngine:
             "FIB_LEVELS": self.config.fib_levels,
             "FIB_STOP_LEVEL": self.config.fib_stop_level,
             "FIB_ENTRY2_LEVEL": self.config.fib_entry2_level,
+            "ENTRY2_ADJUST_LAST_TARGET": self.config.entry2_adjust_last_target,
             "LSR_TIMEFRAME": self.config.lsr_timeframe,
             "LSR_LIMIT": self.config.lsr_limit,
             "LSR_THRESHOLD_PCT": self.config.lsr_threshold_pct,

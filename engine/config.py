@@ -41,13 +41,15 @@ class BotConfig:
     min_pivot_dist: int = 4
     local_low_window: int = 4
     
-    # Fibonacci Targets (2 alvos, 50% cada — alinhado com bot.py)
+    # Fibonacci Targets (2+ alvos — default 2 alvos de 50% cada)
     fib_levels: List[Tuple[float, float]] = field(default_factory=lambda: [
         (0.618, 0.50),  # Alvo 1 (0.618)
         (1.0, 0.50),    # Alvo 2 (1.0)
     ])
     fib_stop_level: float = 1.8
     fib_entry2_level: float = 1.414
+    # Se true, quando entrada 2 executar o último alvo vai para 0.0 (retorno ao setup)
+    entry2_adjust_last_target: bool = True
     
     # LSR Binance
     lsr_timeframe: str = "30m"

@@ -263,7 +263,8 @@ export default function TradesPage() {
                         {b.reason === "high_extremo" && "High extremo"}
                         {b.reason === "low_extremo" && "Low extremo"}
                         {b.reason === "limite_trades" && "Limite de trades"}
-                        {!["LSR","ativo_forte_24h","ativo_fraco_24h","high_extremo","low_extremo","limite_trades"].includes(b.reason) && b.reason}
+                        {b.reason === "symbol_ja_ativo" && "Símbolo já ativo em outro TF"}
+                        {!["LSR","ativo_forte_24h","ativo_fraco_24h","high_extremo","low_extremo","limite_trades","symbol_ja_ativo"].includes(b.reason) && b.reason}
                       </td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry2_px?.toFixed(2)}</td>

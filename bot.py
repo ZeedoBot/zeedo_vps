@@ -1094,6 +1094,29 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     analyzed_candles[candle_id] = True
                     continue
 
+                # Bloqueio: símbolo já ativo/pendente em outro TF
+                if sym in entry_tracker:
+                    other_tf = entry_tracker[sym].get("tf") or "-"
+                    tg_send(
+                        f"📡 NOVO SINAL DE TRADE\n"
+                        f"🚫 TRADE BLOQUEADO: {sym} já ativo/pendente no TF {other_tf}\n"
+                        f"{sig['side'].upper()} {sym} | {tf}\n"
+                        f"1ª entrada: {entry_px:.4f}\n"
+                        f"2ª entrada: {entry2_px:.4f}\n"
+                        f"Stop: {stop_real:.4f}\n"
+                        f"https://app.hyperliquid.xyz/trade/{sym}"
+                    )
+                    btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "symbol_ja_ativo")
+                    if btd and hasattr(storage, "save_blocked_trade"):
+                        storage.save_blocked_trade(btd)
+                    if sym not in history_tracker:
+                        history_tracker[sym] = {}
+                    history_tracker[sym][tf] = sig_ts
+                    if hasattr(storage, "save_history_tracker"):
+                        storage.save_history_tracker(history_tracker)
+                    analyzed_candles[candle_id] = True
+                    continue
+
                 # Limite de trades simultâneos: bloqueia entrada mas notifica
                 if len(busy_symbols) >= MAX_POSITIONS:
                     tg_send(

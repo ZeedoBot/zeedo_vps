@@ -66,7 +66,45 @@ class BotInstance:
             allowed_entry2 = plan in ('pro', 'satoshi')
             entry2_enabled = bool(bot_config_dict.get('entry2_enabled', True))
 
-            # 5. Cria BotConfig
+            # 5. Monta config de Fibo (alvos e stop) a partir do bot_config
+            stop_mult = float(bot_config_dict.get('stop_multiplier', 1.8) or 1.8)
+            entry2_mult = float(bot_config_dict.get('entry2_multiplier', 1.414) or 1.414)
+
+            fib_levels: list[tuple[float, float]] = []
+            entry2_adjust_last_target = bool(bot_config_dict.get('entry2_adjust_last_target', True))
+            try:
+                t1_level = bot_config_dict.get('target1_level')
+                t1_pct = bot_config_dict.get('target1_percent')
+                if t1_level is not None and t1_pct is not None:
+                    lvl = float(t1_level or 0)
+                    pct = float(t1_pct or 0)
+                    if lvl != 0 and pct > 0:
+                        fib_levels.append((lvl, pct / 100.0))
+
+                t2_level = bot_config_dict.get('target2_level')
+                t2_pct = bot_config_dict.get('target2_percent')
+                if t2_level is not None and t2_pct is not None:
+                    lvl = float(t2_level or 0)
+                    pct = float(t2_pct or 0)
+                    if lvl != 0 and pct > 0:
+                        fib_levels.append((lvl, pct / 100.0))
+
+                t3_level = bot_config_dict.get('target3_level')
+                t3_pct = bot_config_dict.get('target3_percent')
+                if t3_level is not None and t3_pct is not None:
+                    lvl = float(t3_level or 0)
+                    pct = float(t3_pct or 0)
+                    if lvl != 0 and pct > 0:
+                        fib_levels.append((lvl, pct / 100.0))
+            except Exception:
+                # Em caso de qualquer problema de parsing, deixa fib_levels vazio e usa defaults
+                fib_levels = []
+
+            fib_kwargs = {}
+            if fib_levels:
+                fib_kwargs["fib_levels"] = fib_levels
+
+            # 6. Cria BotConfig
             self.config = BotConfig(
                 user_id=self.user_id,
                 wallet_address=credentials['wallet_address'],
@@ -81,6 +119,10 @@ class BotInstance:
                 max_single_pos_exposure=bot_config_dict.get('max_single_pos_exposure', 2500.0),
                 max_positions=bot_config_dict.get('max_positions', 2),
                 is_mainnet=credentials.get('network', 'mainnet') == 'mainnet',
+                fib_stop_level=stop_mult,
+                fib_entry2_level=entry2_mult,
+                entry2_adjust_last_target=entry2_adjust_last_target,
+                **fib_kwargs,
             )
             
             # 6. Inicializa conexão Hyperliquid
