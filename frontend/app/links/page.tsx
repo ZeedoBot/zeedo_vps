@@ -64,7 +64,7 @@ export default function LinksPage() {
         </div>
 
         <p className="text-center text-white/40 text-xs mt-12">
-          zeedo.ai.br
+          zeedo.ia.br
         </p>
       </div>
     </div>
