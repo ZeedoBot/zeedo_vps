@@ -30,6 +30,16 @@ type BlockedTrade = {
   created_at?: string;
 };
 
+function formatSignalTime(iso?: string) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 type OverviewData = {
   balance: number;
   trades: unknown[];
@@ -152,7 +162,7 @@ export default function TradesPage() {
                     <tr key={`${p.symbol}-${p.tf}-${p.side}`}>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.symbol}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.tf}</td>
-                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.side}</td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.side.toUpperCase()}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
                       <td className={`px-4 py-2 text-sm text-right font-medium ${(p.unrealized_pnl ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
@@ -212,7 +222,7 @@ export default function TradesPage() {
                     <tr key={`${p.symbol}-${p.tf}-${p.side}`}>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.symbol}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.tf}</td>
-                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.side}</td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.side.toUpperCase()}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
@@ -242,6 +252,7 @@ export default function TradesPage() {
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Ticker</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">TF</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Hora</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Motivo</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">1ª entrada</th>
@@ -255,7 +266,8 @@ export default function TradesPage() {
                     <tr key={b.id}>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.symbol}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.tf}</td>
-                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.side}</td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{formatSignalTime(b.created_at)}</td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.side.toUpperCase()}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
                         {b.reason === "LSR" && "LSR"}
                         {b.reason === "ativo_forte_24h" && "Ativo forte 24h"}

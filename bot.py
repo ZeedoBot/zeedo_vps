@@ -1388,11 +1388,16 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     logging.warning(f"⚠️ Fallback Fib para {sym}")
 
                 qty_entry_2 = mem_data.get('qty_entry_2')
+                qty_entry_1 = mem_data.get('qty_entry_1')
+                entry2_qty = mem_data.get('entry2_qty', 0) or 0
                 def _qty_matches(exp, act):
                     if exp is None: return False
                     tol = max(exp * 0.001, 0.01)
                     return abs(act - exp) <= tol
-                entry2_filled = bool(qty_entry_2 and _qty_matches(qty_entry_2, abs(size)))
+                # Só considera entrada 2 preenchida se realmente há entrada 2 (entry2_qty > 0)
+                # e o tamanho da posição atingiu qty_entry_2 (1ª + 2ª)
+                has_entry2 = entry2_qty > 0 and qty_entry_2 and qty_entry_1 and qty_entry_2 > qty_entry_1
+                entry2_filled = bool(has_entry2 and _qty_matches(qty_entry_2, abs(size)))
                 place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor, entry2_filled=entry2_filled)
 
             # Segunda entrada (limit) no nível -1.414 fib (Pro/Enterprise, se ativada)
