@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { SiInstagram, SiTiktok, SiX } from "react-icons/si";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, type ReactNode } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
@@ -611,7 +612,7 @@ export default function AcessoAntecipadoPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
               >
-                <span>📷</span> @azevedocrypto
+                <SiInstagram className="h-5 w-5 shrink-0" /> @azevedocrypto
               </a>
               <a
                 href="https://instagram.com/zeedobot"
@@ -619,7 +620,7 @@ export default function AcessoAntecipadoPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
               >
-                <span>📷</span> @zeedobot
+                <SiInstagram className="h-5 w-5 shrink-0" /> @zeedobot
               </a>
               <a
                 href="https://www.tiktok.com/@zeedobot"
@@ -627,7 +628,7 @@ export default function AcessoAntecipadoPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
               >
-                <span>🎵</span> TikTok
+                <SiTiktok className="h-5 w-5 shrink-0" /> TikTok
               </a>
               <a
                 href="https://x.com/zeedobot"
@@ -635,7 +636,7 @@ export default function AcessoAntecipadoPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
               >
-                <span>𝕏</span> X (Twitter)
+                <SiX className="h-5 w-5 shrink-0" /> X (Twitter)
               </a>
             </div>
           </div>
