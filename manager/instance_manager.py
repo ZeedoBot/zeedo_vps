@@ -56,14 +56,15 @@ class InstanceManager:
         """Verifica usuários ativos e gerencia instâncias."""
         try:
             # Verifica trials expirados (30 dias ou $50 lucro) e desliga bots
-            if hasattr(self.storage, "_client") and self.storage._client:
-                try:
-                    from backend.app.services.trial_service import check_all_active_trials
-                    ended = check_all_active_trials(self.storage._client)
-                    if ended > 0:
-                        self.logger.info(f"Encerrados {ended} trial(s) (expirado ou lucro >= $50)")
-                except Exception as e:
-                    self.logger.warning(f"Erro ao verificar trials: {e}")
+            try:
+                from backend.app.services.supabase_client import get_supabase
+                from backend.app.services.trial_service import check_all_active_trials
+                supabase = get_supabase()
+                ended = check_all_active_trials(supabase)
+                if ended > 0:
+                    self.logger.info(f"Encerrados {ended} trial(s) (expirado ou lucro >= $50)")
+            except Exception as e:
+                self.logger.warning(f"Erro ao verificar trials: {e}")
 
             # Busca usuários ativos no banco (bot_enabled = true)
             active_users = set(self._get_active_users())
