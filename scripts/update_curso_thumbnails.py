@@ -33,7 +33,7 @@ if adv_id:
 else:
     print("Aula 'Configurações Avançadas' não encontrada.")
 
-# Thumbnails
-client.table("course_lessons").update({"thumbnail": "/curso/aula-2.jpg"}).eq("lesson_order", 2).execute()
-client.table("course_lessons").update({"thumbnail": "/curso/aula-3.jpg"}).eq("lesson_order", 3).execute()
-print("Thumbnails aulas 2 e 3 ok.")
+# Thumbnails (capas aula-1 a aula-7)
+for i in range(1, 8):
+    client.table("course_lessons").update({"thumbnail": f"/curso/aula-{i}.jpg"}).eq("lesson_order", i).execute()
+print("Thumbnails aulas 1 a 7 ok.")

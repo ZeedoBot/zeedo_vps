@@ -347,6 +347,39 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <div className="card max-w-xl">
+        <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">Suporte</h2>
+        <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 mb-4">
+          Precisa de ajuda, cancelar ou alterar seu plano? Entre em contato:
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="mailto:suportezeedo@gmail.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+          >
+            <span>✉</span> Email
+          </a>
+          <a
+            href="https://wa.me/5547992279022"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+          >
+            <span>💬</span> WhatsApp
+          </a>
+          <a
+            href="https://t.me/suportezeedo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+          >
+            <span>✈</span> Telegram
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
