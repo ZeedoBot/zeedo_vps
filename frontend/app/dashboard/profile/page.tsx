@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { apiGet, apiPut, apiPost } from "@/lib/api";
+import { HiOutlineMail } from "react-icons/hi";
+import { SiWhatsapp, SiTelegram } from "react-icons/si";
 
 type Profile = {
   full_name: string | null;
@@ -35,6 +37,8 @@ export default function ProfilePage() {
   const [emailPassword, setEmailPassword] = useState("");
   const [emailMessage, setEmailMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [changingEmail, setChangingEmail] = useState(false);
+
+  const [showSupport, setShowSupport] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -227,7 +231,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="card max-w-xl">
-        <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">Segurança</h2>
+        <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">Segurança e Suporte</h2>
         <div className="space-y-4">
           <div>
             <button
@@ -345,39 +349,50 @@ export default function ProfilePage() {
               </form>
             )}
           </div>
-        </div>
-      </div>
 
-      <div className="card max-w-xl">
-        <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">Suporte</h2>
-        <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 mb-4">
-          Precisa de ajuda, cancelar ou alterar seu plano? Entre em contato:
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="mailto:suportezeedo@gmail.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
-          >
-            <span>✉</span> Email
-          </a>
-          <a
-            href="https://wa.me/5547992279022"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
-          >
-            <span>💬</span> WhatsApp
-          </a>
-          <a
-            href="https://t.me/suportezeedo"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
-          >
-            <span>✈</span> Telegram
-          </a>
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowSupport(!showSupport)}
+              className="text-sm font-medium text-zeedo-orange hover:underline"
+            >
+              {showSupport ? "Ocultar suporte" : "Suporte"}
+            </button>
+            {showSupport && (
+              <div className="mt-4 space-y-3 border-t border-zeedo-orange/20 pt-4">
+                <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+                  Precisa de ajuda ou tem alguma dúvida?<br />
+                  Entre em contato pelos canais abaixo:
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <a
+                    href="mailto:suportezeedo@gmail.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+                  >
+                    <HiOutlineMail className="w-5 h-5" /> Email
+                  </a>
+                  <a
+                    href="https://wa.me/5547992279022"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+                  >
+                    <SiWhatsapp className="w-5 h-5" /> WhatsApp
+                  </a>
+                  <a
+                    href="https://t.me/suportezeedo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-zeedo-orange/40 px-4 py-2.5 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 transition-colors"
+                  >
+                    <SiTelegram className="w-5 h-5" /> Telegram
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
