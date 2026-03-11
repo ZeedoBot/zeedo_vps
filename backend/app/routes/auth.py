@@ -61,7 +61,9 @@ def login_with_email_or_username(body: LoginBody):
 
 @router.get("/me")
 def get_me(user_id: str = Depends(get_current_user_id)):
-    """Retorna dados do usuário logado. Verifica trial (30 dias ou $50 lucro) e encerra se atingido."""
+    """Retorna dados do usuário logado. Inclui trial_expires_at quando em trial Pro. Verifica se trial deve encerrar."""
+    import logging
+    logger = logging.getLogger(__name__)
     supabase = get_supabase()
     r = supabase.table("users").select("id, email, username, subscription_status, subscription_tier, created_at").eq("id", user_id).limit(1).execute()
     if not r.data or len(r.data) == 0:
@@ -72,17 +74,19 @@ def get_me(user_id: str = Depends(get_current_user_id)):
 
     # Se está em trial Pro, verifica se deve encerrar (30 dias ou $50 lucro)
     if status == "trial" and tier == "pro":
-        from backend.app.services.trial_service import check_and_end_trial_if_needed
-        tc = supabase.table("trial_claims").select("*").eq("user_id", user_id).limit(1).execute()
-        if tc.data and len(tc.data) > 0:
-            trial = tc.data[0]
-            if check_and_end_trial_if_needed(supabase, trial):
-                # Trial foi encerrado; refetch user para retornar status atualizado
-                r = supabase.table("users").select("id, email, username, subscription_status, subscription_tier, created_at").eq("id", user_id).limit(1).execute()
-                if r.data and len(r.data) > 0:
-                    row = r.data[0]
-                    status = (row.get("subscription_status") or "").lower()
-                    tier = (row.get("subscription_tier") or "").lower()
+        try:
+            from backend.app.services.trial_service import check_and_end_trial_if_needed
+            tc = supabase.table("trial_claims").select("*").eq("user_id", user_id).limit(1).execute()
+            if tc.data and len(tc.data) > 0:
+                trial = tc.data[0]
+                if check_and_end_trial_if_needed(supabase, trial):
+                    r = supabase.table("users").select("id, email, username, subscription_status, subscription_tier, created_at").eq("id", user_id).limit(1).execute()
+                    if r.data and len(r.data) > 0:
+                        row = r.data[0]
+                        status = (row.get("subscription_status") or "").lower()
+                        tier = (row.get("subscription_tier") or "").lower()
+        except Exception as e:
+            logger.warning("Erro ao verificar trial em /auth/me: %s", e)
 
     out = {
         "id": row["id"],

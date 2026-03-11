@@ -2,7 +2,10 @@
 Serviço de verificação e encerramento de trials.
 Usado pelo backend (API) e pelo manager (checagem periódica).
 """
+import logging
 from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 TRIAL_DAYS = 30
 TRIAL_PROFIT_LIMIT_USD = 50.0
@@ -13,8 +16,10 @@ def get_trial_profit_usd(client, user_id: str, since: str) -> float:
         r = client.table("trades_database").select("pnl_usd").eq("user_id", user_id).gte("closed_at", since).execute()
         if not r.data:
             return 0.0
-        return sum(float(row.get("pnl_usd", 0) or 0) for row in r.data)
-    except Exception:
+        total = sum(float(row.get("pnl_usd", 0) or 0) for row in r.data)
+        return total
+    except Exception as e:
+        logger.warning("get_trial_profit_usd falhou: %s", e)
         return 0.0
 
 
@@ -52,21 +57,28 @@ def check_and_end_trial_if_needed(client, trial: dict) -> bool:
     expires = trial.get("expires_at")
     user_id = trial["user_id"]
 
+    if not started:
+        logger.warning("Trial sem started_at: user_id=%s", user_id)
+        return False
+
     now = datetime.utcnow()
     if isinstance(expires, str):
         try:
             expires_dt = datetime.fromisoformat(expires.replace("Z", "+00:00"))
-        except Exception:
+        except Exception as e:
+            logger.warning("Trial expires_at inválido: %s", e)
             expires_dt = now + timedelta(days=1)
     else:
         expires_dt = expires
 
+    since_str = started.isoformat() if hasattr(started, "isoformat") else str(started)
+    profit = get_trial_profit_usd(client, user_id, since_str)
+    logger.info("Trial check user_id=%s profit=%.2f limit=%.2f expires=%s now=%s", user_id, profit, TRIAL_PROFIT_LIMIT_USD, expires_dt, now)
+
     if now >= expires_dt:
-        profit = get_trial_profit_usd(client, user_id, started)
         _end_trial(client, trial, "expired", profit)
         return True
 
-    profit = get_trial_profit_usd(client, user_id, started)
     if profit >= TRIAL_PROFIT_LIMIT_USD:
         _end_trial(client, trial, "profit_reached", profit)
         return True
