@@ -3,7 +3,7 @@ Serviço de verificação e encerramento de trials.
 Usado pelo backend (API) e pelo manager (checagem periódica).
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ def check_and_end_trial_if_needed(client, trial: dict) -> bool:
         logger.warning("Trial sem started_at: user_id=%s", user_id)
         return False
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if isinstance(expires, str):
         try:
             expires_dt = datetime.fromisoformat(expires.replace("Z", "+00:00"))
@@ -70,6 +70,8 @@ def check_and_end_trial_if_needed(client, trial: dict) -> bool:
             expires_dt = now + timedelta(days=1)
     else:
         expires_dt = expires
+    if expires_dt.tzinfo is None:
+        expires_dt = expires_dt.replace(tzinfo=timezone.utc)
 
     since_str = started.isoformat() if hasattr(started, "isoformat") else str(started)
     profit = get_trial_profit_usd(client, user_id, since_str)
