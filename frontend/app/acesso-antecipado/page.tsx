@@ -3,7 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { SiInstagram, SiTiktok, SiX } from "react-icons/si";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useState, type ReactNode } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase";
@@ -280,9 +279,6 @@ export default function AcessoAntecipadoPage() {
             <Image src="/zeedo-logo.png?v=4" alt="Zeedo" width={40} height={40} className="mix-blend-multiply dark:mix-blend-screen" />
             <span className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">Zeedo</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-          </div>
         </div>
       </header>
 
@@ -401,13 +397,13 @@ export default function AcessoAntecipadoPage() {
             >
               <div className="relative text-center">
                 <h3 className="text-xl font-bold sm:text-2xl text-zeedo-orange">
-                  Mas o Zeedo é só para Traders?
+                  O Zeedo não é só para Traders Profissionais!
                 </h3>
                 <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70">
-                  Não. O Zeedo ao mesmo tempo é a solução para iniciantes ou até para quem nunca fez um trade na vida e não sabe como começar.
+                  O Zeedo ao mesmo tempo é a solução para iniciantes ou até para quem nunca fez um trade na vida e não sabe como começar.
                 </p>
                 <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70">
-                  Por se tratar de uma automação que analisa o gráfico em tempo real, entra e sai automaticamente dos trades e ainda alerta você na palma da sua mão sobre cada decisão, então você não necessita experiência. Você ainda pode usar os sinais para estudar e aprimorar sua própria estratégia no futuro.
+                  Por se tratar de uma automação que analisa o gráfico em tempo real, entra e sai automaticamente dos trades e ainda alerta você na palma da sua mão sobre cada decisão, então você não necessita experiência prévia. Você ainda pode usar os sinais e trades que forem acontecendo para estudar, aprimorar e personalizar sua própria estratégia no futuro.
                 </p>
               </div>
             </motion.div>
@@ -430,32 +426,32 @@ export default function AcessoAntecipadoPage() {
             <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="relative z-10 mx-auto max-w-4xl">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-6">
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <span className="text-lg font-bold text-zeedo-black dark:text-zeedo-white">Automatize</span>
-              </div>
-              <div className="hidden sm:block h-0.5 w-12 bg-zeedo-orange/30" />
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="flex flex-row items-center justify-center gap-2 sm:gap-8 mb-6">
+              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                  <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-zeedo-black dark:text-zeedo-white">Configure</span>
+                <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Configure</span>
               </div>
-              <div className="hidden sm:block h-0.5 w-12 bg-zeedo-orange/30" />
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
+              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                  <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Automatize</span>
+              </div>
+              <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
+              <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
+                  <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-zeedo-black dark:text-zeedo-white">Relaxe</span>
+                <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Relaxe</span>
               </div>
             </div>
             <p className="mx-auto mt-6 max-w-2xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
