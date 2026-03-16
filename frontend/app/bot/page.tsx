@@ -224,8 +224,7 @@ export default function BotPage() {
 
       <main>
         {/* Hero */}
-        <section className="relative overflow-hidden px-4 py-16 sm:py-24">
-          <div className="absolute inset-0 bg-gradient-to-b from-zeedo-orange/5 to-transparent dark:from-zeedo-orange/10" />
+        <section className="relative overflow-hidden px-4 py-16 sm:py-24 bg-zeedo-black">
           <div className="relative mx-auto max-w-6xl">
             <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
               <motion.div
@@ -303,27 +302,23 @@ export default function BotPage() {
                 </p>
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-8">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                      <Image
-                        src="/Zeedos/2.png"
-                        alt="Falta de tempo"
-                        width={28}
-                        height={28}
-                        className="h-7 w-7 object-contain"
-                      />
-                    </div>
+                    <Image
+                      src="/Zeedos/2.png"
+                      alt="Falta de tempo"
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 object-contain"
+                    />
                     <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">FALTA DE TEMPO</span>
                   </div>
                   <div className="flex flex-col items-center gap-2">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                      <Image
-                        src="/Zeedos/3.png"
-                        alt="Emocional"
-                        width={28}
-                        height={28}
-                        className="h-7 w-7 object-contain"
-                      />
-                    </div>
+                    <Image
+                      src="/Zeedos/3.png"
+                      alt="Emocional"
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 object-contain"
+                    />
                     <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">EMOCIONAL</span>
                   </div>
                 </div>
@@ -359,7 +354,7 @@ export default function BotPage() {
 
         {/* Solução */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-zeedo-black/5 dark:bg-white/5 px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-zeedo-black px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -375,41 +370,35 @@ export default function BotPage() {
           <div className="relative z-10 mx-auto max-w-4xl">
             <div className="flex flex-row items-center justify-center gap-2 sm:gap-8 mb-6">
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <Image
-                    src="/Zeedos/8.png"
-                    alt="Configure"
-                    width={32}
-                    height={32}
-                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
-                  />
-                </div>
+                <Image
+                  src="/Zeedos/8.png"
+                  alt="Configure"
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 object-contain"
+                />
                 <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Configure</span>
               </div>
               <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <Image
-                    src="/Zeedos/9.png"
-                    alt="Automatize"
-                    width={32}
-                    height={32}
-                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
-                  />
-                </div>
+                <Image
+                  src="/Zeedos/9.png"
+                  alt="Automatize"
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 object-contain"
+                />
                 <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Automatize</span>
               </div>
               <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <Image
-                    src="/Zeedos/10.png"
-                    alt="Relaxe"
-                    width={32}
-                    height={32}
-                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
-                  />
-                </div>
+                <Image
+                  src="/Zeedos/10.png"
+                  alt="Relaxe"
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 object-contain"
+                />
                 <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Relaxe</span>
               </div>
             </div>
@@ -430,15 +419,13 @@ export default function BotPage() {
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
                   className="card flex flex-col items-start p-6 cursor-default"
                 >
-                  <div className="rounded-lg bg-zeedo-orange/10 p-3 text-zeedo-orange">
-                    <Image
-                      src={b.image}
-                      alt={b.title}
-                      width={24}
-                      height={24}
-                      className="h-6 w-6 object-contain"
-                    />
-                  </div>
+                  <Image
+                    src={b.image}
+                    alt={b.title}
+                    width={40}
+                    height={40}
+                    className="h-10 w-10 object-contain"
+                  />
                   <h3 className="mt-4 font-semibold">{b.title}</h3>
                   <p className="mt-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60">{b.desc}</p>
                 </motion.div>
@@ -449,7 +436,7 @@ export default function BotPage() {
 
         {/* Como funciona */}
         <motion.section
-          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24 bg-[#111111]"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
