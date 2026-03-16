@@ -120,30 +120,22 @@ const BENEFITS = [
   {
     title: "Operação 24/7",
     desc: "O mercado não para. O Zeedo também não. Sem cansaço, sem distração.",
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    ),
+    image: "/Zeedos/4.png",
   },
   {
     title: "Sem emoção",
     desc: "Decisões baseadas em matemática e regras, não em medo ou ganância.",
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-    ),
+    image: "/Zeedos/5.png",
   },
   {
     title: "Controle total",
     desc: "Target loss, exposição máxima e segunda entrada, tudo configurável por você.",
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-    ),
+    image: "/Zeedos/6.png",
   },
   {
     title: "Alertas no Telegram",
     desc: "Entradas, parciais, stops e PnL, tudo no seu celular, em tempo real.",
-    icon: (
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-    ),
+    image: "/Zeedos/7.png",
   },
 ];
 
@@ -320,7 +312,7 @@ export default function AcessoAntecipadoPage() {
               >
                 <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96">
                   <Image
-                    src="/zeedo-robot.png"
+                    src="/Zeedos/1.png"
                     alt="Zeedo - Robô de trading automatizado"
                     width={384}
                     height={384}
@@ -364,18 +356,25 @@ export default function AcessoAntecipadoPage() {
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-8">
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                      <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+                      <Image
+                        src="/Zeedos/2.png"
+                        alt="Falta de tempo"
+                        width={28}
+                        height={28}
+                        className="h-7 w-7 object-contain"
+                      />
                     </div>
                     <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">FALTA DE TEMPO</span>
                   </div>
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                      <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
-                        <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
-                      </svg>
+                      <Image
+                        src="/Zeedos/3.png"
+                        alt="Emocional"
+                        width={28}
+                        height={28}
+                        className="h-7 w-7 object-contain"
+                      />
                     </div>
                     <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">EMOCIONAL</span>
                   </div>
@@ -420,36 +419,48 @@ export default function AcessoAntecipadoPage() {
           transition={{ duration: 0.5 }}
         >
           <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden lg:block">
-            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
+            <Image src="/Zeedos/1.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:block">
-            <Image src="/zeedo-robot.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
+            <Image src="/Zeedos/1.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="relative z-10 mx-auto max-w-4xl">
             <div className="flex flex-row items-center justify-center gap-2 sm:gap-8 mb-6">
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
                 <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  </svg>
+                  <Image
+                    src="/Zeedos/8.png"
+                    alt="Configure"
+                    width={32}
+                    height={32}
+                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
+                  />
                 </div>
                 <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Configure</span>
               </div>
               <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
                 <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
+                  <Image
+                    src="/Zeedos/9.png"
+                    alt="Automatize"
+                    width={32}
+                    height={32}
+                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
+                  />
                 </div>
                 <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Automatize</span>
               </div>
               <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
                 <div className="flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-zeedo-orange shadow-lg">
-                  <svg className="h-6 w-6 sm:h-8 sm:w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  <Image
+                    src="/Zeedos/10.png"
+                    alt="Relaxe"
+                    width={32}
+                    height={32}
+                    className="h-6 w-6 sm:h-8 sm:w-8 object-contain"
+                  />
                 </div>
                 <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Relaxe</span>
               </div>
@@ -472,9 +483,13 @@ export default function AcessoAntecipadoPage() {
                   className="card flex flex-col items-start p-6 cursor-default"
                 >
                   <div className="rounded-lg bg-zeedo-orange/10 p-3 text-zeedo-orange">
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      {b.icon}
-                    </svg>
+                    <Image
+                      src={b.image}
+                      alt={b.title}
+                      width={24}
+                      height={24}
+                      className="h-6 w-6 object-contain"
+                    />
                   </div>
                   <h3 className="mt-4 font-semibold">{b.title}</h3>
                   <p className="mt-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60">{b.desc}</p>
