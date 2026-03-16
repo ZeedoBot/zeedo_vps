@@ -120,22 +120,22 @@ const BENEFITS = [
   {
     title: "Operação 24/7",
     desc: "O mercado não para. O Zeedo também não. Sem cansaço, sem distração.",
-    image: "/Zeedos/4.png",
+    image: "/Zeedos/4.png?v=2",
   },
   {
     title: "Sem emoção",
     desc: "Decisões baseadas em matemática e regras, não em medo ou ganância.",
-    image: "/Zeedos/5.png",
+    image: "/Zeedos/5.png?v=2",
   },
   {
     title: "Controle total",
     desc: "Target loss, exposição máxima e segunda entrada, tudo configurável por você.",
-    image: "/Zeedos/6.png",
+    image: "/Zeedos/6.png?v=2",
   },
   {
     title: "Alertas no Telegram",
     desc: "Entradas, parciais, stops e PnL, tudo no seu celular, em tempo real.",
-    image: "/Zeedos/7.png",
+    image: "/Zeedos/7.png?v=2",
   },
 ];
 
@@ -311,7 +311,7 @@ export default function AcessoAntecipadoPage() {
               >
                 <div className="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-96 lg:h-96">
                   <Image
-                    src="/Zeedos/1.png"
+                    src="/Zeedos/1.png?v=2"
                     alt="Zeedo - Robô de trading automatizado"
                     width={384}
                     height={384}
@@ -355,7 +355,7 @@ export default function AcessoAntecipadoPage() {
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-8">
                   <div className="flex flex-col items-center gap-2">
                     <Image
-                      src="/Zeedos/2.png"
+                      src="/Zeedos/2.png?v=2"
                       alt="Falta de tempo"
                       width={56}
                       height={56}
@@ -365,7 +365,7 @@ export default function AcessoAntecipadoPage() {
                   </div>
                   <div className="flex flex-col items-center gap-2">
                     <Image
-                      src="/Zeedos/3.png"
+                      src="/Zedos/3.png?v=2"
                       alt="Emocional"
                       width={56}
                       height={56}
@@ -414,16 +414,16 @@ export default function AcessoAntecipadoPage() {
           transition={{ duration: 0.5 }}
         >
           <div className="absolute left-8 top-1/2 -translate-y-1/2 hidden lg:block">
-            <Image src="/Zeedos/1.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
+            <Image src="/Zeedos/1.png?v=2" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden lg:block">
-            <Image src="/Zeedos/1.png" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
+            <Image src="/Zeedos/1.png?v=2" alt="" width={200} height={200} className="object-contain opacity-[0.1] dark:opacity-[0.15]" />
           </div>
           <div className="relative z-10 mx-auto max-w-4xl">
             <div className="flex flex-row items-center justify-center gap-2 sm:gap-8 mb-6">
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                <Image
-                  src="/Zeedos/8.png"
+                  <Image
+                    src="/Zeedos/8.png?v=2"
                   alt="Configure"
                   width={64}
                   height={64}
@@ -433,8 +433,8 @@ export default function AcessoAntecipadoPage() {
               </div>
               <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                <Image
-                  src="/Zeedos/9.png"
+                  <Image
+                    src="/Zeedos/9.png?v=2"
                   alt="Automatize"
                   width={64}
                   height={64}
@@ -444,8 +444,8 @@ export default function AcessoAntecipadoPage() {
               </div>
               <div className="flex-shrink-0 h-0.5 w-4 sm:w-12 bg-zeedo-orange/30" />
               <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                <Image
-                  src="/Zeedos/10.png"
+                  <Image
+                    src="/Zeedos/10.png?v=2"
                   alt="Relaxe"
                   width={64}
                   height={64}
