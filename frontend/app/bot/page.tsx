@@ -224,7 +224,7 @@ export default function BotPage() {
 
       <main>
         {/* Hero */}
-        <section className="relative overflow-hidden px-4 py-16 sm:py-24 bg-zeedo-black">
+        <section className="relative overflow-hidden px-4 py-16 sm:py-24 bg-[#000000]">
           <div className="relative mx-auto max-w-6xl">
             <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
               <motion.div
@@ -354,7 +354,7 @@ export default function BotPage() {
 
         {/* Solução */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-zeedo-black px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-[#000000] px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -422,9 +422,9 @@ export default function BotPage() {
                   <Image
                     src={b.image}
                     alt={b.title}
-                    width={40}
-                    height={40}
-                    className="h-10 w-10 object-contain"
+                    width={48}
+                    height={48}
+                    className="h-12 w-12 object-contain mx-auto"
                   />
                   <h3 className="mt-4 font-semibold">{b.title}</h3>
                   <p className="mt-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60">{b.desc}</p>
@@ -655,7 +655,7 @@ export default function BotPage() {
 
         {/* Prova social */}
         <motion.section
-          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24 bg-[#111111]"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
