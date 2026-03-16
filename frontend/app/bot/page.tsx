@@ -224,7 +224,8 @@ export default function BotPage() {
 
       <main>
         {/* Hero */}
-        <section className="relative overflow-hidden px-4 py-16 sm:py-24 bg-[#000000]">
+        <section className="relative overflow-hidden px-4 py-16 sm:py-24">
+          <div className="absolute inset-0 bg-gradient-to-b from-zeedo-orange/5 to-transparent dark:from-zeedo-orange/10" />
           <div className="relative mx-auto max-w-6xl">
             <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
               <motion.div
@@ -305,9 +306,9 @@ export default function BotPage() {
                     <Image
                       src="/Zeedos/2.png"
                       alt="Falta de tempo"
-                      width={56}
-                      height={56}
-                      className="h-14 w-14 object-contain"
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 object-contain"
                     />
                     <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">FALTA DE TEMPO</span>
                   </div>
@@ -315,9 +316,9 @@ export default function BotPage() {
                     <Image
                       src="/Zeedos/3.png"
                       alt="Emocional"
-                      width={56}
-                      height={56}
-                      className="h-14 w-14 object-contain"
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 object-contain"
                     />
                     <span className="text-xs font-semibold uppercase tracking-wide text-zeedo-orange">EMOCIONAL</span>
                   </div>
@@ -354,7 +355,7 @@ export default function BotPage() {
 
         {/* Solução */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-[#000000] px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-zeedo-black/5 dark:bg-white/5 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -436,7 +437,7 @@ export default function BotPage() {
 
         {/* Como funciona */}
         <motion.section
-          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24 bg-[#111111]"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -655,7 +656,7 @@ export default function BotPage() {
 
         {/* Prova social */}
         <motion.section
-          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24 bg-[#111111]"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
