@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
-TRIAL_DAYS = 30
-TRIAL_PROFIT_LIMIT_USD = 50.0
+TRIAL_DAYS = 7
+TRIAL_PROFIT_LIMIT_USD = 25.0
 
 
 def get_trial_profit_usd(client, user_id: str, since: str) -> float:
@@ -49,7 +49,7 @@ def _end_trial(client, trial: dict, reason: str, profit: float = 0.0):
 
 
 def check_and_end_trial_if_needed(client, trial: dict) -> bool:
-    """Se trial deve terminar (30 dias ou $50 lucro), encerra e retorna True."""
+    """Se trial deve terminar (7 dias ou $25 lucro), encerra e retorna True."""
     if trial.get("status") != "active":
         return False
 
@@ -90,7 +90,7 @@ def check_and_end_trial_if_needed(client, trial: dict) -> bool:
 
 def check_all_active_trials(client) -> int:
     """
-    Verifica todos os trials ativos e encerra os que expiraram ou atingiram $50 lucro.
+    Verifica todos os trials ativos e encerra os que expiraram ou atingiram $25 lucro.
     Retorna quantos foram encerrados.
     """
     try:

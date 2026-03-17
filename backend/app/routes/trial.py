@@ -1,5 +1,5 @@
 """
-Trial Pro 30 dias: ativação via CPF, termina em 30 dias ou $50 de lucro.
+Trial Pro 7 dias: ativação via CPF, termina em 7 dias ou $25 de lucro.
 Cada CPF e cada usuário só podem ativar 1 vez.
 """
 import hashlib
@@ -94,7 +94,7 @@ def get_trial_status(user_id: str = Depends(get_current_user_id)):
 
 @router.post("/claim")
 def claim_trial(body: TrialClaimBody, user_id: str = Depends(get_current_user_id)):
-    """Ativa o trial Pro 30 dias. Exige CPF válido. 1 trial por CPF e por usuário."""
+    """Ativa o trial Pro 7 dias. Exige CPF válido. 1 trial por CPF e por usuário."""
     if not _is_cpf_valid(body.cpf):
         raise HTTPException(status_code=400, detail="CPF inválido. Verifique os dígitos.")
 

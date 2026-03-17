@@ -72,7 +72,7 @@ def get_me(user_id: str = Depends(get_current_user_id)):
     status = (row.get("subscription_status") or "").lower()
     tier = (row.get("subscription_tier") or "").lower()
 
-    # Se está em trial Pro, verifica se deve encerrar (30 dias ou $50 lucro)
+    # Se está em trial Pro, verifica se deve encerrar (7 dias ou $25 lucro)
     if status == "trial" and tier == "pro":
         try:
             from backend.app.services.trial_service import check_and_end_trial_if_needed

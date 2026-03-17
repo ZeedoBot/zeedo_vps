@@ -133,7 +133,7 @@ export default function SegredoPage() {
             <Image src="/zeedo-robot-segredo.png" alt="Zeedo" width={220} height={220} className="object-contain" priority />
           </div>
           <h1 className="text-2xl font-semibold text-zeedo-black dark:text-zeedo-white mb-2">
-            Parabéns. Você acabou de ganhar 30 dias grátis de acesso ao plano Pro!
+            Parabéns. Você acabou de ganhar 7 dias grátis de acesso ao plano Pro!
           </h1>
           <p className="text-zeedo-black/60 dark:text-zeedo-white/60 mb-8 text-sm">
             Crie sua conta para resgatar seu benefício e começar a operar com o Zeedo Pro.
@@ -165,7 +165,7 @@ export default function SegredoPage() {
           <Image src="/zeedo-robot-segredo.png" alt="Zeedo" width={220} height={220} className="object-contain" priority />
         </div>
         <h1 className="text-2xl font-semibold text-zeedo-black dark:text-zeedo-white mb-2 text-center">
-          Parabéns. Você acabou de ganhar 30 dias grátis de acesso ao plano Pro!
+          Parabéns. Você acabou de ganhar 7 dias grátis de acesso ao plano Pro!
         </h1>
         <p className="text-zeedo-black/60 dark:text-zeedo-white/60 mb-6 text-center text-sm">
           Informe seu CPF para ativar o benefício.

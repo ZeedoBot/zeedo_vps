@@ -54,6 +54,7 @@ export default function TradesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [closing, setClosing] = useState<string | null>(null);
+  const [cancelingPending, setCancelingPending] = useState<string | null>(null);
   const [closePct, setClosePct] = useState<Record<string, number>>({});
   const [executingId, setExecutingId] = useState<string | null>(null);
 
@@ -108,6 +109,22 @@ export default function TradesPage() {
       setError(err instanceof Error ? err.message : "Erro ao fechar posição.");
     } finally {
       setClosing(null);
+    }
+  }
+
+  async function handleCancelPending(symbol: string) {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setCancelingPending(symbol);
+    setError("");
+    try {
+      await apiPost("/dashboard/cancel-pending-position", { symbol }, session.access_token);
+      await load(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao cancelar pendência.");
+    } finally {
+      setCancelingPending(null);
     }
   }
 
@@ -215,6 +232,7 @@ export default function TradesPage() {
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Valor</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zeedo-orange/20">
@@ -226,6 +244,16 @@ export default function TradesPage() {
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
+                      <td className="px-4 py-2 text-sm text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleCancelPending(p.symbol)}
+                          disabled={cancelingPending === p.symbol}
+                          className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/30 disabled:opacity-50 dark:text-red-400"
+                        >
+                          {cancelingPending === p.symbol ? "…" : "Cancelar"}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

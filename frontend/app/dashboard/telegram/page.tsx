@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet } from "@/lib/api";
 
 type TelegramStatus = { connected: boolean; chat_id_masked?: string | null };
 type ConnectLink = { url: string; bot_username: string };
@@ -10,12 +10,13 @@ type ConnectLink = { url: string; bot_username: string };
 export default function TelegramPage() {
   const [status, setStatus] = useState<TelegramStatus | null>(null);
   const [connectLink, setConnectLink] = useState<ConnectLink | null>(null);
-  const [chatIdManual, setChatIdManual] = useState("");
-  const [showManual, setShowManual] = useState(false);
+  const [showQrCode, setShowQrCode] = useState(false);
   const [showChangeForm, setShowChangeForm] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const qrCodeUrl = connectLink?.url
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(connectLink.url)}`
+    : "";
 
   useEffect(() => {
     async function load() {
@@ -40,34 +41,6 @@ export default function TelegramPage() {
     if (connectLink?.url) {
       window.open(connectLink.url, "_blank");
       setMessage({ type: "ok", text: "Abra o Telegram e toque em Iniciar. Em seguida, volte aqui e recarregue a página." });
-    }
-  }
-
-  async function handleManualSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage(null);
-    if (!chatIdManual.trim()) {
-      setMessage({ type: "err", text: "Informe seu Chat ID." });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        setMessage({ type: "err", text: "Sessão expirada. Faça login novamente." });
-        return;
-      }
-      await apiPost("/telegram/connect", { chat_id: chatIdManual.trim() }, session.access_token);
-      setMessage({ type: "ok", text: "Telegram conectado com sucesso." });
-      setChatIdManual("");
-      setShowChangeForm(false);
-      const data = await apiGet<TelegramStatus>("/telegram/status", session.access_token);
-      setStatus(data);
-    } catch (err) {
-      setMessage({ type: "err", text: err instanceof Error ? err.message : "Erro ao conectar." });
-    } finally {
-      setSubmitting(false);
     }
   }
 
@@ -113,30 +86,23 @@ export default function TelegramPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setShowManual(!showManual)}
+                  onClick={() => setShowQrCode(!showQrCode)}
                   className="text-sm text-zeedo-orange hover:underline"
                 >
-                  {showManual ? "Ocultar" : "Ou informar Chat ID manualmente"}
+                  {showQrCode ? "Ocultar QR Code" : "Desktop sem Telegram? Escaneie o QR Code com seu celular"}
                 </button>
-                {showManual && (
-                  <form onSubmit={handleManualSubmit} className="pt-4 border-t border-zeedo-orange/20 space-y-4">
-                    <div>
-                      <label htmlFor="chat_id" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Chat ID (obtido com @userinfobot no Telegram)
-                      </label>
-                      <input
-                        id="chat_id"
-                        type="text"
-                        value={chatIdManual}
-                        onChange={(e) => setChatIdManual(e.target.value)}
-                        className="input-field"
-                        placeholder="Ex: 123456789"
-                      />
-                    </div>
-                    <button type="submit" disabled={submitting} className="btn-primary">
-                      {submitting ? "Salvando…" : "Conectar"}
-                    </button>
-                  </form>
+                {showQrCode && qrCodeUrl && (
+                  <div className="rounded-lg border border-zeedo-orange/20 bg-zeedo-orange/5 p-4 space-y-3">
+                    <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
+                      Escaneie com a camera do celular para abrir o Telegram no mesmo link de conexao automatica.
+                    </p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code para conectar Telegram"
+                      className="mx-auto h-56 w-56 rounded-md border border-zeedo-orange/20 bg-white p-2"
+                    />
+                  </div>
                 )}
               </div>
             )}

@@ -31,6 +31,10 @@ class ExecuteBlockedTradeBody(BaseModel):
     id: str = Field(..., description="UUID do trade bloqueado")
 
 
+class CancelPendingPositionBody(BaseModel):
+    symbol: str = Field(..., min_length=2, max_length=10)
+
+
 def _get_wallet_address(user_id: str) -> str | None:
     supabase = get_supabase()
     r = supabase.table("trading_accounts").select("wallet_address").eq("user_id", user_id).eq("is_active", True).limit(1).execute()
@@ -354,6 +358,111 @@ def close_position(
         "success": True,
         "message": f"Posição {symbol} fechada ({body.pct:.0f}%).",
         "filled": filled,
+    }
+
+
+@router.post("/cancel-pending-position")
+def cancel_pending_position(
+    body: CancelPendingPositionBody,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    Cancela ordens pendentes de entrada do símbolo e remove do bot_tracker.
+    """
+    supabase = get_supabase()
+    r = supabase.table("trading_accounts").select(
+        "wallet_address, encrypted_private_key, encryption_salt, network"
+    ).eq("user_id", user_id).eq("is_active", True).limit(1).execute()
+    if not r.data or len(r.data) == 0:
+        raise HTTPException(status_code=400, detail="Conecte a carteira antes de cancelar pendências.")
+
+    row = r.data[0]
+    wallet = row.get("wallet_address")
+    enc_key = row.get("encrypted_private_key")
+    salt = row.get("encryption_salt")
+    if not enc_key or not salt:
+        raise HTTPException(status_code=400, detail="Chave da carteira não encontrada. Reconecte a carteira.")
+
+    symbol = body.symbol.strip().upper()
+    tracker = supabase.table("bot_tracker").select("symbol").eq("user_id", user_id).eq("symbol", symbol).limit(1).execute()
+    if not tracker.data:
+        raise HTTPException(status_code=404, detail=f"Nenhum trade pendente encontrado em {symbol}.")
+
+    # Garante que não há posição aberta para esse símbolo.
+    try:
+        resp = requests.post(
+            HYPERLIQUID_API,
+            json={"type": "clearinghouseState", "user": wallet},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException as e:
+        logger.warning(f"Erro Hyperliquid clearinghouseState: {e}")
+        raise HTTPException(status_code=502, detail="Não foi possível consultar posições.")
+
+    for p in data.get("assetPositions", []):
+        pos = p.get("position", {})
+        if (pos.get("coin") or "").upper() == symbol and abs(float(pos.get("szi", 0) or 0)) > 1e-8:
+            raise HTTPException(status_code=400, detail=f"{symbol} já está com posição ativa. Use Fechar posição.")
+
+    # Descriptografa chave para assinar cancelamentos na exchange.
+    _root = Path(__file__).resolve().parent.parent.parent.parent
+    if str(_root) not in sys.path:
+        sys.path.insert(0, str(_root))
+    from auth.encryption import EncryptionManager
+    key = (get_settings().encryption_master_key or "").strip().strip("[]")
+    if not key:
+        raise HTTPException(status_code=500, detail="Servidor não configurado.")
+    enc = EncryptionManager(master_key=key)
+    try:
+        private_key = enc.decrypt_private_key(enc_key, salt, user_id)
+    except Exception:
+        logger.exception("Erro ao descriptografar chave")
+        raise HTTPException(status_code=500, detail="Erro ao acessar carteira.")
+
+    from hyperliquid.exchange import Exchange
+    from hyperliquid.utils import constants
+    is_mainnet = (row.get("network") or "mainnet") == "mainnet"
+    base_url = constants.MAINNET_API_URL if is_mainnet else constants.TESTNET_API_URL
+    account = Account.from_key(private_key)
+    exchange = Exchange(account, base_url, account_address=wallet)
+
+    # Cancela somente ordens de entrada (reduceOnly=False) do símbolo.
+    cancelled = 0
+    try:
+        ord_resp = requests.post(
+            HYPERLIQUID_API,
+            json={"type": "openOrders", "user": wallet},
+            timeout=10,
+        )
+        ord_resp.raise_for_status()
+        orders = ord_resp.json() or []
+    except requests.RequestException as e:
+        logger.warning(f"Erro Hyperliquid openOrders: {e}")
+        raise HTTPException(status_code=502, detail="Não foi possível consultar ordens abertas.")
+
+    for order in orders:
+        coin = (order.get("coin") or "").upper()
+        if coin != symbol:
+            continue
+        if bool(order.get("reduceOnly")):
+            continue
+        oid = order.get("oid")
+        if oid is None:
+            continue
+        try:
+            exchange.cancel(symbol, oid)
+            cancelled += 1
+        except Exception as e:
+            logger.error(f"Erro ao cancelar ordem {symbol} oid={oid}: {e}")
+
+    supabase.table("bot_tracker").delete().eq("user_id", user_id).eq("symbol", symbol).execute()
+
+    return {
+        "success": True,
+        "message": f"Pendência em {symbol} cancelada.",
+        "cancelled_orders": cancelled,
     }
 
 

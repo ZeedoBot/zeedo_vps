@@ -1479,17 +1479,36 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                             )
 
                 if new_sl:
+                    # Cancela o SL antigo
                     exchange.cancel(sym, sl_order["oid"])
                     new_sl = round_px(new_sl)
-                    
-                    # Quando move para breakeven, a entrada 2 já foi cancelada (alvo 1 atingido)
-                    # Portanto, usa apenas a quantidade atual da posição
+
+                    # Ao mover para breakeven, cancelamos qualquer ordem de 2ª entrada pendente
+                    # (ordens adicionais não-reduceOnly) para este símbolo
+                    for o in my_orders:
+                        try:
+                            if o["coin"] == sym and not o.get("reduceOnly", False) and not o.get("isTrigger", False):
+                                exchange.cancel(sym, o["oid"])
+                        except Exception as e:
+                            logging.error(f"Erro ao cancelar ordem de entrada extra em {sym} ao mover para BE: {e}")
+
+                    # Usa apenas a quantidade atual da posição para o novo stop
                     stop_qty = abs(size)
-                    
-                    exchange.order(sym, False if side == "long" else True, stop_qty, new_sl, {"trigger": {"triggerPx": new_sl, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
+
+                    exchange.order(
+                        sym,
+                        False if side == "long" else True,
+                        stop_qty,
+                        new_sl,
+                        {"trigger": {"triggerPx": new_sl, "isMarket": True, "tpsl": "sl"}},
+                        reduce_only=True,
+                    )
                     if sym in entry_tracker:
-                        entry_tracker[sym]['planned_stop'] = new_sl
-                        entry_tracker[sym]['breakeven_moved'] = True
+                        entry_tracker[sym]["planned_stop"] = new_sl
+                        entry_tracker[sym]["breakeven_moved"] = True
+                        # Marca entrada 2 como desativada para este trade
+                        entry_tracker[sym]["entry2_placed"] = True
+                        entry_tracker[sym]["entry2_qty"] = 0
                         storage.save_entry_tracker(entry_tracker)
 
             # Atualiza last_size apenas se mudou significativamente (para manter estado sincronizado)
