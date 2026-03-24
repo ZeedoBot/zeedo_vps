@@ -22,6 +22,7 @@ type PlanLimits = {
 
 type BotConfig = {
   bot_enabled: boolean;
+  signal_mode?: boolean;
   entry2_enabled?: boolean;
   symbols: string[];
   timeframes: string[];
@@ -58,7 +59,8 @@ export default function BotPage() {
   const [maxPositions, setMaxPositions] = useState<number | "">(2);
   const [maxSinglePosition, setMaxSinglePosition] = useState<number | "">(1250);
   const [entry2Enabled, setEntry2Enabled] = useState(true);
-  
+  const [signalMode, setSignalMode] = useState(false);
+
   // Estados para alvos e stop customizados
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [stopMultiplier, setStopMultiplier] = useState<number | string>("1.8");
@@ -89,7 +91,8 @@ export default function BotPage() {
         const maxSingle = data.max_single_pos_exposure ?? 1250;
         setMaxSinglePosition(pl ? Math.min(maxSingle, pl.max_single_position_usd) : maxSingle);
         setEntry2Enabled(data.entry2_enabled ?? true);
-        
+        setSignalMode(data.signal_mode ?? false);
+
         // Carrega alvos e stop customizados
         setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
         setEntry2Multiplier((data.entry2_multiplier ?? 1.414).toString());
@@ -139,6 +142,7 @@ export default function BotPage() {
         symbols: symbolsInput,
         timeframes: timeframesInput,
         trade_mode: config?.trade_mode ?? "BOTH",
+        signal_mode: signalMode,
         target_loss_usd: tl,
         max_global_exposure: limits.max_global_exposure_usd,
         max_single_pos_exposure: msp,
@@ -206,6 +210,7 @@ export default function BotPage() {
               target_loss_usd: tl,
               max_positions: mp,
               max_single_pos_exposure: msp,
+              signal_mode: signalMode,
             }
           : null
       );
@@ -314,6 +319,36 @@ export default function BotPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <label htmlFor="signal-mode" className="text-sm font-medium text-zeedo-orange cursor-pointer">
+                Modo Sinal:
+              </label>
+              <button
+                type="button"
+                id="signal-mode"
+                role="switch"
+                aria-checked={signalMode}
+                onClick={() => setSignalMode((v) => !v)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
+                  signalMode ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                    signalMode ? "translate-x-5" : "translate-x-1"
+                  }`}
+                />
+              </button>
+              <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
+                {signalMode ? "Ativado" : "Desativado"}
+              </span>
+            </div>
+            <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+              Ative o Modo Sinal se não desejar que o Zeedo ative nenhum trade automáticamente.
+            </p>
           </div>
 
           <div className={`space-y-2 ${!limits?.allowed_entry2 ? "opacity-60" : ""}`}>

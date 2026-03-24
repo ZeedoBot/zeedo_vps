@@ -40,6 +40,47 @@ function formatSignalTime(iso?: string) {
   });
 }
 
+/** Alinhado a `_BLOCK_REASON_LABELS` em bot.py; `reason` pode ser "a | b | c". */
+const BLOCKED_REASON_LABELS: Record<string, string> = {
+  modo_sinal: "Modo Sinal",
+  LSR: "LSR",
+  high_extremo: "High extremo",
+  low_extremo: "Low extremo",
+  ativo_fraco_24h: "Ativo fraco 24h",
+  ativo_forte_24h: "Ativo forte 24h",
+  symbol_ja_ativo: "Símbolo já ativo em outro TF",
+  limite_trades: "Limite de trades",
+};
+
+function formatBlockedReasonPart(part: string): string {
+  const t = part.trim();
+  if (!t) return "";
+  if (BLOCKED_REASON_LABELS[t]) return BLOCKED_REASON_LABELS[t];
+  return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function BlockedReasonCell({ reason }: { reason: string }) {
+  const parts = reason
+    .split(" | ")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const labels = parts.map(formatBlockedReasonPart).filter(Boolean);
+  if (labels.length <= 1) {
+    return (
+      <span className="text-zeedo-black/70 dark:text-zeedo-white/70">
+        {labels[0] ?? formatBlockedReasonPart(reason)}
+      </span>
+    );
+  }
+  return (
+    <ul className="list-disc list-inside text-zeedo-black/70 dark:text-zeedo-white/70 space-y-0.5 max-w-xs">
+      {labels.map((label, i) => (
+        <li key={i}>{label}</li>
+      ))}
+    </ul>
+  );
+}
+
 type OverviewData = {
   balance: number;
   trades: unknown[];
@@ -296,15 +337,8 @@ export default function TradesPage() {
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.tf}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{formatSignalTime(b.created_at)}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.side.toUpperCase()}</td>
-                      <td className="px-4 py-2 text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
-                        {b.reason === "LSR" && "LSR"}
-                        {b.reason === "ativo_forte_24h" && "Ativo forte 24h"}
-                        {b.reason === "ativo_fraco_24h" && "Ativo fraco 24h"}
-                        {b.reason === "high_extremo" && "High extremo"}
-                        {b.reason === "low_extremo" && "Low extremo"}
-                        {b.reason === "limite_trades" && "Limite de trades"}
-                        {b.reason === "symbol_ja_ativo" && "Símbolo já ativo em outro TF"}
-                        {!["LSR","ativo_forte_24h","ativo_fraco_24h","high_extremo","low_extremo","limite_trades","symbol_ja_ativo"].includes(b.reason) && b.reason}
+                      <td className="px-4 py-2 text-sm align-top">
+                        <BlockedReasonCell reason={b.reason} />
                       </td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry2_px?.toFixed(2)}</td>

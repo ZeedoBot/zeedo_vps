@@ -259,7 +259,7 @@ class SupabaseStorage(StorageBase):
         try:
             user_id = user_id or self._user_id
             query = self._client.table(TABLE_CONFIG).select(
-                "symbols, timeframes, trade_mode, stop_multiplier, entry2_multiplier, entry2_adjust_last_target, "
+                "symbols, timeframes, trade_mode, signal_mode, stop_multiplier, entry2_multiplier, entry2_adjust_last_target, "
                 "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent"
             )
             
@@ -274,6 +274,7 @@ class SupabaseStorage(StorageBase):
                 "symbols": row.get("symbols") or [],
                 "timeframes": row.get("timeframes") or [],
                 "trade_mode": row.get("trade_mode") or "BOTH",
+                "signal_mode": bool(row.get("signal_mode", False)),
                 "stop_multiplier": row.get("stop_multiplier", 1.8),
                 "entry2_multiplier": row.get("entry2_multiplier", 1.414),
                 "entry2_adjust_last_target": row.get("entry2_adjust_last_target", True),

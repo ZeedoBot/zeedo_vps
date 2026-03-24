@@ -88,6 +88,7 @@ ENTRY2_ADJUST_LAST_TARGET = True  # Se true, último alvo vai para 0.0 quando en
 # ENTRADA 2 (Pro/Enterprise): plano permite e usuário pode ativar/desativar
 ENTRY2_ALLOWED = True   # Definido por plan (basic=False, pro/satoshi=True)
 ENTRY2_ENABLED = True   # Toggle do usuário em bot_config.entry2_enabled
+SIGNAL_MODE = False     # Modo Sinal: não executa trades; bot_config.signal_mode (SaaS)
 
 # CONEXÃO
 def setup_client():
@@ -131,7 +132,7 @@ def tg_send(msg):
 
 def load_config(storage):
     """Carrega config do storage (local ou Supabase) e atualiza SYMBOLS, TIMEFRAMES, TRADE_MODE, alvos e stop."""
-    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY2_ADJUST_LAST_TARGET
+    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY2_ADJUST_LAST_TARGET, SIGNAL_MODE
     config = storage.get_config()
     if config:
         if "symbols" in config and config["symbols"]:
@@ -139,7 +140,8 @@ def load_config(storage):
         if "timeframes" in config and config["timeframes"]:
             TIMEFRAMES = config["timeframes"]
         TRADE_MODE = config.get("trade_mode", "BOTH")
-        
+        SIGNAL_MODE = bool(config.get("signal_mode", False))
+
         # Carrega alvos customizados (alvo 1 obrigatório, alvos 2 e 3 opcionais)
         t1_level = config.get("target1_level", 0.618)
         t1_pct = config.get("target1_percent", 50) / 100.0
@@ -842,8 +844,24 @@ def get_24h_change_pct(info, symbol):
         logging.error(f"Erro variação 24h {symbol}: {e}")
         return None
 
+_BLOCK_REASON_LABELS = {
+    "modo_sinal": "Modo Sinal",
+    "LSR": "LSR",
+    "high_extremo": "High extremo",
+    "low_extremo": "Low extremo",
+    "ativo_fraco_24h": "Ativo fraco 24h",
+    "ativo_forte_24h": "Ativo forte 24h",
+    "symbol_ja_ativo": "Símbolo já ativo em outro TF",
+    "limite_trades": "Limite de trades simultâneos",
+}
+
+
+def _format_blocked_reasons_tg(reasons: list[str]) -> str:
+    return "\n".join(f"• {_BLOCK_REASON_LABELS.get(r, r.replace('_', ' ').title())}" for r in reasons)
+
+
 def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
-    """Monta dict para save_blocked_trade. Retorna None se qty inválido."""
+    """Monta dict para save_blocked_trade. Retorna None se qty inválido. `reason` pode ser 'a | b' para vários motivos."""
     try:
         entry_px = round_px(sig["trigger"])
         entry2_px = round_px(sig["entry2_px"])
@@ -960,86 +978,49 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 analyzed_candles[candle_id] = True
                 continue
 
-            # Bloqueio high/low extremo (retornado por get_signal)
+            update_lsr_cache(sym, force=True)
+
+            block_reasons: list[str] = []
+            if SIGNAL_MODE:
+                block_reasons.append("modo_sinal")
             if sig.get("blocked") and sig.get("reason") in ("high_extremo", "low_extremo"):
-                tg_msg = (
+                block_reasons.append(sig["reason"])
+            if not lsr_allows_trade(sym, sig["side"]):
+                block_reasons.append("LSR")
+            if sig["side"] == "long" and sym in strength_block_cache["blocked_longs"]:
+                block_reasons.append("ativo_fraco_24h")
+            if sig["side"] == "short" and sym in strength_block_cache["blocked_shorts"]:
+                block_reasons.append("ativo_forte_24h")
+
+            if block_reasons:
+                reason_combined = " | ".join(block_reasons)
+                if "LSR" in block_reasons:
+                    logging.info(f"[{sym} {tf}] 🚫 Trade bloqueado ({reason_combined}) | LSR trend={lsr_cache.get(sym, {}).get('trend')}")
+                else:
+                    logging.info(f"[{sym} {tf}] 🚫 Trade bloqueado ({reason_combined})")
+                extra = ""
+                if "high_extremo" in block_reasons:
+                    extra += "\n\nEngolfo Bull ignorado por high extremo. O trade pode já ter subido muito."
+                if "low_extremo" in block_reasons:
+                    extra += "\n\nEngolfo Bear ignorado por low extremo. O trade pode já ter caído muito."
+                if "LSR" in block_reasons:
+                    extra += "\n\nO trade pode estar a favor do LSR (junto com as sardinhas)."
+                if "ativo_fraco_24h" in block_reasons:
+                    extra += "\n\nO ativo está entre os mais fracos nas últimas 24h."
+                if "ativo_forte_24h" in block_reasons:
+                    extra += "\n\nO ativo está entre os mais fortes nas últimas 24h."
+                if "modo_sinal" in block_reasons:
+                    extra += "\n\nModo Sinal ativo: nenhuma ordem será colocada automaticamente."
+                tg_send(
                     f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
-                    f"🚫{'🟢' if sig['side'] == 'long' else '🔴'} {sig['side'].upper()} BLOQUEADO ({sig['reason'].replace('_', ' ').title()})🚫\n"
-                    f"{sym} | {tf}\n"
+                    f"🚫{'🟢' if sig['side'] == 'long' else '🔴'} {sig['side'].upper()} BLOQUEADO 🚫\n"
+                    f"{sym} | {tf}\n\n"
+                    f"Motivos:\n{_format_blocked_reasons_tg(block_reasons)}"
+                    f"{extra}\n\n"
                     f"Recomendação: Faça sua própria análise.\n"
                     f"https://app.hyperliquid.xyz/trade/{sym}"
                 )
-                if sig["reason"] == "high_extremo":
-                    tg_msg = tg_msg.replace("Recomendação:", "Engolfo Bull ignorado por high extremo. O trade pode já ter subido muito.\nRecomendação:")
-                else:
-                    tg_msg = tg_msg.replace("Recomendação:", "Engolfo Bear ignorado por low extremo. O trade pode já ter caído muito.\nRecomendação:")
-                tg_send(tg_msg)
-                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, sig["reason"])
-                if btd and hasattr(storage, "save_blocked_trade"):
-                    storage.save_blocked_trade(btd)
-                if sym not in history_tracker:
-                    history_tracker[sym] = {}
-                history_tracker[sym][tf] = sig["signal_ts"]
-                if hasattr(storage, "save_history_tracker"):
-                    storage.save_history_tracker(history_tracker)
-                analyzed_candles[candle_id] = True
-                continue
-
-            update_lsr_cache(sym, force=True)
-
-            if not lsr_allows_trade(sym, sig["side"]):
-                logging.info(f"[{sym} {tf}] 🚫 Trade bloqueado por LSR ({lsr_cache.get(sym, {}).get('trend')})")
-                tg_send(
-                    f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
-                    f"🚫{'🟢' if sig['side'] == 'long' else '🔴'} {sig['side'].upper()} BLOQUEADO (LSR)🚫\n"
-                    f"{sym} | {tf}\n"
-                    f"O Trade está a favor do LSR (junto com as sardinhas)!\n"
-                    f"Recomendação: Faça sua própria análise. Se resolver entrar: Entre com uma mão mais leve ou em um ativo com LSR neutro/contrário.\n"
-                    f"https://app.hyperliquid.xyz/trade/{sym}"
-                )
-                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "LSR")
-                if btd and hasattr(storage, "save_blocked_trade"):
-                    storage.save_blocked_trade(btd)
-                if sym not in history_tracker:
-                    history_tracker[sym] = {}
-                history_tracker[sym][tf] = sig["signal_ts"]
-                if hasattr(storage, "save_history_tracker"):
-                    storage.save_history_tracker(history_tracker)
-                analyzed_candles[candle_id] = True
-                continue
-
-            if sig["side"] == "long" and sym in strength_block_cache["blocked_longs"]:
-                tg_send(
-                    f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
-                    f"🚫🟢 LONG BLOQUEADO (Ativo fraco 24h)🚫\n"
-                    f"{sym} | {tf}\n"
-                    f"O ativo está muito fraco nas últimas 24 horas.\n"
-                    f"Recomendação: Faça sua própria análise. Se resolver entrar: Entre com uma mão mais leve ou escolha outro ativo mais forte.\n"
-                    f"https://app.hyperliquid.xyz/trade/{sym}"
-                )
-                logging.info(f"[{sym} {tf}] 🚫 LONG bloqueado (Ativo fraco 24h)")
-                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "ativo_fraco_24h")
-                if btd and hasattr(storage, "save_blocked_trade"):
-                    storage.save_blocked_trade(btd)
-                if sym not in history_tracker:
-                    history_tracker[sym] = {}
-                history_tracker[sym][tf] = sig["signal_ts"]
-                if hasattr(storage, "save_history_tracker"):
-                    storage.save_history_tracker(history_tracker)
-                analyzed_candles[candle_id] = True
-                continue
-
-            if sig["side"] == "short" and sym in strength_block_cache["blocked_shorts"]:
-                tg_send(
-                    f"⚠️ ALERTA DE POSSÍVEL TRADE ⚠️\n"
-                    f"🚫🔴 SHORT BLOQUEADO (Ativo forte 24h)🚫\n"
-                    f"{sym} | {tf}\n"
-                    f"O ativo está muito forte nas últimas 24 horas.\n"
-                    f"Recomendação: Faça sua própria análise. Se resolver entrar: Entre com uma mão mais leve ou escolha outro ativo mais fraco.\n"
-                    f"https://app.hyperliquid.xyz/trade/{sym}"
-                )
-                logging.info(f"[{sym} {tf}] 🚫 SHORT bloqueado (Ativo forte 24h)")
-                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "ativo_forte_24h")
+                btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason_combined)
                 if btd and hasattr(storage, "save_blocked_trade"):
                     storage.save_blocked_trade(btd)
                 if sym not in history_tracker:

@@ -79,7 +79,12 @@ type OverviewData = {
 };
 
 type BotStatus = { status: string };
-type BotConfig = { symbols: string[]; timeframes: string[]; trial_ended?: boolean };
+type BotConfig = {
+  symbols: string[];
+  timeframes: string[];
+  trial_ended?: boolean;
+  signal_mode?: boolean;
+};
 type WalletStatus = { connected: boolean; wallet_address: string | null };
 type TelegramStatus = { connected: boolean };
 
@@ -272,6 +277,17 @@ export default function DashboardPage() {
           </p>
           <a href="/dashboard/bot" className="text-sm underline mt-1 inline-block hover:text-amber-600 dark:hover:text-amber-300">
             Ir para Configurações do Bot →
+          </a>
+        </div>
+      )}
+
+      {botConfig?.signal_mode && (
+        <div className="rounded-lg border border-zeedo-orange/40 bg-zeedo-orange/10 p-4 text-zeedo-black dark:text-zeedo-white">
+          <p className="font-medium text-zeedo-orange">
+            Zeedo em Modo Sinal: Trades não serão ativados automáticamente
+          </p>
+          <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline mt-1 inline-block">
+            Ajustar em Configurações do Bot →
           </a>
         </div>
       )}

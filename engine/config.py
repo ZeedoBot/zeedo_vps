@@ -27,6 +27,9 @@ class BotConfig:
     entry2_enabled: bool = True
     entry2_allowed: bool = True  # Por plano: basic=False, pro/satoshi=True
 
+    # Modo Sinal: não coloca ordens; envia alerta e regista trade bloqueado.
+    signal_mode: bool = False
+
     # Risk Management
     target_loss_usd: float = 5.0
     max_global_exposure: float = 5000.0

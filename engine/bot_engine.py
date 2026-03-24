@@ -58,6 +58,7 @@ class BotEngine:
             "STRENGTH_UPDATE_INTERVAL": self.config.strength_update_interval,
             "ENTRY2_ENABLED": self.config.entry2_enabled,
             "ENTRY2_ALLOWED": self.config.entry2_allowed,
+            "SIGNAL_MODE": self.config.signal_mode,
         }
 
     def run(self, info, exchange, wallet_addr):

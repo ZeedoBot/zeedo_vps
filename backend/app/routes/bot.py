@@ -47,6 +47,7 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
 
 class BotConfigUpdate(BaseModel):
     bot_enabled: Optional[bool] = None
+    signal_mode: Optional[bool] = None
     entry2_enabled: Optional[bool] = None
     symbols: Optional[List[str]] = None
     timeframes: Optional[List[str]] = None
@@ -75,13 +76,14 @@ def get_config(user_id: str = Depends(get_current_user_id)):
     trial_ended = sub_status == "expired"
     limits = _get_plan_limits(supabase, user_id)
     r = supabase.table("bot_config").select(
-        "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, "
+        "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, signal_mode, "
         "target_loss_usd, max_global_exposure, max_single_pos_exposure, max_positions, "
         "stop_multiplier, entry2_multiplier, entry2_adjust_last_target, "
         "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent, updated_at"
     ).eq("user_id", user_id).limit(1).execute()
     out = {
         "bot_enabled": False,
+        "signal_mode": False,
         "entry2_enabled": True,
         "symbols": [],
         "timeframes": [],

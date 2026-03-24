@@ -112,6 +112,7 @@ class BotInstance:
                 symbols=bot_config_dict.get('symbols', []),
                 timeframes=bot_config_dict.get('timeframes', []),
                 trade_mode=bot_config_dict.get('trade_mode', 'BOTH'),
+                signal_mode=bool(bot_config_dict.get('signal_mode', False)),
                 entry2_enabled=entry2_enabled,
                 entry2_allowed=allowed_entry2,
                 target_loss_usd=bot_config_dict.get('target_loss_usd', 5.0),
