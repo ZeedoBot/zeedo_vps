@@ -139,7 +139,7 @@ class InstanceManager:
             'entry2_enabled', 'target_loss_usd', 'max_global_exposure',
             'max_single_pos_exposure', 'max_positions',
             # Configurações avançadas
-            'stop_multiplier', 'entry2_multiplier', 'entry2_adjust_last_target',
+            'stop_multiplier', 'entry1_multiplier', 'entry2_multiplier', 'entry2_adjust_last_target',
             'target1_level', 'target1_percent',
             'target2_level', 'target2_percent',
             'target3_level', 'target3_percent',

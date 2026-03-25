@@ -68,6 +68,7 @@ class BotInstance:
 
             # 5. Monta config de Fibo (alvos e stop) a partir do bot_config
             stop_mult = float(bot_config_dict.get('stop_multiplier', 1.8) or 1.8)
+            entry1_mult = float(bot_config_dict.get('entry1_multiplier', 0.618) or 0.618)
             entry2_mult = float(bot_config_dict.get('entry2_multiplier', 1.414) or 1.414)
 
             fib_levels: list[tuple[float, float]] = []
@@ -78,7 +79,7 @@ class BotInstance:
                 if t1_level is not None and t1_pct is not None:
                     lvl = float(t1_level or 0)
                     pct = float(t1_pct or 0)
-                    if lvl != 0 and pct > 0:
+                    if pct > 0:
                         fib_levels.append((lvl, pct / 100.0))
 
                 t2_level = bot_config_dict.get('target2_level')
@@ -121,6 +122,7 @@ class BotInstance:
                 max_positions=bot_config_dict.get('max_positions', 2),
                 is_mainnet=credentials.get('network', 'mainnet') == 'mainnet',
                 fib_stop_level=stop_mult,
+                entry1_multiplier=entry1_mult,
                 fib_entry2_level=entry2_mult,
                 entry2_adjust_last_target=entry2_adjust_last_target,
                 **fib_kwargs,

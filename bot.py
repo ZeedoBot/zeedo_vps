@@ -85,6 +85,9 @@ FIB_STOP_LEVEL = 1.8  # Padrão: -1.8 fib
 FIB_ENTRY2_LEVEL = 1.414  # Padrão: -1.414 fib (customizável: 0.619-5.0)
 ENTRY2_ADJUST_LAST_TARGET = True  # Se true, último alvo vai para 0.0 quando entrada 2 executar
 
+# Entrada 1: default (predefinida) em -0.618 para LONG e +0.618 para SHORT.
+ENTRY1_MULTIPLIER = 0.618
+
 # ENTRADA 2 (Pro/Enterprise): plano permite e usuário pode ativar/desativar
 ENTRY2_ALLOWED = True   # Definido por plan (basic=False, pro/satoshi=True)
 ENTRY2_ENABLED = True   # Toggle do usuário em bot_config.entry2_enabled
@@ -132,7 +135,7 @@ def tg_send(msg):
 
 def load_config(storage):
     """Carrega config do storage (local ou Supabase) e atualiza SYMBOLS, TIMEFRAMES, TRADE_MODE, alvos e stop."""
-    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY2_ADJUST_LAST_TARGET, SIGNAL_MODE
+    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY1_MULTIPLIER, ENTRY2_ADJUST_LAST_TARGET, SIGNAL_MODE
     config = storage.get_config()
     if config:
         if "symbols" in config and config["symbols"]:
@@ -160,6 +163,7 @@ def load_config(storage):
         # Carrega stop e entrada 2 customizados
         FIB_STOP_LEVEL = config.get("stop_multiplier", 1.8)
         FIB_ENTRY2_LEVEL = config.get("entry2_multiplier", 1.414)
+        ENTRY1_MULTIPLIER = config.get("entry1_multiplier", 0.618)
         ENTRY2_ADJUST_LAST_TARGET = config.get("entry2_adjust_last_target", True)
         
         logging.info(f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada2: -{FIB_ENTRY2_LEVEL}")
@@ -428,7 +432,6 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     prefix = f"[{symbol} {timeframe}]"
     signal_ts = int(curr["timestamp"])
     signal = {"take": False, "side": None, "trigger": 0.0, "entry2_px": 0.0}
-
     #LONG
     if "HAMMER_BULL" in patterns:
         if div_type == "BULL":
@@ -437,7 +440,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_low_hl = curr_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
                 
-                trigger_hl = setup_high_hl - (tech_base * 0.618) #ENTRADA 1: LIMIT -0.618
+                trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER) #ENTRADA 1: LIMIT -valor (LONG)
                 entry2_px = entry_2(setup_high_hl, setup_low_hl, "long")
                 
                 ref_info = format_ref_info(div_px, div_ts)
@@ -464,7 +467,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_high_hl = curr_hl["high"]
                 setup_low_hl = prev_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
-                trigger_hl = setup_high_hl - (tech_base * 0.618)
+                trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER)
                 entry2_px = entry_2(setup_high_hl, setup_low_hl, "long")
                 stop_inicial = round_px(setup_high_hl - FIB_STOP_LEVEL * tech_base)
                 logging.info(f"{prefix} 🚫 Engolfo Bull ignorado (high extremo)")
@@ -480,8 +483,8 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_low_hl = prev_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
 
-                # Primeira entrada: LIMIT no nível -0.618 da fib (simplificado)
-                trigger_hl = setup_high_hl - (tech_base * 0.618)
+                # Primeira entrada: LIMIT no nível da fib (customizável)
+                trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER)
                 entry2_px = entry_2(setup_high_hl, setup_low_hl, "long")
                 
                 ref_info = format_ref_info(div_px, div_ts)
@@ -506,8 +509,8 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_low_hl = curr_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
                 
-                # Primeira entrada: LIMIT no nível +0.618 da fib (simplificado)
-                trigger_hl = setup_low_hl + (tech_base * 0.618)
+                # Primeira entrada: LIMIT no nível da fib (customizável)
+                trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
                 entry2_px = entry_2(setup_high_hl, setup_low_hl, "short")
                 
                 ref_info = format_ref_info(div_px, div_ts)
@@ -534,7 +537,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_high_hl = prev_hl["high"]
                 setup_low_hl = curr_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
-                trigger_hl = setup_low_hl + (tech_base * 0.618)
+                trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
                 entry2_px = entry_2(setup_high_hl, setup_low_hl, "short")
                 stop_inicial = round_px(setup_low_hl + FIB_STOP_LEVEL * tech_base)
                 logging.info(f"{prefix} 🚫 Engolfo Bear ignorado (low extremo)")
@@ -550,8 +553,8 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_low_hl = curr_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
                 
-                # Primeira entrada: LIMIT no nível +0.618 da fib (simplificado)
-                trigger_hl = setup_low_hl + (tech_base * 0.618)
+                # Primeira entrada: LIMIT no nível da fib (customizável)
+                trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
                 entry2_px = entry_2(setup_high_hl, setup_low_hl, "short")
                 
                 ref_info = format_ref_info(div_px, div_ts)
@@ -571,7 +574,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
 
 def place_trade_entry(exchange, symbol, side, qty, entry_px):
     """
-    Coloca ordem LIMIT para primeira entrada no nível -0.618 da fib do setup (fixo).
+    Coloca ordem LIMIT para a primeira entrada no nível da fib (customizável).
     Simplificado: não usa mais STOP LIMIT, apenas LIMIT direto.
     """
     is_buy = True if side == "long" else False

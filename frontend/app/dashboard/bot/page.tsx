@@ -31,6 +31,7 @@ type BotConfig = {
   max_single_pos_exposure: number;
   max_positions: number;
   stop_multiplier?: number;
+  entry1_multiplier?: number;
   entry2_multiplier?: number;
   entry2_adjust_last_target?: boolean;
   target1_level?: number;
@@ -64,6 +65,7 @@ export default function BotPage() {
   // Estados para alvos e stop customizados
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [stopMultiplier, setStopMultiplier] = useState<number | string>("1.8");
+  const [entry1Multiplier, setEntry1Multiplier] = useState<number | string>("0.618");
   const [entry2Multiplier, setEntry2Multiplier] = useState<number | string>("1.414");
   const [entry2AdjustLastTarget, setEntry2AdjustLastTarget] = useState(true);
   const [target1Level, setTarget1Level] = useState<number | string>("0.618");
@@ -95,6 +97,7 @@ export default function BotPage() {
 
         // Carrega alvos e stop customizados
         setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
+        setEntry1Multiplier((data.entry1_multiplier ?? 0.618).toString());
         setEntry2Multiplier((data.entry2_multiplier ?? 1.414).toString());
         setEntry2AdjustLastTarget(data.entry2_adjust_last_target ?? true);
         setTarget1Level((data.target1_level ?? 0.618).toString());
@@ -158,6 +161,11 @@ export default function BotPage() {
         const stopNum = parseFloat(stopNormalized);
         if (!isNaN(stopNum)) {
           payload.stop_multiplier = stopNum;
+        }
+        const entry1Normalized = typeof entry1Multiplier === "string" ? normalizeDecimalInput(entry1Multiplier) : entry1Multiplier.toString();
+        const entry1Num = parseFloat(entry1Normalized);
+        if (!isNaN(entry1Num)) {
+          payload.entry1_multiplier = entry1Num;
         }
         const entry2Normalized = typeof entry2Multiplier === "string" ? normalizeDecimalInput(entry2Multiplier) : entry2Multiplier.toString();
         const entry2Num = parseFloat(entry2Normalized);
@@ -546,6 +554,7 @@ export default function BotPage() {
                   type="button"
                   onClick={() => {
                     setStopMultiplier("1.8");
+                  setEntry1Multiplier("0.618");
                     setEntry2Multiplier("1.414");
                     setEntry2AdjustLastTarget(true);
                     setTarget1Level("0.618");
@@ -588,7 +597,7 @@ export default function BotPage() {
                         } else {
                           const num = Number(normalized);
                           if (!isNaN(num)) {
-                            setStopMultiplier(clampValue(num, 1.0, 3.0).toString());
+                            setStopMultiplier(clampValue(num, 1.0, 10.0).toString());
                           } else {
                             setStopMultiplier("1.8");
                           }
@@ -597,7 +606,42 @@ export default function BotPage() {
                       className="input-field max-w-xs"
                     />
                     <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                      Stop Padrão: 1.8 | Intervalo: 1.0 a 3.0
+                      Stop Padrão: 1.8 | Intervalo: 1.0 a 10.0
+                    </p>
+                  </div>
+
+                  <div>
+                    <label htmlFor="entry1_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
+                      Entrada 1 (Fib / trigger)
+                    </label>
+                    <input
+                      id="entry1_multiplier"
+                      type="text"
+                      inputMode="decimal"
+                      value={entry1Multiplier}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (isValidDecimal(val)) {
+                          setEntry1Multiplier(val);
+                        }
+                      }}
+                      onBlur={() => {
+                        const normalized = normalizeDecimalInput(entry1Multiplier);
+                        if (normalized === "" || normalized === ".") {
+                          setEntry1Multiplier("0.618");
+                        } else {
+                          const num = Number(normalized);
+                          if (!isNaN(num)) {
+                            setEntry1Multiplier(clampValue(num, 0.0, 3.0).toString());
+                          } else {
+                            setEntry1Multiplier("0.618");
+                          }
+                        }
+                      }}
+                      className="input-field max-w-xs"
+                    />
+                    <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                      Padrão: -0.618 | Intervalo: 0.0 a 3.0 (LONG usa -valor / SHORT usa +valor)
                     </p>
                   </div>
 
@@ -703,7 +747,7 @@ export default function BotPage() {
                           } else {
                             const num = Number(normalized);
                             if (!isNaN(num)) {
-                              setTarget1Level(clampValue(num, 0, 5).toString());
+                            setTarget1Level(clampValue(num, 0, 5).toString());
                             } else {
                               setTarget1Level("0.618");
                             }

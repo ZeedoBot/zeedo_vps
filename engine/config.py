@@ -49,6 +49,9 @@ class BotConfig:
         (0.618, 0.50),  # Alvo 1 (0.618)
         (1.0, 0.50),    # Alvo 2 (1.0)
     ])
+    # Entrada 1 (Prolongamento do setup): long usa -valor; short usa +valor
+    # Ex: 0.618 => long: setup_high - tech_base*0.618 (equivale a "entrada -0.618")
+    entry1_multiplier: float = 0.618
     fib_stop_level: float = 1.8
     fib_entry2_level: float = 1.414
     # Se true, quando entrada 2 executar o último alvo vai para 0.0 (retorno ao setup)

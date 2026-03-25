@@ -56,7 +56,8 @@ class BotConfigUpdate(BaseModel):
     max_global_exposure: Optional[float] = None
     max_single_pos_exposure: Optional[float] = None
     max_positions: Optional[int] = None
-    stop_multiplier: Optional[float] = Field(None, ge=1.0, le=3.0)
+    stop_multiplier: Optional[float] = Field(None, ge=1.0, le=10.0)
+    entry1_multiplier: Optional[float] = Field(None, ge=0.0, le=3.0)
     entry2_multiplier: Optional[float] = Field(None, ge=0.618, le=5.0)
     entry2_adjust_last_target: Optional[bool] = None
     target1_level: Optional[float] = Field(None, ge=0.0, le=5.0)
@@ -78,7 +79,7 @@ def get_config(user_id: str = Depends(get_current_user_id)):
     r = supabase.table("bot_config").select(
         "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, signal_mode, "
         "target_loss_usd, max_global_exposure, max_single_pos_exposure, max_positions, "
-        "stop_multiplier, entry2_multiplier, entry2_adjust_last_target, "
+        "stop_multiplier, entry1_multiplier, entry2_multiplier, entry2_adjust_last_target, "
         "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent, updated_at"
     ).eq("user_id", user_id).limit(1).execute()
     out = {
@@ -93,6 +94,7 @@ def get_config(user_id: str = Depends(get_current_user_id)):
         "max_single_pos_exposure": 2500.0,
         "max_positions": 2,
         "stop_multiplier": 1.8,
+        "entry1_multiplier": 0.618,
         "entry2_multiplier": 1.414,
         "entry2_adjust_last_target": True,
         "target1_level": 0.618,
@@ -156,6 +158,9 @@ def update_config(
     
     if body.stop_multiplier is not None and not can_customize_stop:
         raise HTTPException(400, "Customização de stop loss disponível apenas nos planos Pro e Satoshi.")
+
+    if body.entry1_multiplier is not None and not can_customize_stop:
+        raise HTTPException(400, "Customização da entrada 1 disponível apenas nos planos Pro e Satoshi.")
     
     if body.entry2_multiplier is not None and not can_customize_stop:
         raise HTTPException(400, "Customização da entrada 2 disponível apenas nos planos Pro e Satoshi.")
