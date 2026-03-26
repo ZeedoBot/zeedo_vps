@@ -49,6 +49,92 @@ const TRADE_MODE_LABELS: Record<string, string> = {
   SHORT_ONLY: "Apenas Short",
 };
 
+type StrategyKey = "CONSERVADOR" | "MEDIANO" | "AGRESSIVO" | "DEGEN" | "CUSTOM";
+
+type StrategyPreset = {
+  label: string;
+  description: string;
+  rr: string;
+  accuracy: string;
+  stopMultiplier: string;
+  entry1Multiplier: string;
+  entry2Multiplier: string;
+  entry2AdjustLastTarget: boolean;
+  target1Level: string;
+  target1Percent: number;
+  target2Level: string;
+  target2Percent: number;
+  target3Level: string;
+  target3Percent: number;
+};
+
+const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> = {
+  CONSERVADOR: {
+    label: "Conservador",
+    description: "Menos trades ativados, stop mais longo.",
+    rr: "R:R ~ 1.25:1",
+    accuracy: "Maior assertividade, com retorno menor.",
+    stopMultiplier: "2.7",
+    entry1Multiplier: "1.1",
+    entry2Multiplier: "1.9",
+    entry2AdjustLastTarget: true,
+    target1Level: "0.0",
+    target1Percent: 50,
+    target2Level: "0.618",
+    target2Percent: 50,
+    target3Level: "0",
+    target3Percent: 0,
+  },
+  MEDIANO: {
+    label: "Mediano",
+    description: "Meio termo entre Conservador e Agressivo.",
+    rr: "R:R ~ 1.68:1",
+    accuracy: "Assertividade média, com retorno equilibrado.",
+    stopMultiplier: "2.1",
+    entry1Multiplier: "0.618",
+    entry2Multiplier: "1.414",
+    entry2AdjustLastTarget: false,
+    target1Level: "0.618",
+    target1Percent: 50,
+    target2Level: "1.0",
+    target2Percent: 50,
+    target3Level: "0",
+    target3Percent: 0,
+  },
+  AGRESSIVO: {
+    label: "Agressivo",
+    description: "Mais trades ativados, stop mais curto.",
+    rr: "R:R ~ 2.65:1",
+    accuracy: "Menor assertividade, com retorno alto.",
+    stopMultiplier: "1.6",
+    entry1Multiplier: "0.618",
+    entry2Multiplier: "1.2",
+    entry2AdjustLastTarget: false,
+    target1Level: "0.618",
+    target1Percent: 20,
+    target2Level: "1.0",
+    target2Percent: 80,
+    target3Level: "0",
+    target3Percent: 0,
+  },
+  DEGEN: {
+    label: "Degen",
+    description: "Entrada e stop parecidos com Agressivo, com mais alvos.",
+    rr: "R:R ~ 3.67:1",
+    accuracy: "Assertividade menor, com retorno mais elevado.",
+    stopMultiplier: "1.52",
+    entry1Multiplier: "0.618",
+    entry2Multiplier: "1.1",
+    entry2AdjustLastTarget: false,
+    target1Level: "1.0",
+    target1Percent: 30,
+    target2Level: "1.618",
+    target2Percent: 40,
+    target3Level: "2.0",
+    target3Percent: 30,
+  },
+};
+
 export default function BotPage() {
   const [config, setConfig] = useState<BotConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +160,7 @@ export default function BotPage() {
   const [target2Percent, setTarget2Percent] = useState<number | "">(50);
   const [target3Level, setTarget3Level] = useState<number | string>("0");
   const [target3Percent, setTarget3Percent] = useState<number | "">(0);
+  const [selectedStrategy, setSelectedStrategy] = useState<StrategyKey>("CUSTOM");
 
   const limits = config?.plan_limits;
 
@@ -106,6 +193,20 @@ export default function BotPage() {
         setTarget2Percent(data.target2_percent ?? 50);
         setTarget3Level((data.target3_level ?? 0).toString());
         setTarget3Percent(data.target3_percent ?? 0);
+        const detectedStrategy = detectStrategy({
+          stopMultiplier: data.stop_multiplier,
+          entry1Multiplier: data.entry1_multiplier,
+          entry2Multiplier: data.entry2_multiplier,
+          entry2AdjustLastTarget: data.entry2_adjust_last_target,
+          target1Level: data.target1_level,
+          target1Percent: data.target1_percent,
+          target2Level: data.target2_level ?? 0,
+          target2Percent: data.target2_percent ?? 0,
+          target3Level: data.target3_level ?? 0,
+          target3Percent: data.target3_percent ?? 0,
+        });
+        setSelectedStrategy(detectedStrategy);
+        setShowAdvanced(detectedStrategy === "CUSTOM");
       } finally {
         setLoading(false);
       }
@@ -127,6 +228,93 @@ export default function BotPage() {
   function isValidDecimal(val: string): boolean {
     if (val === "" || val === "." || val === "," || val === "0." || val === "0,") return true;
     return /^\d*[.,]?\d*$/.test(val);
+  }
+
+  function toNumber(value: unknown, fallback: number): number {
+    if (typeof value === "number" && !isNaN(value)) return value;
+    if (typeof value === "string") {
+      const parsed = parseFloat(value.replace(",", "."));
+      if (!isNaN(parsed)) return parsed;
+    }
+    return fallback;
+  }
+
+  function isSameValue(a: number, b: number, tolerance = 0.0001): boolean {
+    return Math.abs(a - b) <= tolerance;
+  }
+
+  function matchesPreset(values: {
+    stopMultiplier: number;
+    entry1Multiplier: number;
+    entry2Multiplier: number;
+    entry2AdjustLastTarget: boolean;
+    target1Level: number;
+    target1Percent: number;
+    target2Level: number;
+    target2Percent: number;
+    target3Level: number;
+    target3Percent: number;
+  }, preset: StrategyPreset): boolean {
+    return (
+      isSameValue(values.stopMultiplier, toNumber(preset.stopMultiplier, 0)) &&
+      isSameValue(values.entry1Multiplier, toNumber(preset.entry1Multiplier, 0)) &&
+      isSameValue(values.entry2Multiplier, toNumber(preset.entry2Multiplier, 0)) &&
+      values.entry2AdjustLastTarget === preset.entry2AdjustLastTarget &&
+      isSameValue(values.target1Level, toNumber(preset.target1Level, 0)) &&
+      values.target1Percent === preset.target1Percent &&
+      isSameValue(values.target2Level, toNumber(preset.target2Level, 0)) &&
+      values.target2Percent === preset.target2Percent &&
+      isSameValue(values.target3Level, toNumber(preset.target3Level, 0)) &&
+      values.target3Percent === preset.target3Percent
+    );
+  }
+
+  function detectStrategy(values: {
+    stopMultiplier?: number;
+    entry1Multiplier?: number;
+    entry2Multiplier?: number;
+    entry2AdjustLastTarget?: boolean;
+    target1Level?: number;
+    target1Percent?: number;
+    target2Level?: number | null;
+    target2Percent?: number;
+    target3Level?: number | null;
+    target3Percent?: number;
+  }): StrategyKey {
+    const normalized = {
+      stopMultiplier: toNumber(values.stopMultiplier, 1.8),
+      entry1Multiplier: toNumber(values.entry1Multiplier, 0.618),
+      entry2Multiplier: toNumber(values.entry2Multiplier, 1.414),
+      entry2AdjustLastTarget: values.entry2AdjustLastTarget ?? true,
+      target1Level: toNumber(values.target1Level, 0.618),
+      target1Percent: values.target1Percent ?? 50,
+      target2Level: toNumber(values.target2Level, 0),
+      target2Percent: values.target2Percent ?? 0,
+      target3Level: toNumber(values.target3Level, 0),
+      target3Percent: values.target3Percent ?? 0,
+    };
+
+    const order: Exclude<StrategyKey, "CUSTOM">[] = ["CONSERVADOR", "MEDIANO", "AGRESSIVO", "DEGEN"];
+    for (const key of order) {
+      if (matchesPreset(normalized, STRATEGY_PRESETS[key])) {
+        return key;
+      }
+    }
+    return "CUSTOM";
+  }
+
+  function applyStrategyPreset(key: Exclude<StrategyKey, "CUSTOM">) {
+    const preset = STRATEGY_PRESETS[key];
+    setStopMultiplier(preset.stopMultiplier);
+    setEntry1Multiplier(preset.entry1Multiplier);
+    setEntry2Multiplier(preset.entry2Multiplier);
+    setEntry2AdjustLastTarget(preset.entry2AdjustLastTarget);
+    setTarget1Level(preset.target1Level);
+    setTarget1Percent(preset.target1Percent);
+    setTarget2Level(preset.target2Level);
+    setTarget2Percent(preset.target2Percent);
+    setTarget3Level(preset.target3Level);
+    setTarget3Percent(preset.target3Percent);
   }
 
   async function handleSaveSettings(e: React.FormEvent) {
@@ -505,7 +693,7 @@ export default function BotPage() {
             </div>
           </div>
 
-          {/* Configurações Avançadas (apenas Pro e Satoshi) */}
+          {/* Estratégias (apenas Pro e Satoshi) */}
           {(limits?.can_customize_targets || limits?.can_customize_stop) && (
             <>
               <hr className="border-zeedo-orange/20" />
@@ -517,7 +705,7 @@ export default function BotPage() {
                 className="flex w-full items-center justify-between rounded-lg bg-zeedo-orange/5 p-4 hover:bg-zeedo-orange/10 transition-colors"
               >
                 <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">
-                  Configurações Avançadas
+                  Estratégias
                 </h3>
                 <svg
                   className={`h-5 w-5 text-zeedo-orange transition-transform ${showAdvanced ? "rotate-180" : ""}`}
@@ -529,8 +717,55 @@ export default function BotPage() {
                 </svg>
               </button>
 
-              {/* Aviso para iniciantes */}
               {showAdvanced && (
+                <div className="grid gap-3">
+                  {(Object.entries(STRATEGY_PRESETS) as [Exclude<StrategyKey, "CUSTOM">, StrategyPreset][]).map(([key, preset]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setSelectedStrategy(key);
+                        applyStrategyPreset(key);
+                      }}
+                      className={`w-full rounded-lg border p-4 text-left transition-colors ${
+                        selectedStrategy === key
+                          ? "border-zeedo-orange bg-zeedo-orange/10"
+                          : "border-zeedo-orange/30 hover:bg-zeedo-orange/5"
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-zeedo-black dark:text-zeedo-white">{preset.label}</p>
+                      <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">{preset.description}</p>
+                      <p className="mt-1 text-xs text-zeedo-orange">{preset.rr} (2 entradas + todos alvos)</p>
+                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">{preset.accuracy}</p>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStrategy("CUSTOM");
+                      setShowAdvanced(true);
+                    }}
+                    className={`w-full rounded-lg border p-4 text-left transition-colors ${
+                      selectedStrategy === "CUSTOM"
+                        ? "border-zeedo-orange bg-zeedo-orange/10"
+                        : "border-zeedo-orange/30 hover:bg-zeedo-orange/5"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-zeedo-black dark:text-zeedo-white">Personalizada (Avançado)</p>
+                    <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
+                      Ajuste manual de entradas, stop e alvos.
+                    </p>
+                  </button>
+                </div>
+              )}
+              {showAdvanced && selectedStrategy !== "CUSTOM" && (
+                <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                  Os parâmetros da estratégia selecionada são aplicados automaticamente.
+                </p>
+              )}
+
+              {/* Aviso para iniciantes */}
+              {showAdvanced && selectedStrategy === "CUSTOM" && (
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
                   <div className="flex gap-3">
                     <svg className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -549,7 +784,7 @@ export default function BotPage() {
               )}
 
               {/* Botão Redefinir Padrão */}
-              {showAdvanced && (
+              {showAdvanced && selectedStrategy === "CUSTOM" && (
                 <button
                   type="button"
                   onClick={() => {
@@ -573,7 +808,7 @@ export default function BotPage() {
                 </button>
               )}
               
-              {showAdvanced && limits?.can_customize_stop && (
+              {showAdvanced && selectedStrategy === "CUSTOM" && limits?.can_customize_stop && (
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="stop_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
@@ -710,7 +945,7 @@ export default function BotPage() {
                 </div>
               )}
 
-              {showAdvanced && limits?.can_customize_targets && (
+              {showAdvanced && selectedStrategy === "CUSTOM" && limits?.can_customize_targets && (
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-base font-semibold text-zeedo-orange mb-1">

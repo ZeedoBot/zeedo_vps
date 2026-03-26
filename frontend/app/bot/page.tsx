@@ -544,7 +544,7 @@ export default function BotPage() {
               <li><span className="text-zeedo-orange text-lg leading-tight">•</span> <span className="font-semibold">Como conectar o Telegram</span></li>
               <li><span className="text-zeedo-orange text-lg leading-tight">•</span> <span className="font-semibold">Como configurar o Bot</span></li>
               <li><span className="text-zeedo-orange text-lg leading-tight">•</span> <span className="font-semibold">Dicas de gerenciamento de risco</span></li>
-              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Configurações Avançadas</li>
+              <li><span className="text-zeedo-orange text-lg leading-tight">•</span> Estratégias</li>
             </ul>
             <p className="mt-8 text-center font-semibold text-zeedo-black dark:text-zeedo-white">
               Extra:
