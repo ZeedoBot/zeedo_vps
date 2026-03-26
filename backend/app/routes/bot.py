@@ -66,6 +66,10 @@ class BotConfigUpdate(BaseModel):
     target2_percent: Optional[int] = Field(None, ge=0, le=100)
     target3_level: Optional[float] = Field(None, ge=0.0, le=5.0)
     target3_percent: Optional[int] = Field(None, ge=0, le=100)
+    strategy_preset: Optional[str] = Field(
+        None,
+        pattern="^(CONSERVADOR|MEDIANO|AGRESSIVO|DEGEN|CUSTOM)$",
+    )
 
 
 @router.get("/config")
@@ -80,7 +84,8 @@ def get_config(user_id: str = Depends(get_current_user_id)):
         "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, signal_mode, "
         "target_loss_usd, max_global_exposure, max_single_pos_exposure, max_positions, "
         "stop_multiplier, entry1_multiplier, entry2_multiplier, entry2_adjust_last_target, "
-        "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent, updated_at"
+        "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent, "
+        "strategy_preset, updated_at"
     ).eq("user_id", user_id).limit(1).execute()
     out = {
         "bot_enabled": False,
@@ -103,6 +108,7 @@ def get_config(user_id: str = Depends(get_current_user_id)):
         "target2_percent": 50,
         "target3_level": None,
         "target3_percent": 0,
+        "strategy_preset": None,
     }
     if r.data and len(r.data) > 0:
         out.update(r.data[0])

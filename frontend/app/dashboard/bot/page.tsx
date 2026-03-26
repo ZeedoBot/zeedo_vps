@@ -40,6 +40,8 @@ type BotConfig = {
   target2_percent?: number;
   target3_level?: number;
   target3_percent?: number;
+  /** CONSERVADOR | MEDIANO | AGRESSIVO | DEGEN | CUSTOM | null (inferir pelos números) */
+  strategy_preset?: string | null;
   plan_limits?: PlanLimits;
 };
 
@@ -50,6 +52,21 @@ const TRADE_MODE_LABELS: Record<string, string> = {
 };
 
 type StrategyKey = "CONSERVADOR" | "MEDIANO" | "AGRESSIVO" | "DEGEN" | "CUSTOM";
+
+const STRATEGY_KEYS: StrategyKey[] = ["CONSERVADOR", "MEDIANO", "AGRESSIVO", "DEGEN", "CUSTOM"];
+
+function parseStoredStrategy(v: unknown): StrategyKey | null {
+  if (v == null || String(v).trim() === "") return null;
+  const s = String(v).trim().toUpperCase();
+  return STRATEGY_KEYS.includes(s as StrategyKey) ? (s as StrategyKey) : null;
+}
+
+/** PostgREST às vezes devolve boolean como string — normaliza para match de preset. */
+function coerceBool(v: unknown, fallback: boolean): boolean {
+  if (v === true || v === "true" || v === 1 || v === "1") return true;
+  if (v === false || v === "false" || v === 0 || v === "0") return false;
+  return fallback;
+}
 
 type StrategyPreset = {
   label: string;
@@ -78,7 +95,7 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
     entry1Multiplier: "1.1",
     entry2Multiplier: "1.9",
     entry2AdjustLastTarget: true,
-    target1Level: "0.0",
+    target1Level: "0.618",
     target1Percent: 50,
     target2Level: "0.618",
     target2Percent: 50,
@@ -185,14 +202,14 @@ export default function BotPage() {
         setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
         setEntry1Multiplier((data.entry1_multiplier ?? 0.618).toString());
         setEntry2Multiplier((data.entry2_multiplier ?? 1.414).toString());
-        setEntry2AdjustLastTarget(data.entry2_adjust_last_target ?? true);
+        setEntry2AdjustLastTarget(coerceBool(data.entry2_adjust_last_target, true));
         setTarget1Level((data.target1_level ?? 0.618).toString());
         setTarget1Percent(data.target1_percent ?? 50);
         setTarget2Level((data.target2_level ?? 1.0).toString());
         setTarget2Percent(data.target2_percent ?? 50);
         setTarget3Level((data.target3_level ?? 0).toString());
         setTarget3Percent(data.target3_percent ?? 0);
-        const detectedStrategy = detectStrategy({
+        const inferred = detectStrategy({
           stopMultiplier: data.stop_multiplier,
           entry1Multiplier: data.entry1_multiplier,
           entry2Multiplier: data.entry2_multiplier,
@@ -204,7 +221,8 @@ export default function BotPage() {
           target3Level: data.target3_level ?? 0,
           target3Percent: data.target3_percent ?? 0,
         });
-        setSelectedStrategy(detectedStrategy);
+        const stored = parseStoredStrategy(data.strategy_preset);
+        setSelectedStrategy(stored ?? inferred);
       } finally {
         setLoading(false);
       }
@@ -237,7 +255,7 @@ export default function BotPage() {
     return fallback;
   }
 
-  function isSameValue(a: number, b: number, tolerance = 0.0001): boolean {
+  function isSameValue(a: number, b: number, tolerance = 0.001): boolean {
     return Math.abs(a - b) <= tolerance;
   }
 
@@ -283,7 +301,7 @@ export default function BotPage() {
       stopMultiplier: toNumber(values.stopMultiplier, 1.8),
       entry1Multiplier: toNumber(values.entry1Multiplier, 0.618),
       entry2Multiplier: toNumber(values.entry2Multiplier, 1.414),
-      entry2AdjustLastTarget: values.entry2AdjustLastTarget ?? true,
+      entry2AdjustLastTarget: coerceBool(values.entry2AdjustLastTarget, true),
       target1Level: toNumber(values.target1Level, 0.618),
       target1Percent: Math.round(toNumber(values.target1Percent, 50)),
       target2Level: toNumber(values.target2Level, 0),
@@ -388,7 +406,10 @@ export default function BotPage() {
           payload.target3_percent = 0;
         }
       }
-      
+      if (limits?.can_customize_targets || limits?.can_customize_stop) {
+        payload.strategy_preset = selectedStrategy;
+      }
+
       await apiPut(
         "/bot/config",
         payload,
@@ -405,6 +426,10 @@ export default function BotPage() {
               max_positions: mp,
               max_single_pos_exposure: msp,
               signal_mode: signalMode,
+              strategy_preset:
+                limits?.can_customize_targets || limits?.can_customize_stop
+                  ? selectedStrategy
+                  : c.strategy_preset,
             }
           : null
       );

@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+from typing import Optional
 import json
 import numpy as np
 import pandas as pd
@@ -626,6 +627,42 @@ def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, 
         except Exception as e:
             logging.error(f"Erro TP {fib_mult}: {e}")
 
+
+def _normalize_trade_side(side) -> Optional[str]:
+    """Normaliza side armazenado (tracker / DB) para LONG ou SHORT."""
+    if side is None:
+        return None
+    s = str(side).strip().upper()
+    if s in ("LONG", "L"):
+        return "LONG"
+    if s in ("SHORT", "S"):
+        return "SHORT"
+    if s == "BUY":
+        return "LONG"
+    if s == "SELL":
+        return "SHORT"
+    return None
+
+
+def _infer_position_side_from_fill(fill: dict) -> Optional[str]:
+    """
+    Infere o lado da POSIÇÃO (long/short) a partir do fill Hyperliquid.
+    Prefere `dir` (ex.: Open Long, Close Short); evita confundir ação de fechamento com o lado da posição.
+    """
+    raw_dir = str(fill.get("dir") or "")
+    rd = raw_dir.lower()
+    if "short" in rd:
+        return "SHORT"
+    if "long" in rd:
+        return "LONG"
+    raw_side = str(fill.get("side", "")).upper()
+    if raw_side in ("B", "BUY"):
+        return "LONG"
+    if raw_side in ("A", "SELL"):
+        return "SHORT"
+    return None
+
+
 def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
     try:
         # Limite: só considera trades após criação da conta no Zeedo (multiusuário)
@@ -677,6 +714,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         for oid, fills in new_fills_by_oid.items():
             base_fill = fills[0]
             coin = base_fill.get('coin') or base_fill.get('symbol') or base_fill.get('market') or None
+            fill_side_inf = _infer_position_side_from_fill(base_fill)
             tf = "-"
             trade_id = "-"
             
@@ -685,8 +723,11 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                 tracker_ts = int(entry_tracker[coin].get('placed_at', 0) * 1000)
                 try:
                     if abs(int(fill_ts) - tracker_ts) < 86400000:
-                        tf = entry_tracker[coin].get('tf', '-')
-                        trade_id = entry_tracker[coin].get('trade_id', '-')
+                        tr_side = _normalize_trade_side(entry_tracker[coin].get("side"))
+                        # Tracker antigo (ex.: LONG fechado) não pode "puxar" fee/PnL de novo trade no lado oposto
+                        if not (fill_side_inf and tr_side and fill_side_inf != tr_side):
+                            tf = entry_tracker[coin].get('tf', '-')
+                            trade_id = entry_tracker[coin].get('trade_id', '-')
                 except Exception:
                     pass
 
@@ -700,6 +741,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                         if abs(fill_ts - past_ts) < (72 * 3600 * 1000):
                             candidate_tf = past_trade.get('tf', '-')
                             candidate_tid = past_trade.get('trade_id', '-')
+                            past_side = _normalize_trade_side(past_trade.get("side"))
+                            if fill_side_inf and past_side and fill_side_inf != past_side:
+                                continue
                             
                             if candidate_tf != "-" and candidate_tid != "-":
                                 tf = candidate_tf
@@ -716,6 +760,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                     if tc == coin and tt and abs(fill_ts - tt) <= WINDOW_12H_MS:
                         tid = t.get('trade_id', '-')
                         if tid and tid != "-" and str(tid).startswith("MANUAL_"):
+                            past_side = _normalize_trade_side(t.get("side"))
+                            if fill_side_inf and past_side and fill_side_inf != past_side:
+                                continue
                             trade_id = tid
                             break
                 if trade_id == "-":
@@ -733,16 +780,19 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             
             pnl_net = total_pnl - total_fee
             trade = entry_tracker.get(coin)
-            if trade:
+            tr_side = _normalize_trade_side(trade.get("side")) if trade else None
+            tracker_side_mismatch = bool(trade and fill_side_inf and tr_side and fill_side_inf != tr_side)
+            if trade and not tracker_side_mismatch:
                 for fill in fills:
                     pnl_fill = float(fill.get("closedPnl", 0) or 0) - float(fill.get("fee", 0) or 0)
                     trade["pnl_realized"] += pnl_fill
                 storage.save_entry_tracker(entry_tracker)
             
-            # Side: usa o tracker (correto) quando disponível. Fill indica a ação de fechamento (ex: BUY fecha SHORT),
-            # não a direção original do trade — por isso inferir do fill erra (SHORT fechando = BUY → LONG errado).
-            if trade:
+            # Side: tracker quando alinhado ao fill; senão inferência HL (dir) evita confundir fechamento com lado da posição
+            if trade and not tracker_side_mismatch:
                 side = (trade.get("side") or "long").upper()
+            elif fill_side_inf:
+                side = fill_side_inf
             else:
                 raw_dir = str(base_fill.get('dir') or "")
                 if "Long" in raw_dir or raw_dir.lower().startswith("long"):
@@ -770,7 +820,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             if total_pnl != 0 and tg_time(fill_timestamp):
                 emoji = "🤑 PARCIAL REALIZADA" if pnl_net >= 0 else "❌ STOP"
                 sign = "+" if pnl_net >= 0 else ""                
-                if trade and trade.get("tf"):
+                if trade and trade.get("tf") and not tracker_side_mismatch:
                     tg_send(
                         f"{emoji}\n"
                         f"{side} {coin} {tf}\n"
@@ -785,17 +835,21 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             
             position_still_open = positions_by_coin.get(coin, 0) != 0
             if not position_still_open and tg_time(fill_timestamp):
-                trade = entry_tracker.get(coin)
-                if trade:
-                    total_pnl = trade.get("pnl_realized", 0.0)
+                trade_closed = entry_tracker.get(coin)
+                tr_closed_side = _normalize_trade_side(trade_closed.get("side")) if trade_closed else None
+                closed_tracker_mismatch = bool(
+                    trade_closed and fill_side_inf and tr_closed_side and fill_side_inf != tr_closed_side
+                )
+                if trade_closed and not closed_tracker_mismatch:
+                    total_closed_pnl = trade_closed.get("pnl_realized", 0.0)
                 else:
-                    total_pnl = pnl_net  #fallback de segurança
+                    total_closed_pnl = pnl_net  # fallback de segurança
 
-                sign = "+" if total_pnl >= 0 else ""
+                sign = "+" if total_closed_pnl >= 0 else ""
                 tg_send(
                     f"🏁 TRADE ENCERRADO\n"
                     f"{side} {coin}\n"
-                    f"PnL TOTAL: {sign}${total_pnl:.2f}"
+                    f"PnL TOTAL: {sign}${total_closed_pnl:.2f}"
                 )
 
         if new_trades:
