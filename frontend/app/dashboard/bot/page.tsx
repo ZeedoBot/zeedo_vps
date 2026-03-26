@@ -268,16 +268,16 @@ export default function BotPage() {
   }
 
   function detectStrategy(values: {
-    stopMultiplier?: number;
-    entry1Multiplier?: number;
-    entry2Multiplier?: number;
+    stopMultiplier?: number | string | null;
+    entry1Multiplier?: number | string | null;
+    entry2Multiplier?: number | string | null;
     entry2AdjustLastTarget?: boolean;
-    target1Level?: number;
-    target1Percent?: number;
-    target2Level?: number | null;
-    target2Percent?: number;
-    target3Level?: number | null;
-    target3Percent?: number;
+    target1Level?: number | string | null;
+    target1Percent?: number | string | null;
+    target2Level?: number | string | null;
+    target2Percent?: number | string | null;
+    target3Level?: number | string | null;
+    target3Percent?: number | string | null;
   }): StrategyKey {
     const normalized = {
       stopMultiplier: toNumber(values.stopMultiplier, 1.8),
@@ -285,11 +285,11 @@ export default function BotPage() {
       entry2Multiplier: toNumber(values.entry2Multiplier, 1.414),
       entry2AdjustLastTarget: values.entry2AdjustLastTarget ?? true,
       target1Level: toNumber(values.target1Level, 0.618),
-      target1Percent: values.target1Percent ?? 50,
+      target1Percent: Math.round(toNumber(values.target1Percent, 50)),
       target2Level: toNumber(values.target2Level, 0),
-      target2Percent: values.target2Percent ?? 0,
+      target2Percent: Math.round(toNumber(values.target2Percent, 0)),
       target3Level: toNumber(values.target3Level, 0),
-      target3Percent: values.target3Percent ?? 0,
+      target3Percent: Math.round(toNumber(values.target3Percent, 0)),
     };
 
     const order: Exclude<StrategyKey, "CUSTOM">[] = ["CONSERVADOR", "MEDIANO", "AGRESSIVO", "DEGEN"];
