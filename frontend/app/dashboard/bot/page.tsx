@@ -149,7 +149,6 @@ export default function BotPage() {
   const [signalMode, setSignalMode] = useState(false);
 
   // Estados para alvos e stop customizados
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [stopMultiplier, setStopMultiplier] = useState<number | string>("1.8");
   const [entry1Multiplier, setEntry1Multiplier] = useState<number | string>("0.618");
   const [entry2Multiplier, setEntry2Multiplier] = useState<number | string>("1.414");
@@ -206,7 +205,6 @@ export default function BotPage() {
           target3Percent: data.target3_percent ?? 0,
         });
         setSelectedStrategy(detectedStrategy);
-        setShowAdvanced(detectedStrategy === "CUSTOM");
       } finally {
         setLoading(false);
       }
@@ -595,7 +593,7 @@ export default function BotPage() {
           <div className="space-y-4">
             <div title={`Limite do plano: ${limits.target_loss_min} – ${limits.target_loss_max} USD`}>
               <label htmlFor="target_loss" className="block text-sm font-medium text-zeedo-orange mb-1">
-                Target loss (USD)
+                Target Loss (Valor em USD que você arrisca perder por trade)
               </label>
               <input
                 id="target_loss"
@@ -621,7 +619,7 @@ export default function BotPage() {
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                Máx. {limits.target_loss_min} – {limits.target_loss_max >= 99999 ? "Ilimitado" : `${limits.target_loss_max} USD`}
+                {limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.target_loss_min} – ${limits.target_loss_max} USD`}
               </p>
               <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
                 {entry2Enabled
@@ -657,12 +655,12 @@ export default function BotPage() {
                 className="input-field max-w-xs"
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                Máx. {limits.max_positions}
+                {limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.max_positions}`}
               </p>
             </div>
             <div title={limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.max_single_position_usd} USD`}>
               <label htmlFor="max_single" className="block text-sm font-medium text-zeedo-orange mb-1">
-                Patrimônio por trade
+                Patrimônio por trade (Trava de Segurança)
               </label>
               <input
                 id="max_single"
@@ -697,75 +695,63 @@ export default function BotPage() {
           {(limits?.can_customize_targets || limits?.can_customize_stop) && (
             <>
               <hr className="border-zeedo-orange/20" />
-              
-              {/* Botão para expandir/colapsar */}
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex w-full items-center justify-between rounded-lg bg-zeedo-orange/5 p-4 hover:bg-zeedo-orange/10 transition-colors"
-              >
-                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">
-                  Estratégias
-                </h3>
-                <svg
-                  className={`h-5 w-5 text-zeedo-orange transition-transform ${showAdvanced ? "rotate-180" : ""}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {showAdvanced && (
-                <div className="grid gap-3">
-                  {(Object.entries(STRATEGY_PRESETS) as [Exclude<StrategyKey, "CUSTOM">, StrategyPreset][]).map(([key, preset]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        setSelectedStrategy(key);
-                        applyStrategyPreset(key);
-                      }}
-                      className={`w-full rounded-lg border p-4 text-left transition-colors ${
-                        selectedStrategy === key
-                          ? "border-zeedo-orange bg-zeedo-orange/10"
-                          : "border-zeedo-orange/30 hover:bg-zeedo-orange/5"
-                      }`}
-                    >
-                      <p className="text-sm font-semibold text-zeedo-black dark:text-zeedo-white">{preset.label}</p>
-                      <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">{preset.description}</p>
-                      <p className="mt-1 text-xs text-zeedo-orange">{preset.rr} (2 entradas + todos alvos)</p>
-                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">{preset.accuracy}</p>
-                    </button>
-                  ))}
+              <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">
+                Estratégias
+              </h3>
+              <div className="space-y-2">
+                {(Object.entries(STRATEGY_PRESETS) as [Exclude<StrategyKey, "CUSTOM">, StrategyPreset][]).map(([key, preset]) => (
                   <button
+                    key={key}
                     type="button"
                     onClick={() => {
-                      setSelectedStrategy("CUSTOM");
-                      setShowAdvanced(true);
+                      setSelectedStrategy(key);
+                      applyStrategyPreset(key);
                     }}
-                    className={`w-full rounded-lg border p-4 text-left transition-colors ${
-                      selectedStrategy === "CUSTOM"
-                        ? "border-zeedo-orange bg-zeedo-orange/10"
-                        : "border-zeedo-orange/30 hover:bg-zeedo-orange/5"
+                    className={`w-full rounded-lg px-3 py-2 text-left text-sm border transition-colors ${
+                      selectedStrategy === key
+                        ? "bg-zeedo-orange text-white border-zeedo-orange"
+                        : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
                     }`}
                   >
-                    <p className="text-sm font-semibold text-zeedo-black dark:text-zeedo-white">Personalizada (Avançado)</p>
-                    <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
-                      Ajuste manual de entradas, stop e alvos.
-                    </p>
+                    {preset.label}
                   </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSelectedStrategy("CUSTOM")}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm border transition-colors ${
+                    selectedStrategy === "CUSTOM"
+                      ? "bg-zeedo-orange text-white border-zeedo-orange"
+                      : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
+                  }`}
+                >
+                  Personalizada (Avançado)
+                </button>
+              </div>
+
+              {selectedStrategy !== "CUSTOM" ? (
+                <div className="rounded-lg border border-zeedo-orange/30 bg-zeedo-orange/5 p-4">
+                  <p className="text-sm font-semibold text-zeedo-black dark:text-zeedo-white">
+                    {STRATEGY_PRESETS[selectedStrategy].label}
+                  </p>
+                  <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
+                    {STRATEGY_PRESETS[selectedStrategy].description}
+                  </p>
+                  <p className="mt-1 text-xs text-zeedo-orange">
+                    {STRATEGY_PRESETS[selectedStrategy].rr} (2 entradas + todos alvos)
+                  </p>
+                  <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                    {STRATEGY_PRESETS[selectedStrategy].accuracy}
+                  </p>
                 </div>
-              )}
-              {showAdvanced && selectedStrategy !== "CUSTOM" && (
+              ) : (
                 <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                  Os parâmetros da estratégia selecionada são aplicados automaticamente.
+                  Ajuste manual de entradas, stop e alvos.
                 </p>
               )}
 
               {/* Aviso para iniciantes */}
-              {showAdvanced && selectedStrategy === "CUSTOM" && (
+              {selectedStrategy === "CUSTOM" && (
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4">
                   <div className="flex gap-3">
                     <svg className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -784,7 +770,7 @@ export default function BotPage() {
               )}
 
               {/* Botão Redefinir Padrão */}
-              {showAdvanced && selectedStrategy === "CUSTOM" && (
+              {selectedStrategy === "CUSTOM" && (
                 <button
                   type="button"
                   onClick={() => {
@@ -808,7 +794,7 @@ export default function BotPage() {
                 </button>
               )}
               
-              {showAdvanced && selectedStrategy === "CUSTOM" && limits?.can_customize_stop && (
+              {selectedStrategy === "CUSTOM" && limits?.can_customize_stop && (
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="stop_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
@@ -945,7 +931,7 @@ export default function BotPage() {
                 </div>
               )}
 
-              {showAdvanced && selectedStrategy === "CUSTOM" && limits?.can_customize_targets && (
+              {selectedStrategy === "CUSTOM" && limits?.can_customize_targets && (
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-base font-semibold text-zeedo-orange mb-1">
