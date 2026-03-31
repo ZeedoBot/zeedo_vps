@@ -15,6 +15,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
+import { IoNotificationsOutline, IoPower } from "react-icons/io5";
 
 const PERIOD_OPTIONS = [
   { value: "24h", label: "24 horas" },
@@ -87,11 +88,6 @@ type BotConfig = {
 };
 type WalletStatus = { connected: boolean; wallet_address: string | null };
 type TelegramStatus = { connected: boolean };
-
-function truncateAddress(addr: string): string {
-  if (!addr || addr.length <= 16) return addr || "Conectada";
-  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
-}
 
 function groupTradesById(trades: Trade[]) {
   const map = new Map<string, { pnl: number; token: string; side: string; tf: string; time: number; pnl_pct?: number | null }>();
@@ -290,38 +286,15 @@ export default function DashboardPage() {
           - Mobile: cards de status primeiro (compactos)
           - Desktop: abre direto no painel/gráfico; cards descem para depois do gráfico */}
       <div className="flex flex-col gap-8">
-        {/* Aviso Modo Sinal */}
-        {botConfig?.signal_mode && (
-          <>
-            {/* Mobile: apenas uma linha laranja, sem caixote */}
-            <div className="sm:hidden">
-              <a href="/dashboard/bot" className="block text-zeedo-orange font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-                ⚠️Modo Sinal Ativado
-              </a>
-            </div>
-            {/* Desktop: mantém card com CTA */}
-            <div className="hidden sm:block rounded-lg border border-zeedo-orange/40 bg-zeedo-orange/10 p-4 text-zeedo-black dark:text-zeedo-white">
-              <p className="font-medium text-zeedo-orange">
-                Zeedo em Modo Sinal: Trades não serão ativados automáticamente
-              </p>
-              <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline mt-1 inline-block">
-                Ajustar em Configurações do Bot →
-              </a>
-            </div>
-          </>
-        )}
-
-        {/* Cards de status (compactos no mobile; depois do gráfico no desktop) */}
-        <div className="order-1 lg:order-4 grid grid-cols-3 gap-2 sm:gap-4">
+        {/* Cards de status + aviso Modo Sinal (logo abaixo dos cards no mobile e no desktop) */}
+        <div className="order-1 lg:order-3 space-y-2">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <a href="/dashboard/wallet" className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 block">
             <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
               Carteira
             </h2>
-            <p
-              className="text-sm sm:text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate"
-              title={walletStatus?.wallet_address ?? undefined}
-            >
-              {walletStatus?.connected ? truncateAddress(walletStatus.wallet_address ?? "") : "Não conectada"}
+            <p className="text-sm sm:text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate">
+              {walletStatus?.connected ? "Conectado" : "Não conectado"}
             </p>
             <span className="hidden sm:inline-block text-sm text-zeedo-orange hover:underline mt-2">
               {walletStatus?.connected ? "Alterar" : "Conectar"}
@@ -340,12 +313,12 @@ export default function DashboardPage() {
             </span>
           </a>
 
-          <div className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4">
+          <div className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 min-w-0">
             <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
               Bot
             </h2>
-            <div className="flex items-center justify-between gap-2">
-              <p className={`text-sm sm:text-lg font-medium ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className={`min-w-0 flex-1 text-sm sm:text-lg font-medium truncate ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
                 {botStatus?.status === "running" ? "Ligado" : "Desligado"}
               </p>
               {botStatus?.status === "running" ? (
@@ -353,18 +326,20 @@ export default function DashboardPage() {
                   type="button"
                   onClick={toggleBot}
                   disabled={botToggling}
-                  className="text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-red-500/50 text-red-600 hover:bg-red-500/10 transition-colors shrink-0 ml-auto"
+                  aria-label="Desligar bot"
+                  className="shrink-0 inline-flex items-center justify-center p-1.5 rounded-lg border border-red-500/60 text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                 >
-                  {botToggling ? "…" : "Desligar"}
+                  <IoPower className="h-5 w-5 rotate-[135deg]" />
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={toggleBot}
                   disabled={botToggling || !walletStatus?.connected || !telegramStatus?.connected}
-                  className="text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-green-500/50 text-green-600 hover:bg-green-500/10 transition-colors shrink-0 ml-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  aria-label="Ligar bot"
+                  className="shrink-0 inline-flex items-center justify-center p-1.5 rounded-lg border border-green-500/60 text-green-600 hover:bg-green-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {botToggling ? "…" : "Ligar"}
+                  <IoPower className="h-5 w-5" />
                 </button>
               )}
             </div>
@@ -378,12 +353,22 @@ export default function DashboardPage() {
             </a>
           </div>
         </div>
+        {botConfig?.signal_mode && (
+            <a
+              href="/dashboard/bot"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-zeedo-orange hover:underline"
+            >
+              <IoNotificationsOutline className="h-3 w-3 shrink-0 text-zeedo-orange opacity-90" aria-hidden />
+              Modo Sinal Ativado
+            </a>
+        )}
+        </div>
 
         {/* Painel de Performance */}
         <section className="order-2 lg:order-1">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">
-            📊 Painel de Lucros e Performance
+            Performance
           </h2>
           <div className="flex flex-wrap items-center gap-3">
             <select
@@ -624,7 +609,7 @@ export default function DashboardPage() {
       {metrics.grouped.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
-            📋 Detalhamento (Agrupado por Trade ID)
+            Histórico
           </h2>
           <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
             <table className="min-w-full divide-y divide-zeedo-orange/20">
