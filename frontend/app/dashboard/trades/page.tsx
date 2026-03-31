@@ -52,6 +52,12 @@ const BLOCKED_REASON_LABELS: Record<string, string> = {
   limite_trades: "Limite de trades",
 };
 
+/** Última coluna (ações): fixa à direita no mobile durante scroll horizontal. */
+const STICKY_ACTION_TH =
+  "max-md:sticky max-md:right-0 max-md:z-[2] max-md:min-w-[12rem] max-md:bg-zeedo-white max-md:dark:bg-zeedo-black max-md:shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.12)] max-md:dark:shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.35)]";
+const STICKY_ACTION_TD =
+  "max-md:sticky max-md:right-0 max-md:z-[1] max-md:min-w-[12rem] max-md:bg-zeedo-white max-md:dark:bg-zeedo-black max-md:shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.12)] max-md:dark:shadow-[-6px_0_10px_-4px_rgba(0,0,0,0.35)]";
+
 function formatBlockedReasonPart(part: string): string {
   const t = part.trim();
   if (!t) return "";
@@ -208,11 +214,11 @@ export default function TradesPage() {
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Ticker</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">TF</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">PnL</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Valor</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">PnL</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Fechar</th>
+                    <th className={`px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase ${STICKY_ACTION_TH}`}>Fechar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zeedo-orange/20">
@@ -221,13 +227,13 @@ export default function TradesPage() {
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.symbol}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.tf}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.side.toUpperCase()}</td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
                       <td className={`px-4 py-2 text-sm text-right font-medium ${(p.unrealized_pnl ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                         {p.unrealized_pnl != null ? `${p.unrealized_pnl >= 0 ? "+" : ""}$${p.unrealized_pnl.toFixed(2)}` : "-"}
                       </td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
-                      <td className="px-4 py-2 text-sm text-right">
+                      <td className={`px-4 py-2 text-sm text-right ${STICKY_ACTION_TD}`}>
                         <div className="flex items-center justify-end gap-2">
                           <select
                             value={closePct[p.symbol] ?? 100}
@@ -273,7 +279,7 @@ export default function TradesPage() {
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Valor</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Ação</th>
+                    <th className={`px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase ${STICKY_ACTION_TH}`}>Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zeedo-orange/20">
@@ -285,7 +291,7 @@ export default function TradesPage() {
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
-                      <td className="px-4 py-2 text-sm text-right">
+                      <td className={`px-4 py-2 text-sm text-right ${STICKY_ACTION_TD}`}>
                         <button
                           type="button"
                           onClick={() => handleCancelPending(p.symbol)}
@@ -327,7 +333,7 @@ export default function TradesPage() {
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">1ª entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">2ª entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Ação</th>
+                    <th className={`px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase ${STICKY_ACTION_TH}`}>Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zeedo-orange/20">
@@ -343,15 +349,15 @@ export default function TradesPage() {
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry2_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.stop_real?.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-sm text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className={`px-4 py-2 text-sm text-right ${STICKY_ACTION_TD}`}>
+                        <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
                           <a
                             href={`https://app.hyperliquid.xyz/trade/${b.symbol}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-zeedo-orange hover:underline"
+                            className="text-xs text-zeedo-orange hover:underline whitespace-nowrap"
                           >
-                            Abrir HL
+                            Ver gráfico
                           </a>
                           <button
                             type="button"

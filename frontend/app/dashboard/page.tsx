@@ -329,7 +329,7 @@ export default function DashboardPage() {
                   aria-label="Desligar bot"
                   className="shrink-0 inline-flex items-center justify-center p-1.5 rounded-lg border border-red-500/60 text-red-600 hover:bg-red-500/10 transition-colors disabled:opacity-50"
                 >
-                  <IoPower className="h-5 w-5 rotate-[135deg]" />
+                  <IoPower className="h-5 w-5" />
                 </button>
               ) : (
                 <button

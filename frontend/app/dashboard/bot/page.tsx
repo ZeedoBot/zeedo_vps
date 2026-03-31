@@ -484,13 +484,13 @@ export default function BotPage() {
         <form onSubmit={handleSaveSettings} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-zeedo-orange mb-2">Símbolos</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-5 gap-2 sm:flex sm:flex-wrap">
               {symbolsOptions.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => toggleSymbol(s)}
-                  className={`rounded-lg px-3 py-1.5 text-sm border transition-colors ${
+                  className={`w-full rounded-lg px-2 py-1 text-xs sm:w-auto sm:px-3 sm:py-1.5 sm:text-sm border transition-colors ${
                     symbolsInput.includes(s)
                       ? "bg-zeedo-orange text-white border-zeedo-orange"
                       : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
@@ -503,13 +503,13 @@ export default function BotPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-zeedo-orange mb-2">Timeframes</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-6 gap-2 sm:flex sm:flex-wrap">
               {timeframesOptions.map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => toggleTimeframe(t)}
-                  className={`rounded-lg px-3 py-1.5 text-sm border transition-colors ${
+                  className={`w-full rounded-lg px-2 py-1 text-xs sm:w-auto sm:px-3 sm:py-1.5 sm:text-sm border transition-colors ${
                     timeframesInput.includes(t)
                       ? "bg-zeedo-orange text-white border-zeedo-orange"
                       : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
@@ -522,13 +522,13 @@ export default function BotPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-zeedo-orange mb-2">Modo</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
               {tradeModeOptions.map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setConfig((c) => (c ? { ...c, trade_mode: m } : null))}
-                  className={`rounded-lg px-3 py-1.5 text-sm border transition-colors ${
+                  className={`w-full rounded-lg px-2 py-1 text-xs sm:w-auto sm:px-3 sm:py-1.5 sm:text-sm border transition-colors ${
                     (config?.trade_mode ?? "BOTH") === m
                       ? "bg-zeedo-orange text-white border-zeedo-orange"
                       : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
