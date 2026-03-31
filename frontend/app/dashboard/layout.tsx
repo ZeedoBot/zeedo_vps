@@ -5,6 +5,15 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { IoHome } from "react-icons/io5";
+import { MdCandlestickChart } from "react-icons/md";
+import { FaWrench } from "react-icons/fa";
+
+const mobileTabBar = [
+  { href: "/dashboard", label: "Dashboard", Icon: IoHome, match: (p: string) => p === "/dashboard" },
+  { href: "/dashboard/trades", label: "Trades", Icon: MdCandlestickChart, match: (p: string) => p.startsWith("/dashboard/trades") },
+  { href: "/dashboard/bot", label: "Configurações do Bot", Icon: FaWrench, match: (p: string) => p.startsWith("/dashboard/bot") },
+] as const;
 
 const mainNav = [
   { href: "/dashboard", label: "Dashboard" },
@@ -219,7 +228,34 @@ export default function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-8 pb-24 sm:px-6 md:pb-8">
+        {children}
+      </main>
+
+      {/* Bottom tab bar — somente mobile */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch justify-around border-t border-zeedo-orange/20 bg-zeedo-white/95 px-2 pt-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur-md dark:bg-zeedo-black/95 md:hidden"
+        aria-label="Navegação principal"
+      >
+        {mobileTabBar.map((item) => {
+          const { href, label, Icon, match } = item;
+          const active = match(pathname);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-label={label}
+              className={`flex min-w-0 flex-1 flex-col items-center justify-center py-2 transition-colors ${
+                active
+                  ? "text-zeedo-orange"
+                  : "text-zeedo-black/55 hover:text-zeedo-orange dark:text-zeedo-white/55 dark:hover:text-zeedo-orange"
+              }`}
+            >
+              <Icon className={`h-7 w-7 shrink-0 ${active ? "opacity-100" : "opacity-85"}`} aria-hidden />
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }

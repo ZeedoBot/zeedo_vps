@@ -261,12 +261,17 @@ export default function DashboardPage() {
     botStatus?.status === "running" &&
     (!(botConfig?.symbols?.length ?? 0) || !(botConfig?.timeframes?.length ?? 0));
 
+  const hasDataToShow =
+    (overview?.trades?.length ?? 0) > 0 ||
+    (overview?.open_positions?.length ?? 0) > 0 ||
+    (overview?.pending_positions?.length ?? 0) > 0;
+
   return (
     <div className="space-y-8">
       <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white">
         Dashboard
       </h1>
-      <p className="text-zeedo-black/60 dark:text-zeedo-white/60 -mt-4">
+      <p className={`text-zeedo-black/60 dark:text-zeedo-white/60 -mt-4 ${hasDataToShow ? "hidden sm:block" : ""}`}>
         Acompanhe o status do seu bot, carteira e performance em um só lugar.
       </p>
 
@@ -281,88 +286,101 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {botConfig?.signal_mode && (
-        <div className="rounded-lg border border-zeedo-orange/40 bg-zeedo-orange/10 p-4 text-zeedo-black dark:text-zeedo-white">
-          <p className="font-medium text-zeedo-orange">
-            Zeedo em Modo Sinal: Trades não serão ativados automáticamente
-          </p>
-          <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline mt-1 inline-block">
-            Ajustar em Configurações do Bot →
-          </a>
-        </div>
-      )}
+      {/* Layout responsivo:
+          - Mobile: cards de status primeiro (compactos)
+          - Desktop: abre direto no painel/gráfico; cards descem para depois do gráfico */}
+      <div className="flex flex-col gap-8">
+        {/* Aviso Modo Sinal */}
+        {botConfig?.signal_mode && (
+          <>
+            {/* Mobile: apenas uma linha laranja, sem caixote */}
+            <div className="sm:hidden">
+              <a href="/dashboard/bot" className="block text-zeedo-orange font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+                ⚠️Modo Sinal Ativado
+              </a>
+            </div>
+            {/* Desktop: mantém card com CTA */}
+            <div className="hidden sm:block rounded-lg border border-zeedo-orange/40 bg-zeedo-orange/10 p-4 text-zeedo-black dark:text-zeedo-white">
+              <p className="font-medium text-zeedo-orange">
+                Zeedo em Modo Sinal: Trades não serão ativados automáticamente
+              </p>
+              <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline mt-1 inline-block">
+                Ajustar em Configurações do Bot →
+              </a>
+            </div>
+          </>
+        )}
 
-      {/* Cards de status */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-zeedo-orange/20 p-4">
-          <h2 className="text-sm font-medium text-zeedo-orange mb-1">
-            Carteira Hyperliquid
-          </h2>
-          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate" title={walletStatus?.wallet_address ?? undefined}>
-            {walletStatus?.connected ? truncateAddress(walletStatus.wallet_address ?? "") : "Não conectada"}
-          </p>
-          <a
-            href="/dashboard/wallet"
-            className="text-sm text-zeedo-orange hover:underline mt-2 inline-block"
-          >
-            {walletStatus?.connected ? "Alterar" : "Conectar"}
-          </a>
-        </div>
-        <div className="rounded-lg border border-zeedo-orange/20 p-4">
-          <h2 className="text-sm font-medium text-zeedo-orange mb-1">
-            Telegram
-          </h2>
-          <p className="text-lg font-medium text-zeedo-black dark:text-zeedo-white">
-            {telegramStatus?.connected ? "Conectado" : "Não conectado"}
-          </p>
-          <a
-            href="/dashboard/telegram"
-            className="text-sm text-zeedo-orange hover:underline mt-2 inline-block"
-          >
-            {telegramStatus?.connected ? "Alterar" : "Conectar"}
-          </a>
-        </div>
-        <div className="rounded-lg border border-zeedo-orange/20 p-4">
-          <h2 className="text-sm font-medium text-zeedo-orange mb-1">
-            Bot
-          </h2>
-          <div className="flex items-center justify-between gap-2">
-            <p className={`text-lg font-medium ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
-              {botStatus?.status === "running" ? "Ligado" : "Desligado"}
+        {/* Cards de status (compactos no mobile; depois do gráfico no desktop) */}
+        <div className="order-1 lg:order-4 grid grid-cols-3 gap-2 sm:gap-4">
+          <a href="/dashboard/wallet" className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 block">
+            <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
+              Carteira
+            </h2>
+            <p
+              className="text-sm sm:text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate"
+              title={walletStatus?.wallet_address ?? undefined}
+            >
+              {walletStatus?.connected ? truncateAddress(walletStatus.wallet_address ?? "") : "Não conectada"}
             </p>
-            {botStatus?.status === "running" ? (
-              <button
-                type="button"
-                onClick={toggleBot}
-                disabled={botToggling}
-                className="text-sm font-medium px-3 py-1.5 rounded-lg border border-red-500/50 text-red-600 hover:bg-red-500/10 transition-colors shrink-0 ml-auto"
-              >
-                {botToggling ? "…" : "Desligar"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={toggleBot}
-                disabled={botToggling || !walletStatus?.connected || !telegramStatus?.connected}
-                className="text-sm font-medium px-3 py-1.5 rounded-lg border border-green-500/50 text-green-600 hover:bg-green-500/10 transition-colors shrink-0 ml-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              >
-                {botToggling ? "…" : "Ligar"}
-              </button>
+            <span className="hidden sm:inline-block text-sm text-zeedo-orange hover:underline mt-2">
+              {walletStatus?.connected ? "Alterar" : "Conectar"}
+            </span>
+          </a>
+
+          <a href="/dashboard/telegram" className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 block">
+            <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
+              Telegram
+            </h2>
+            <p className="text-sm sm:text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate">
+              {telegramStatus?.connected ? "Conectado" : "Não conectado"}
+            </p>
+            <span className="hidden sm:inline-block text-sm text-zeedo-orange hover:underline mt-2">
+              {telegramStatus?.connected ? "Alterar" : "Conectar"}
+            </span>
+          </a>
+
+          <div className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4">
+            <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
+              Bot
+            </h2>
+            <div className="flex items-center justify-between gap-2">
+              <p className={`text-sm sm:text-lg font-medium ${botStatus?.status === "running" ? "text-green-600" : "text-red-600"}`}>
+                {botStatus?.status === "running" ? "Ligado" : "Desligado"}
+              </p>
+              {botStatus?.status === "running" ? (
+                <button
+                  type="button"
+                  onClick={toggleBot}
+                  disabled={botToggling}
+                  className="text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-red-500/50 text-red-600 hover:bg-red-500/10 transition-colors shrink-0 ml-auto"
+                >
+                  {botToggling ? "…" : "Desligar"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={toggleBot}
+                  disabled={botToggling || !walletStatus?.connected || !telegramStatus?.connected}
+                  className="text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-green-500/50 text-green-600 hover:bg-green-500/10 transition-colors shrink-0 ml-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                >
+                  {botToggling ? "…" : "Ligar"}
+                </button>
+              )}
+            </div>
+            {botStatus?.status !== "running" && (!walletStatus?.connected || !telegramStatus?.connected) && (
+              <p className="hidden sm:block text-xs text-zeedo-black/60 dark:text-zeedo-white/60 mt-1">
+                Conecte a carteira e o Telegram para ligar o bot.
+              </p>
             )}
+            <a href="/dashboard/bot" className="hidden sm:block text-sm text-zeedo-orange hover:underline mt-2">
+              Configurar
+            </a>
           </div>
-          {botStatus?.status !== "running" && (!walletStatus?.connected || !telegramStatus?.connected) && (
-            <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 mt-1">
-              Conecte a carteira e o Telegram para ligar o bot.
-            </p>
-          )}
-          <a href="/dashboard/bot" className="text-sm text-zeedo-orange hover:underline block mt-2">
-            Configurar
-          </a>
         </div>
-      </div>
 
-      {/* Painel de Performance */}
-      <section>
+        {/* Painel de Performance */}
+        <section className="order-2 lg:order-1">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">
             📊 Painel de Lucros e Performance
@@ -408,11 +426,11 @@ export default function DashboardPage() {
           <MetricCard label="Payoff" value={metrics.payoff.toFixed(2)} />
           <MetricCard label="Lucro %" value={`${metrics.pnlPct.toFixed(2)}%`} />
         </div>
-      </section>
+        </section>
 
-      {/* Gráfico de Crescimento */}
-      {metrics.growthData.length > 0 && (
-        <section>
+        {/* Gráfico de Crescimento */}
+        {metrics.growthData.length > 0 && (
+          <section className="order-3 lg:order-2">
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
             Curva de Crescimento
           </h2>
@@ -437,8 +455,9 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </section>
-      )}
+          </section>
+        )}
+      </div>
 
       {/* Performance por Lado, TF e Token */}
       {(bySide.length > 0 || byTf.length > 0 || byToken.length > 0) && (

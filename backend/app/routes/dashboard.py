@@ -563,11 +563,22 @@ def execute_blocked_trade(
     account = Account.from_key(private_key)
     exchange = Exchange(account, base_url, account_address=wallet)
 
+    # Gera trade_id antes de enviar a ordem, para assinar via clientOrderId (evita ser tratado como manual)
+    trade_id = f"{symbol}-{int(time.time())}"
+    client_oid = f"{trade_id}_{int(time.time()*1000)}".replace(" ", "_").replace("-", "_")
+
     # round price for exchange
     entry_px_rounded = round(entry_px, 5)
     is_buy = side == "long"
     try:
-        res = exchange.order(symbol, is_buy, qty, entry_px_rounded, {"limit": {"tif": "Gtc"}}, reduce_only=False)
+        res = exchange.order(
+            symbol,
+            is_buy,
+            qty,
+            entry_px_rounded,
+            {"limit": {"tif": "Gtc"}, "clientOrderId": client_oid},
+            reduce_only=False,
+        )
     except Exception as e:
         logger.exception(f"Erro order execute-blocked-trade {symbol}: {e}")
         raise HTTPException(status_code=502, detail=f"Erro ao colocar ordem: {str(e)}")
@@ -578,7 +589,6 @@ def execute_blocked_trade(
         if st.get("error"):
             raise HTTPException(status_code=400, detail=f"Hyperliquid: {st['error']}")
 
-    trade_id = f"{symbol}-{int(time.time())}"
     second_qty = qty if entry2_enabled else 0
     qty_entry_1 = qty
     qty_entry_2 = qty + second_qty
