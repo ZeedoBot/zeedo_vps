@@ -968,9 +968,6 @@ export default function BotPage() {
                       }}
                       className="input-field max-w-xs"
                     />
-                    <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                      Stop Padrão: 1.8 | Intervalo: 1.0 a 10.0
-                    </p>
                   </div>
 
                   <div>
@@ -1003,13 +1000,9 @@ export default function BotPage() {
                       }}
                       className="input-field max-w-xs"
                     />
-                    <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                      Padrão: -0.618 | Intervalo: 0.0 a 3.0 (LONG usa -valor / SHORT usa +valor)
-                    </p>
                   </div>
 
                   {limits?.allowed_entry2 && (
-                    <>
                       <div>
                         <label htmlFor="entry2_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
                           Entrada 2
@@ -1040,11 +1033,238 @@ export default function BotPage() {
                           }}
                           className="input-field max-w-xs"
                         />
-                        <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                          Entrada 2 Padrão: 1.414 | Intervalo: 0.618 a 5.0
-                        </p>
                       </div>
+                  )}
+                </div>
+              )}
 
+              {selectedStrategy === "CUSTOM" && limits?.can_customize_targets && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-base font-semibold text-zeedo-orange mb-1">
+                      Alvos de Realização
+                    </h3>
+                    <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-tight">
+                      Alvo 1 é obrigatório.<br />
+                      Alvos 2 e 3 são opcionais (deixe em 0 para desativar).<br />
+                      A soma dos percentuais deve ser 100%.
+                    </p>
+                  </div>
+                  
+                  {/* Alvo 1 - OBRIGATÓRIO */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="target1_level" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 1 (Nível Fib) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="target1_level"
+                        type="text"
+                        inputMode="decimal"
+                        value={target1Level}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (isValidDecimal(val)) {
+                            setTarget1Level(val);
+                          }
+                        }}
+                        onBlur={() => {
+                          const normalized = normalizeDecimalInput(target1Level);
+                          if (normalized === "" || normalized === ".") {
+                            setTarget1Level("0.618");
+                          } else {
+                            const num = Number(normalized);
+                            if (!isNaN(num)) {
+                            setTarget1Level(clampValue(num, 0, 5).toString());
+                            } else {
+                              setTarget1Level("0.618");
+                            }
+                          }
+                        }}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="target1_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 1 (%) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="target1_percent"
+                        type="text"
+                        inputMode="numeric"
+                        value={target1Percent}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget1Percent("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget1Percent(clampValue(num, 0, 100));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target1Percent === "") {
+                            setTarget1Percent(50);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Alvo 2 - OPCIONAL */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="target2_level" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 2 (Nível Fib)
+                      </label>
+                      <input
+                        id="target2_level"
+                        type="text"
+                        inputMode="decimal"
+                        value={target2Level}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (isValidDecimal(val)) {
+                            setTarget2Level(val);
+                          }
+                        }}
+                        onBlur={() => {
+                          const normalized = normalizeDecimalInput(target2Level);
+                          if (normalized === "" || normalized === ".") {
+                            setTarget2Level("1.0");
+                          } else {
+                            const num = Number(normalized);
+                            if (!isNaN(num)) {
+                              setTarget2Level(clampValue(num, 0, 5).toString());
+                            } else {
+                              setTarget2Level("1.0");
+                            }
+                          }
+                        }}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="target2_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 2 (%)
+                      </label>
+                      <input
+                        id="target2_percent"
+                        type="text"
+                        inputMode="numeric"
+                        value={target2Percent}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget2Percent("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget2Percent(clampValue(num, 0, 100));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target2Percent === "") {
+                            setTarget2Percent(0);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Alvo 3 - OPCIONAL */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="target3_level" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 3 (Nível Fib)
+                      </label>
+                      <input
+                        id="target3_level"
+                        type="text"
+                        inputMode="decimal"
+                        value={target3Level}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (isValidDecimal(val)) {
+                            setTarget3Level(val);
+                          }
+                        }}
+                        onBlur={() => {
+                          const normalized = normalizeDecimalInput(target3Level);
+                          if (normalized === "" || normalized === ".") {
+                            setTarget3Level("0");
+                          } else {
+                            const num = Number(normalized);
+                            if (!isNaN(num)) {
+                              setTarget3Level(clampValue(num, 0, 5).toString());
+                            } else {
+                              setTarget3Level("0");
+                            }
+                          }
+                        }}
+                        className="input-field"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="target3_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
+                        Alvo 3 (%)
+                      </label>
+                      <input
+                        id="target3_percent"
+                        type="text"
+                        inputMode="numeric"
+                        value={target3Percent}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          if (val === "") {
+                            setTarget3Percent("");
+                            return;
+                          }
+                          const num = Number(val);
+                          if (!isNaN(num)) {
+                            setTarget3Percent(clampValue(num, 0, 100));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (target3Percent === "") {
+                            setTarget3Percent(0);
+                          }
+                        }}
+                        className="input-field"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Validação visual da soma */}
+                  <div className="rounded-lg bg-zeedo-orange/10 p-3">
+                    <p className="text-sm font-medium text-zeedo-black dark:text-zeedo-white">
+                      Soma dos alvos: {
+                        (typeof target1Percent === "number" ? target1Percent : 0) +
+                        (typeof target2Percent === "number" ? target2Percent : 0) +
+                        (typeof target3Percent === "number" ? target3Percent : 0)
+                      }%
+                    </p>
+                    {(typeof target1Percent === "number" ? target1Percent : 0) <= 0 && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        ⚠️ Alvo 1 é obrigatório e deve ter percentual maior que 0%
+                      </p>
+                    )}
+                    {((typeof target1Percent === "number" ? target1Percent : 0) +
+                      (typeof target2Percent === "number" ? target2Percent : 0) +
+                      (typeof target3Percent === "number" ? target3Percent : 0)) !== 100 && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                        ⚠️ A soma deve ser exatamente 100%
+                      </p>
+                    )}
+                  </div>
+
+                  {limits?.allowed_entry2 && (
+                    <>
                       <div>
                         <label className="flex items-center gap-3 cursor-pointer">
                           <span className="text-sm font-medium text-zeedo-black dark:text-zeedo-white">
@@ -1065,11 +1285,11 @@ export default function BotPage() {
                           </button>
                         </label>
                         <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                          Se ativado: Ao pegar a entrada 2, você pode redefinir os alvos (nível fib + %).
+                          Se ativado: Ao pegar a entrada 2, você pode alterar os alvos
                         </p>
                       </div>
 
-                      {entry2AdjustLastTarget && limits?.can_customize_targets && (
+                      {entry2AdjustLastTarget && (
                         <div className="space-y-3">
                           <div>
                             <h3 className="text-base font-semibold text-zeedo-orange mb-1">
@@ -1188,251 +1408,6 @@ export default function BotPage() {
                       )}
                     </>
                   )}
-                </div>
-              )}
-
-              {selectedStrategy === "CUSTOM" && limits?.can_customize_targets && (
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-base font-semibold text-zeedo-orange mb-1">
-                      Alvos de Realização
-                    </h3>
-                    <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-tight">
-                      Alvo 1 é obrigatório.<br />
-                      Alvos 2 e 3 são opcionais (deixe em 0 para desativar).<br />
-                      A soma dos percentuais deve ser 100%.
-                    </p>
-                  </div>
-                  
-                  {/* Alvo 1 - OBRIGATÓRIO */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="target1_level" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 1 (Nível Fib) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="target1_level"
-                        type="text"
-                        inputMode="decimal"
-                        value={target1Level}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (isValidDecimal(val)) {
-                            setTarget1Level(val);
-                          }
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizeDecimalInput(target1Level);
-                          if (normalized === "" || normalized === ".") {
-                            setTarget1Level("0.618");
-                          } else {
-                            const num = Number(normalized);
-                            if (!isNaN(num)) {
-                            setTarget1Level(clampValue(num, 0, 5).toString());
-                            } else {
-                              setTarget1Level("0.618");
-                            }
-                          }
-                        }}
-                        className="input-field"
-                      />
-                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                        Ex: 0.618
-                      </p>
-                    </div>
-                    <div>
-                      <label htmlFor="target1_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 1 (%) <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        id="target1_percent"
-                        type="text"
-                        inputMode="numeric"
-                        value={target1Percent}
-                        onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val === "") {
-                            setTarget1Percent("");
-                            return;
-                          }
-                          const num = Number(val);
-                          if (!isNaN(num)) {
-                            setTarget1Percent(clampValue(num, 0, 100));
-                          }
-                        }}
-                        onBlur={() => {
-                          if (target1Percent === "") {
-                            setTarget1Percent(50);
-                          }
-                        }}
-                        className="input-field"
-                      />
-                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                        1 – 100% (obrigatório)
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Alvo 2 - OPCIONAL */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="target2_level" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 2 (Nível Fib)
-                      </label>
-                      <input
-                        id="target2_level"
-                        type="text"
-                        inputMode="decimal"
-                        value={target2Level}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (isValidDecimal(val)) {
-                            setTarget2Level(val);
-                          }
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizeDecimalInput(target2Level);
-                          if (normalized === "" || normalized === ".") {
-                            setTarget2Level("1.0");
-                          } else {
-                            const num = Number(normalized);
-                            if (!isNaN(num)) {
-                              setTarget2Level(clampValue(num, 0, 5).toString());
-                            } else {
-                              setTarget2Level("1.0");
-                            }
-                          }
-                        }}
-                        className="input-field"
-                      />
-                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                        Ex: 1.0 (deixe 0 para desativar)
-                      </p>
-                    </div>
-                    <div>
-                      <label htmlFor="target2_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 2 (%)
-                      </label>
-                      <input
-                        id="target2_percent"
-                        type="text"
-                        inputMode="numeric"
-                        value={target2Percent}
-                        onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val === "") {
-                            setTarget2Percent("");
-                            return;
-                          }
-                          const num = Number(val);
-                          if (!isNaN(num)) {
-                            setTarget2Percent(clampValue(num, 0, 100));
-                          }
-                        }}
-                        onBlur={() => {
-                          if (target2Percent === "") {
-                            setTarget2Percent(0);
-                          }
-                        }}
-                        className="input-field"
-                      />
-                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                        0 – 100% (deixe 0 para desativar)
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Alvo 3 - OPCIONAL */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="target3_level" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 3 (Nível Fib)
-                      </label>
-                      <input
-                        id="target3_level"
-                        type="text"
-                        inputMode="decimal"
-                        value={target3Level}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (isValidDecimal(val)) {
-                            setTarget3Level(val);
-                          }
-                        }}
-                        onBlur={() => {
-                          const normalized = normalizeDecimalInput(target3Level);
-                          if (normalized === "" || normalized === ".") {
-                            setTarget3Level("0");
-                          } else {
-                            const num = Number(normalized);
-                            if (!isNaN(num)) {
-                              setTarget3Level(clampValue(num, 0, 5).toString());
-                            } else {
-                              setTarget3Level("0");
-                            }
-                          }
-                        }}
-                        className="input-field"
-                      />
-                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                        Ex: 1.618 (deixe 0 para desativar)
-                      </p>
-                    </div>
-                    <div>
-                      <label htmlFor="target3_percent" className="block text-sm font-medium text-zeedo-orange mb-1">
-                        Alvo 3 (%)
-                      </label>
-                      <input
-                        id="target3_percent"
-                        type="text"
-                        inputMode="numeric"
-                        value={target3Percent}
-                        onChange={(e) => {
-                          const val = e.target.value.trim();
-                          if (val === "") {
-                            setTarget3Percent("");
-                            return;
-                          }
-                          const num = Number(val);
-                          if (!isNaN(num)) {
-                            setTarget3Percent(clampValue(num, 0, 100));
-                          }
-                        }}
-                        onBlur={() => {
-                          if (target3Percent === "") {
-                            setTarget3Percent(0);
-                          }
-                        }}
-                        className="input-field"
-                      />
-                      <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                        0 – 100% (deixe 0 para desativar)
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Validação visual da soma */}
-                  <div className="rounded-lg bg-zeedo-orange/10 p-3">
-                    <p className="text-sm font-medium text-zeedo-black dark:text-zeedo-white">
-                      Soma dos alvos: {
-                        (typeof target1Percent === "number" ? target1Percent : 0) +
-                        (typeof target2Percent === "number" ? target2Percent : 0) +
-                        (typeof target3Percent === "number" ? target3Percent : 0)
-                      }%
-                    </p>
-                    {(typeof target1Percent === "number" ? target1Percent : 0) <= 0 && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                        ⚠️ Alvo 1 é obrigatório e deve ter percentual maior que 0%
-                      </p>
-                    )}
-                    {((typeof target1Percent === "number" ? target1Percent : 0) +
-                      (typeof target2Percent === "number" ? target2Percent : 0) +
-                      (typeof target3Percent === "number" ? target3Percent : 0)) !== 100 && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                        ⚠️ A soma deve ser exatamente 100%
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
             </>
