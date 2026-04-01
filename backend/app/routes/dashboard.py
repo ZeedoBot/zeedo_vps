@@ -116,6 +116,32 @@ def _fetch_trades(user_id: str) -> list[dict]:
     return out
 
 
+def _symbols_with_open_entry_orders(wallet: str) -> tuple[bool, set[str]]:
+    """
+    Moedas que têm pelo menos uma ordem aberta de entrada (reduceOnly=false).
+    Retorna (sucesso?, conjunto em MAIÚSCULAS). Se sucesso=False, não confiar no conjunto.
+    """
+    try:
+        resp = requests.post(
+            HYPERLIQUID_API,
+            json={"type": "openOrders", "user": wallet},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        orders = resp.json() or []
+        out: set[str] = set()
+        for order in orders:
+            if bool(order.get("reduceOnly")):
+                continue
+            coin = (order.get("coin") or "").upper()
+            if coin:
+                out.add(coin)
+        return True, out
+    except Exception as e:
+        logger.warning(f"openOrders Hyperliquid: {e}")
+        return False, set()
+
+
 def _fetch_tracker(user_id: str) -> list[dict]:
     supabase = get_supabase()
     r = supabase.table("bot_tracker").select("symbol, data").eq("user_id", user_id).execute()
@@ -169,6 +195,7 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
     # encerra, o bot faz entry_tracker.pop() e save — o SupabaseStorage agora remove do banco.
     active_positions: list[dict] = []
     pending_positions: list[dict] = []
+    supabase = get_supabase()
     if wallet:
         try:
             resp = requests.post(HYPERLIQUID_API, json={"type": "clearinghouseState", "user": wallet}, timeout=10)
@@ -185,17 +212,41 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                             "unrealizedPnl": float(pos.get("unrealizedPnl", 0) or 0),
                             "entryPx": float(pos.get("entryPx", 0) or 0),
                         }
+                orders_ok, hl_entry_open = _symbols_with_open_entry_orders(wallet)
                 for t in tracker:
-                    sym = t.get("symbol", "")
-                    if sym in hl_positions_map:
-                        hlp = hl_positions_map[sym]
+                    raw_sym = (t.get("symbol") or "").strip()
+                    sym_u = raw_sym.upper()
+                    if not sym_u:
+                        continue
+                    hlp = None
+                    if raw_sym in hl_positions_map:
+                        hlp = hl_positions_map[raw_sym]
+                    else:
+                        for k, v in hl_positions_map.items():
+                            if (k or "").upper() == sym_u:
+                                hlp = v
+                                break
+                    if hlp is not None:
                         t["status"] = "ativa"
                         t["size"] = abs(hlp["szi"])
                         t["unrealized_pnl"] = round(hlp["unrealizedPnl"], 2)
                         active_positions.append(t)
-                    else:
-                        t["status"] = "pendente"
-                        pending_positions.append(t)
+                        continue
+                    # Sem posição na HL: só mostra pendente se ainda existir ordem de entrada aberta.
+                    # Cancelar na UI da HL remove a ordem mas não apaga bot_tracker — limpamos órfãos aqui.
+                    if orders_ok and sym_u not in hl_entry_open:
+                        try:
+                            supabase.table("bot_tracker").delete().eq("user_id", user_id).eq("symbol", raw_sym).execute()
+                            logger.info(
+                                "bot_tracker órfão removido: user=%s… %s (sem ordem de entrada na HL)",
+                                user_id[:8],
+                                raw_sym,
+                            )
+                        except Exception as ex:
+                            logger.warning("Falha ao remover bot_tracker órfão %s: %s", raw_sym, ex)
+                        continue
+                    t["status"] = "pendente"
+                    pending_positions.append(t)
             else:
                 for t in tracker:
                     t["status"] = "pendente"
@@ -212,7 +263,6 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
 
     blocked = []
     try:
-        supabase = get_supabase()
         bt = supabase.table("blocked_trades").select("id, symbol, tf, side, entry_px, entry2_px, stop_real, qty, reason, created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
         if bt.data:
             for row in bt.data:

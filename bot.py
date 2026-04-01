@@ -1272,6 +1272,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 logging.error(f"[{sym} {tf}] ❌ Erro lógica trade: {e}")
                 analyzed_candles[candle_id] = True
 
+
 def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, user_state_cache, all_mids_cache, storage):
     try:
         user_state = user_state_cache
@@ -1474,7 +1475,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 entry2_filled = bool(has_entry2 and _qty_matches(qty_entry_2, abs(size)))
                 place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor, entry2_filled=entry2_filled)
 
-            # Segunda entrada (limit) no nível -1.414 fib (Pro/Enterprise, se ativada)
+            # Segunda entrada (limit) no nível fib da 2ª entrada (Pro/Satoshi, se ativada)
             if not is_manual and not mem_data.get('entry2_placed', True):
                 if mem_data.get("pnl_realized", 0) > 0:
                     entry_tracker[sym]['entry2_placed'] = True
