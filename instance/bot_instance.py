@@ -73,6 +73,7 @@ class BotInstance:
 
             fib_levels: list[tuple[float, float]] = []
             entry2_adjust_last_target = bool(bot_config_dict.get('entry2_adjust_last_target', True))
+            entry2_fib_levels_after: list[tuple[float, float]] = []
             try:
                 t1_level = bot_config_dict.get('target1_level')
                 t1_pct = bot_config_dict.get('target1_percent')
@@ -101,9 +102,39 @@ class BotInstance:
                 # Em caso de qualquer problema de parsing, deixa fib_levels vazio e usa defaults
                 fib_levels = []
 
+            # Alvos após entrada 2 (opcionais; se houver, substituem todos os alvos quando entrada 2 executar)
+            try:
+                e1_level = bot_config_dict.get('entry2_target1_level')
+                e1_pct = bot_config_dict.get('entry2_target1_percent')
+                if e1_level is not None and e1_pct is not None:
+                    lvl = float(e1_level)
+                    pct = float(e1_pct or 0)
+                    if pct > 0:
+                        entry2_fib_levels_after.append((lvl, pct / 100.0))
+
+                e2_level = bot_config_dict.get('entry2_target2_level')
+                e2_pct = bot_config_dict.get('entry2_target2_percent')
+                if e2_level is not None and e2_pct is not None:
+                    lvl = float(e2_level)
+                    pct = float(e2_pct or 0)
+                    if pct > 0:
+                        entry2_fib_levels_after.append((lvl, pct / 100.0))
+
+                e3_level = bot_config_dict.get('entry2_target3_level')
+                e3_pct = bot_config_dict.get('entry2_target3_percent')
+                if e3_level is not None and e3_pct is not None:
+                    lvl = float(e3_level)
+                    pct = float(e3_pct or 0)
+                    if pct > 0:
+                        entry2_fib_levels_after.append((lvl, pct / 100.0))
+            except Exception:
+                entry2_fib_levels_after = []
+
             fib_kwargs = {}
             if fib_levels:
                 fib_kwargs["fib_levels"] = fib_levels
+            if entry2_fib_levels_after:
+                fib_kwargs["entry2_fib_levels_after"] = entry2_fib_levels_after
 
             # 6. Cria BotConfig
             self.config = BotConfig(

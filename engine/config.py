@@ -56,6 +56,8 @@ class BotConfig:
     fib_entry2_level: float = 1.414
     # Se true, quando entrada 2 executar o último alvo vai para 0.0 (retorno ao setup)
     entry2_adjust_last_target: bool = True
+    # Alvos alternativos quando entrada 2 executar (se vazio, usa fallback do último alvo→0.0)
+    entry2_fib_levels_after: List[Tuple[float, float]] = field(default_factory=list)
     
     # LSR Binance
     lsr_timeframe: str = "30m"

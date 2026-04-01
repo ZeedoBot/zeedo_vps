@@ -40,6 +40,16 @@ function formatSignalTime(iso?: string) {
   });
 }
 
+function formatSignalDay(iso?: string) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
+
 /** Alinhado a `_BLOCK_REASON_LABELS` em bot.py; `reason` pode ser "a | b | c". */
 const BLOCKED_REASON_LABELS: Record<string, string> = {
   modo_sinal: "Modo Sinal",
@@ -343,9 +353,9 @@ export default function TradesPage() {
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Ticker</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">TF</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Hora</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Motivo</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Hora</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">1ª entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">2ª entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
@@ -357,10 +367,17 @@ export default function TradesPage() {
                     <tr key={b.id}>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.symbol}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.tf}</td>
-                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{formatSignalTime(b.created_at)}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{b.side.toUpperCase()}</td>
                       <td className="px-4 py-2 text-sm align-top">
                         <BlockedReasonCell reason={b.reason} />
+                      </td>
+                      <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white whitespace-nowrap">
+                        <div className="leading-tight">
+                          <div className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
+                            {formatSignalDay(b.created_at)}
+                          </div>
+                          <div className="text-sm">{formatSignalTime(b.created_at)}</div>
+                        </div>
                       </td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry2_px?.toFixed(2)}</td>
@@ -398,7 +415,7 @@ export default function TradesPage() {
 
       {modal && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pb-24 sm:pb-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) setModal(null);
           }}

@@ -85,6 +85,7 @@ FIB_LEVELS = [
 FIB_STOP_LEVEL = 1.8  # Padrão: -1.8 fib
 FIB_ENTRY2_LEVEL = 1.414  # Padrão: -1.414 fib (customizável: 0.619-5.0)
 ENTRY2_ADJUST_LAST_TARGET = True  # Se true, último alvo vai para 0.0 quando entrada 2 executar
+ENTRY2_FIB_LEVELS_AFTER = []  # Alvos alternativos após entrada 2 (se setado)
 
 # Entrada 1: default (predefinida) em -0.618 para LONG e +0.618 para SHORT.
 ENTRY1_MULTIPLIER = 0.618
@@ -136,7 +137,7 @@ def tg_send(msg):
 
 def load_config(storage):
     """Carrega config do storage (local ou Supabase) e atualiza SYMBOLS, TIMEFRAMES, TRADE_MODE, alvos e stop."""
-    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY1_MULTIPLIER, ENTRY2_ADJUST_LAST_TARGET, SIGNAL_MODE
+    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY1_MULTIPLIER, ENTRY2_ADJUST_LAST_TARGET, ENTRY2_FIB_LEVELS_AFTER, SIGNAL_MODE
     config = storage.get_config()
     if config:
         if "symbols" in config and config["symbols"]:
@@ -166,8 +167,30 @@ def load_config(storage):
         FIB_ENTRY2_LEVEL = config.get("entry2_multiplier", 1.414)
         ENTRY1_MULTIPLIER = config.get("entry1_multiplier", 0.618)
         ENTRY2_ADJUST_LAST_TARGET = config.get("entry2_adjust_last_target", True)
+
+        # Alvos após entrada 2 (opcionais)
+        e1_level = config.get("entry2_target1_level")
+        e1_pct = config.get("entry2_target1_percent")
+        e2_level = config.get("entry2_target2_level")
+        e2_pct = config.get("entry2_target2_percent")
+        e3_level = config.get("entry2_target3_level")
+        e3_pct = config.get("entry2_target3_percent")
+        entry2_levels = []
+        try:
+            if e1_level is not None and e1_pct is not None and float(e1_pct) > 0:
+                entry2_levels.append((float(e1_level), float(e1_pct) / 100.0))
+            if e2_level is not None and e2_pct is not None and float(e2_pct) > 0:
+                entry2_levels.append((float(e2_level), float(e2_pct) / 100.0))
+            if e3_level is not None and e3_pct is not None and float(e3_pct) > 0:
+                entry2_levels.append((float(e3_level), float(e3_pct) / 100.0))
+        except Exception:
+            entry2_levels = []
+        ENTRY2_FIB_LEVELS_AFTER = entry2_levels
         
-        logging.info(f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada2: -{FIB_ENTRY2_LEVEL}")
+        logging.info(
+            f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada2: -{FIB_ENTRY2_LEVEL}"
+            + (f" | Alvos pós-entrada2: {ENTRY2_FIB_LEVELS_AFTER}" if ENTRY2_FIB_LEVELS_AFTER else "")
+        )
 
 def get_precision(meta, coin):
     if not meta:
@@ -599,15 +622,24 @@ def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, 
     start_px = anchor_px if anchor_px else entry_px
     is_buy_tp = False if side == "long" else True
     
-    # Se entry2_filled E usuário quer ajustar, último alvo vai para 0.0 (retorno ao setup)
-    if entry2_filled and ENTRY2_ADJUST_LAST_TARGET and len(FIB_LEVELS) >= 1:
-        fib_levels = list(FIB_LEVELS)
-        # Mantém todos os alvos, mas o último vai para 0.0
-        fib_levels[-1] = (0.0, fib_levels[-1][1])
+    # Se entry2_filled e usuário quer ajustar:
+    # - se houver alvos alternativos configurados, usa eles para TODOS os TPs
+    # - senão, fallback: mantém alvos e move o último para 0.0 (retorno ao setup)
+    if entry2_filled and ENTRY2_ADJUST_LAST_TARGET:
+        if ENTRY2_FIB_LEVELS_AFTER:
+            fib_levels = ENTRY2_FIB_LEVELS_AFTER
+        elif len(FIB_LEVELS) >= 1:
+            fib_levels = list(FIB_LEVELS)
+            fib_levels[-1] = (0.0, fib_levels[-1][1])
+        else:
+            fib_levels = FIB_LEVELS
     else:
         fib_levels = FIB_LEVELS
     
-    logging.info(f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}" + (f" | Último TP→0.0 (entrada 2)" if (entry2_filled and ENTRY2_ADJUST_LAST_TARGET) else ""))
+    logging.info(
+        f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}"
+        + (f" | Ajuste pós-entrada2: {fib_levels}" if (entry2_filled and ENTRY2_ADJUST_LAST_TARGET) else "")
+    )
 
     for idx, (fib_mult, pct) in enumerate(fib_levels, start=1):
         qty_tp = round_sz(total_qty * pct, sz_dec)
