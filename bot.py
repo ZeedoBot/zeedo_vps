@@ -188,8 +188,9 @@ def load_config(storage):
         ENTRY2_FIB_LEVELS_AFTER = entry2_levels
         
         logging.info(
-            f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada2: -{FIB_ENTRY2_LEVEL}"
+            f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada1: -{ENTRY1_MULTIPLIER}, Entrada2: -{FIB_ENTRY2_LEVEL}"
             + (f" | Alvos pós-entrada2: {ENTRY2_FIB_LEVELS_AFTER}" if ENTRY2_FIB_LEVELS_AFTER else "")
+            + (f" | preset={config.get('strategy_preset')!r}" if config.get("strategy_preset") else "")
         )
 
 def get_precision(meta, coin):
@@ -1283,50 +1284,53 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
         order_symbols = {o["coin"] for o in all_open_orders if not o["reduceOnly"]}
         now = time.time()
 
-        # Se o preço tocar no alvo 1, cancela ordens ativas
-        target1_fib = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618  # Usa primeiro alvo configurado
-        for sym in list(entry_tracker.keys()):
-            mem = entry_tracker.get(sym, {})
-            if mem.get("alvo1_cancel_done"):
-                continue  # Já cancelou e notificou; evita spam a cada ciclo
-            tech_base = mem.get("tech_base")
-            setup_high = mem.get("setup_high")
-            setup_low = mem.get("setup_low")
-            side = mem.get("side", "long")
-            if tech_base is None or tech_base <= 0:
-                continue
-            curr_price = float(all_mids_cache.get(sym, 0))
-            if curr_price <= 0:
-                continue
-            cancel = False
-            if side == "long" and setup_high is not None:
-                level_target1 = setup_high + (tech_base * target1_fib)
-                if curr_price >= level_target1:
-                    cancel = True
-            elif side == "short" and setup_low is not None:
-                level_target1 = setup_low - (tech_base * target1_fib)
-                if curr_price <= level_target1:
-                    cancel = True
-            if not cancel:
-                continue
-            for o in all_open_orders:
-                if o["coin"] == sym and not o.get("reduceOnly"):
-                    try:
-                        exchange.cancel(sym, o["oid"])
-                        logging.info(f"⏹️ Ordem {sym} cancelada: preço atingiu alvo 1 ({target1_fib})")
-                    except Exception as e:
-                        logging.error(f"Erro ao cancelar ordem {sym}: {e}")
-            
-            mem["alvo1_cancel_done"] = True
-            if sym not in active_symbols:
-                entry_tracker.pop(sym, None)
-                storage.save_entry_tracker(entry_tracker)
-            else:
-                storage.save_entry_tracker(entry_tracker)
-                tg_send(
-                    f"⏹️ Ordens canceladas (preço tocou alvo 1)\n"
-                    f"{side.upper()} {sym} {mem.get('tf', '')}"
-                )
+        # Se o preço tocar no alvo 1, cancela ordens ativas (ex.: 2ª entrada pendente).
+        # Com fib do 1º alvo = 0, o nível coincide com setup_high/setup_low e disparava
+        # cancelamento indevido — nesse caso não usamos esta heurística.
+        target1_fib_cancel = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
+        if target1_fib_cancel > 0:
+            for sym in list(entry_tracker.keys()):
+                mem = entry_tracker.get(sym, {})
+                if mem.get("alvo1_cancel_done"):
+                    continue  # Já cancelou e notificou; evita spam a cada ciclo
+                tech_base = mem.get("tech_base")
+                setup_high = mem.get("setup_high")
+                setup_low = mem.get("setup_low")
+                side = mem.get("side", "long")
+                if tech_base is None or tech_base <= 0:
+                    continue
+                curr_price = float(all_mids_cache.get(sym, 0))
+                if curr_price <= 0:
+                    continue
+                cancel = False
+                if side == "long" and setup_high is not None:
+                    level_target1 = setup_high + (tech_base * target1_fib_cancel)
+                    if curr_price >= level_target1:
+                        cancel = True
+                elif side == "short" and setup_low is not None:
+                    level_target1 = setup_low - (tech_base * target1_fib_cancel)
+                    if curr_price <= level_target1:
+                        cancel = True
+                if not cancel:
+                    continue
+                for o in all_open_orders:
+                    if o["coin"] == sym and not o.get("reduceOnly"):
+                        try:
+                            exchange.cancel(sym, o["oid"])
+                            logging.info(f"⏹️ Ordem {sym} cancelada: preço atingiu alvo 1 ({target1_fib_cancel})")
+                        except Exception as e:
+                            logging.error(f"Erro ao cancelar ordem {sym}: {e}")
+                
+                mem["alvo1_cancel_done"] = True
+                if sym not in active_symbols:
+                    entry_tracker.pop(sym, None)
+                    storage.save_entry_tracker(entry_tracker)
+                else:
+                    storage.save_entry_tracker(entry_tracker)
+                    tg_send(
+                        f"⏹️ Ordens canceladas (preço tocou alvo 1)\n"
+                        f"{side.upper()} {sym} {mem.get('tf', '')}"
+                    )
 
         for sym in list(entry_tracker.keys()):
             if sym not in active_symbols and sym not in order_symbols:

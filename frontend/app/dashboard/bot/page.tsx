@@ -240,7 +240,7 @@ export default function BotPage() {
         setEntry2Enabled(data.entry2_enabled ?? true);
         setSignalMode(data.signal_mode ?? false);
 
-        // Carrega alvos e stop customizados
+        // Carrega alvos e stop customizados (valores persistidos no banco)
         setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
         setEntry1Multiplier((data.entry1_multiplier ?? 0.618).toString());
         setEntry2Multiplier((data.entry2_multiplier ?? 1.414).toString());
@@ -433,6 +433,11 @@ export default function BotPage() {
     const tl = clampValue(typeof targetLoss === "number" ? targetLoss : limits.target_loss_min, limits.target_loss_min, limits.target_loss_max);
     const mp = clampValue(typeof maxPositions === "number" ? maxPositions : 1, 1, limits.max_positions);
     const msp = Math.min(typeof maxSinglePosition === "number" ? maxSinglePosition : 0, limits.max_single_position_usd);
+    const presetForSave: StrategyPreset | null =
+      selectedStrategy !== "CUSTOM"
+        ? STRATEGY_PRESETS[selectedStrategy as Exclude<StrategyKey, "CUSTOM">]
+        : null;
+    const entry2AdjSave = presetForSave?.entry2AdjustLastTarget ?? entry2AdjustLastTarget;
     try {
       const payload: Record<string, unknown> = {
         symbols: symbolsInput,
@@ -446,50 +451,59 @@ export default function BotPage() {
       };
       if (limits?.allowed_entry2) {
         payload.entry2_enabled = entry2Enabled;
-        payload.entry2_adjust_last_target = entry2AdjustLastTarget;
+        payload.entry2_adjust_last_target = entry2AdjSave;
       }
       
       // Adiciona alvos e stop customizados se o plano permitir
       if (limits?.can_customize_stop) {
-        const stopNormalized = typeof stopMultiplier === "string" ? normalizeDecimalInput(stopMultiplier) : stopMultiplier.toString();
+        const stopSrc = presetForSave?.stopMultiplier ?? stopMultiplier;
+        const entry1Src = presetForSave?.entry1Multiplier ?? entry1Multiplier;
+        const entry2Src = presetForSave?.entry2Multiplier ?? entry2Multiplier;
+        const stopNormalized = typeof stopSrc === "string" ? normalizeDecimalInput(stopSrc) : stopSrc.toString();
         const stopNum = parseFloat(stopNormalized);
         if (!isNaN(stopNum)) {
           payload.stop_multiplier = stopNum;
         }
-        const entry1Normalized = typeof entry1Multiplier === "string" ? normalizeDecimalInput(entry1Multiplier) : entry1Multiplier.toString();
+        const entry1Normalized = typeof entry1Src === "string" ? normalizeDecimalInput(entry1Src) : entry1Src.toString();
         const entry1Num = parseFloat(entry1Normalized);
         if (!isNaN(entry1Num)) {
           payload.entry1_multiplier = entry1Num;
         }
-        const entry2Normalized = typeof entry2Multiplier === "string" ? normalizeDecimalInput(entry2Multiplier) : entry2Multiplier.toString();
+        const entry2Normalized = typeof entry2Src === "string" ? normalizeDecimalInput(entry2Src) : entry2Src.toString();
         const entry2Num = parseFloat(entry2Normalized);
         if (!isNaN(entry2Num)) {
           payload.entry2_multiplier = entry2Num;
         }
       }
       if (limits?.can_customize_targets) {
-        const t1Normalized = typeof target1Level === "string" ? normalizeDecimalInput(target1Level) : target1Level.toString();
+        const t1Src = presetForSave?.target1Level ?? target1Level;
+        const t1p = presetForSave?.target1Percent ?? target1Percent;
+        const t1Normalized = typeof t1Src === "string" ? normalizeDecimalInput(t1Src) : t1Src.toString();
         const t1Level = parseFloat(t1Normalized);
         if (!isNaN(t1Level)) payload.target1_level = t1Level;
-        if (typeof target1Percent === "number") payload.target1_percent = target1Percent;
+        if (typeof t1p === "number") payload.target1_percent = t1p;
         
         // Alvo 2 é opcional
-        const t2Normalized = typeof target2Level === "string" ? normalizeDecimalInput(target2Level) : target2Level.toString();
+        const t2Src = presetForSave?.target2Level ?? target2Level;
+        const t2p = presetForSave?.target2Percent ?? target2Percent;
+        const t2Normalized = typeof t2Src === "string" ? normalizeDecimalInput(t2Src) : t2Src.toString();
         const t2Level = parseFloat(t2Normalized);
-        if (!isNaN(t2Level) && t2Level > 0 && typeof target2Percent === "number" && target2Percent > 0) {
+        if (!isNaN(t2Level) && t2Level > 0 && typeof t2p === "number" && t2p > 0) {
           payload.target2_level = t2Level;
-          payload.target2_percent = target2Percent;
+          payload.target2_percent = t2p;
         } else {
           payload.target2_level = null;
           payload.target2_percent = 0;
         }
         
         // Alvo 3 é opcional
-        const t3Normalized = typeof target3Level === "string" ? normalizeDecimalInput(target3Level) : target3Level.toString();
+        const t3Src = presetForSave?.target3Level ?? target3Level;
+        const t3p = presetForSave?.target3Percent ?? target3Percent;
+        const t3Normalized = typeof t3Src === "string" ? normalizeDecimalInput(t3Src) : t3Src.toString();
         const t3Level = parseFloat(t3Normalized);
-        if (!isNaN(t3Level) && t3Level > 0 && typeof target3Percent === "number" && target3Percent > 0) {
+        if (!isNaN(t3Level) && t3Level > 0 && typeof t3p === "number" && t3p > 0) {
           payload.target3_level = t3Level;
-          payload.target3_percent = target3Percent;
+          payload.target3_percent = t3p;
         } else {
           payload.target3_level = null;
           payload.target3_percent = 0;
@@ -501,22 +515,28 @@ export default function BotPage() {
 
       // Alvos após entrada 2 (quando o toggle estiver ativo)
       if (limits?.allowed_entry2 && limits?.can_customize_targets) {
-        payload.entry2_adjust_last_target = entry2AdjustLastTarget;
-        if (entry2AdjustLastTarget) {
-          const e1Normalized = typeof entry2Target1Level === "string" ? normalizeDecimalInput(entry2Target1Level) : entry2Target1Level.toString();
+        payload.entry2_adjust_last_target = entry2AdjSave;
+        if (entry2AdjSave) {
+          const e1Src = presetForSave?.entry2Target1Level ?? entry2Target1Level;
+          const e1p = presetForSave?.entry2Target1Percent ?? entry2Target1Percent;
+          const e1Normalized = typeof e1Src === "string" ? normalizeDecimalInput(e1Src) : e1Src.toString();
           const e1Level = parseFloat(e1Normalized);
           if (!isNaN(e1Level)) payload.entry2_target1_level = e1Level;
-          if (typeof entry2Target1Percent === "number") payload.entry2_target1_percent = entry2Target1Percent;
+          if (typeof e1p === "number") payload.entry2_target1_percent = e1p;
 
-          const e2Normalized = typeof entry2Target2Level === "string" ? normalizeDecimalInput(entry2Target2Level) : entry2Target2Level.toString();
+          const e2Src = presetForSave?.entry2Target2Level ?? entry2Target2Level;
+          const e2p = presetForSave?.entry2Target2Percent ?? entry2Target2Percent;
+          const e2Normalized = typeof e2Src === "string" ? normalizeDecimalInput(e2Src) : e2Src.toString();
           const e2Level = parseFloat(e2Normalized);
           if (!isNaN(e2Level)) payload.entry2_target2_level = e2Level;
-          if (typeof entry2Target2Percent === "number") payload.entry2_target2_percent = entry2Target2Percent;
+          if (typeof e2p === "number") payload.entry2_target2_percent = e2p;
 
-          const e3Normalized = typeof entry2Target3Level === "string" ? normalizeDecimalInput(entry2Target3Level) : entry2Target3Level.toString();
+          const e3Src = presetForSave?.entry2Target3Level ?? entry2Target3Level;
+          const e3p = presetForSave?.entry2Target3Percent ?? entry2Target3Percent;
+          const e3Normalized = typeof e3Src === "string" ? normalizeDecimalInput(e3Src) : e3Src.toString();
           const e3Level = parseFloat(e3Normalized);
           if (!isNaN(e3Level)) payload.entry2_target3_level = e3Level;
-          if (typeof entry2Target3Percent === "number") payload.entry2_target3_percent = entry2Target3Percent;
+          if (typeof e3p === "number") payload.entry2_target3_percent = e3p;
         } else {
           payload.entry2_target1_level = null;
           payload.entry2_target1_percent = null;
@@ -532,6 +552,9 @@ export default function BotPage() {
         payload,
         session.access_token
       );
+      if (selectedStrategy !== "CUSTOM") {
+        applyStrategyPreset(selectedStrategy as Exclude<StrategyKey, "CUSTOM">);
+      }
       setConfig((c) =>
         c
           ? {
