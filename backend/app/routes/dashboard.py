@@ -281,6 +281,14 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
     except Exception as e:
         logger.warning(f"Erro ao buscar blocked_trades: {e}")
 
+    sub_tier = "basic"
+    try:
+        ur = supabase.table("users").select("subscription_tier").eq("id", user_id).limit(1).execute()
+        if ur.data:
+            sub_tier = (ur.data[0].get("subscription_tier") or "basic").lower()
+    except Exception:
+        pass
+
     return {
         "balance": balance,
         "trades": trades,
@@ -288,6 +296,7 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
         "pending_positions": pending_positions,
         "blocked_trades": blocked,
         "logs": logs,
+        "subscription_tier": sub_tier,
     }
 
 
@@ -570,6 +579,14 @@ def execute_blocked_trade(
 
     if not symbol or entry_px <= 0 or qty <= 0:
         raise HTTPException(status_code=400, detail="Dados do trade inválidos.")
+
+    ur_tier = supabase.table("users").select("subscription_tier").eq("id", user_id).limit(1).execute()
+    tier = (ur_tier.data[0].get("subscription_tier") or "basic").lower() if ur_tier.data else "basic"
+    if tier == "basic":
+        raise HTTPException(
+            status_code=403,
+            detail="No plano Basic (apenas Modo Sinal) não é possível acionar trades pela plataforma. Faça upgrade ao Pro para usar esta função.",
+        )
 
     # Busca conta e chave
     acc = supabase.table("trading_accounts").select(

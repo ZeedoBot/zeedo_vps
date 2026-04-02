@@ -108,6 +108,7 @@ type OverviewData = {
   open_positions: Position[];
   pending_positions: Position[];
   blocked_trades?: BlockedTrade[];
+  subscription_tier?: string;
 };
 
 type TradeModalState =
@@ -159,6 +160,7 @@ export default function TradesPage() {
   }, [modal]);
 
   async function handleExecuteBlocked(id: string) {
+    if ((overview?.subscription_tier ?? "basic").toLowerCase() === "basic") return;
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
@@ -210,6 +212,8 @@ export default function TradesPage() {
   }
 
   if (loading) return <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>;
+
+  const isBasicPlan = (overview?.subscription_tier ?? "basic").toLowerCase() === "basic";
 
   return (
     <div className="space-y-8">
@@ -344,7 +348,15 @@ export default function TradesPage() {
           <p className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60 mb-4">
             Recomendação: Todos trades aqui estão de acordo com o setup, porém tem algum indicador adicional que bloqueou o trade.
             <em className="block mt-2">Isso não significa que é trade ruim.</em>
-            Faça sua própria análise, se entender que é uma boa entrada, você pode acionar manualmente com um clique.
+            {isBasicPlan ? (
+              <span className="block mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-800 dark:text-amber-200">
+                No plano Basic (apenas Modo Sinal) o botão Acionar não está disponível. Faça upgrade ao Pro para usar acionamento manual pela plataforma.
+              </span>
+            ) : (
+              <span className="block mt-2">
+                Faça sua própria análise, se entender que é uma boa entrada, você pode acionar manualmente com um clique.
+              </span>
+            )}
           </p>
           {overview?.blocked_trades && overview.blocked_trades.length > 0 ? (
             <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
@@ -394,8 +406,13 @@ export default function TradesPage() {
                           </a>
                           <button
                             type="button"
-                            onClick={() => setModal({ kind: "acionar", id: b.id })}
-                            disabled={executingId === b.id}
+                            onClick={() => !isBasicPlan && setModal({ kind: "acionar", id: b.id })}
+                            disabled={isBasicPlan || executingId === b.id}
+                            title={
+                              isBasicPlan
+                                ? "Indisponível no plano Basic. Upgrade ao Pro."
+                                : undefined
+                            }
                             className="rounded-lg bg-zeedo-orange/20 px-2 py-1 text-xs font-medium text-zeedo-orange hover:bg-zeedo-orange/30 disabled:opacity-50 dark:text-orange-400"
                           >
                             {executingId === b.id ? "…" : "Acionar"}

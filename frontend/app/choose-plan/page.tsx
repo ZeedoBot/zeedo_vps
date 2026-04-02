@@ -131,19 +131,15 @@ export default function ChoosePlanPage() {
                     <>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas 6 disponíveis</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas 9 disponíveis</span>
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">15m</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 30m e 1h</span>
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">1</span>
-                      </div>
-                      <div className="text-sm">
-                        <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">$10 por trade</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">Modo:</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas Modo Sinal</span>
                       </div>
                     </>
                   )}

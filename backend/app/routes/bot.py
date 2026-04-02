@@ -125,6 +125,8 @@ def get_config(user_id: str = Depends(get_current_user_id)):
     }
     if r.data and len(r.data) > 0:
         out.update(r.data[0])
+    if limits.get("plan") == "basic":
+        out["signal_mode"] = True
     out["plan_limits"] = limits
     out["trial_ended"] = trial_ended
     return out
@@ -141,6 +143,14 @@ def update_config(
     payload = body.model_dump(exclude_none=True)
     if not payload:
         return {"success": True, "message": "Nada a atualizar"}
+
+    if limits.get("plan") == "basic":
+        if body.signal_mode is not None and not body.signal_mode:
+            raise HTTPException(
+                400,
+                "No plano Basic o Modo Sinal fica sempre ativado. Faça upgrade ao Pro para operar com trades automáticos.",
+            )
+        payload["signal_mode"] = True
 
     # Validação contra plan_limits
     if body.entry2_enabled is not None and body.entry2_enabled and not limits.get("allowed_entry2", False):

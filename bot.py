@@ -717,6 +717,16 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         if not user_fills:
             return
 
+        # Alinha RAM com bot_tracker no storage (ex.: trade acionado no site) antes de classificar fills
+        if hasattr(storage, "get_entry_tracker"):
+            try:
+                fresh = storage.get_entry_tracker()
+                for sym, data in (fresh or {}).items():
+                    if sym and isinstance(data, dict):
+                        entry_tracker[sym] = data
+            except Exception as e:
+                logging.warning("sync_trade_history: merge tracker: %s", e)
+
         trades_db = storage.get_trades_db()
         if not isinstance(trades_db, list):
             trades_db = []

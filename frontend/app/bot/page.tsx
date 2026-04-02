@@ -12,7 +12,11 @@ const PLANS = [
     name: "Basic",
     price: 49,
     recommended: false,
-    features: ["Ativos: BTC e ETH", "Timeframes: 15m", "Trades simultâneos: máx. 2"],
+    features: [
+      "Ativos: 9 disponíveis (BTC, ETH, SOL, XRP, BNB, HYPE, LINK, AVAX, DOGE)",
+      "Timeframes: 15m, 30m e 1h",
+      "Apenas Modo Sinal (sem trades automáticos pela plataforma)",
+    ],
     cta: "Começar",
   },
   {
@@ -604,19 +608,15 @@ export default function BotPage() {
                         <>
                           <div className="text-sm">
                             <span className="font-medium text-gray-700 dark:text-gray-300">Ativos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas 6 disponíveis</span>
+                            <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas 9 disponíveis</span>
                           </div>
                           <div className="text-sm">
                             <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">15m</span>
+                            <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 30m e 1h</span>
                           </div>
                           <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">1</span>
-                          </div>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">Limite:</span>
-                            <span className="ml-2 text-gray-600 dark:text-gray-400">$10 por trade</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">Modo:</span>
+                            <span className="ml-2 text-gray-600 dark:text-gray-400">Apenas Modo Sinal</span>
                           </div>
                         </>
                       )}

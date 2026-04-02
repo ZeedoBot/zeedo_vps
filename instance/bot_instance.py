@@ -137,6 +137,8 @@ class BotInstance:
                 fib_kwargs["entry2_fib_levels_after"] = entry2_fib_levels_after
 
             # 6. Cria BotConfig
+            # Plano Basic: sempre Modo Sinal (sem execução automática de trades pelo motor)
+            signal_mode = plan == 'basic' or bool(bot_config_dict.get('signal_mode', False))
             self.config = BotConfig(
                 user_id=self.user_id,
                 wallet_address=credentials['wallet_address'],
@@ -144,7 +146,7 @@ class BotInstance:
                 symbols=bot_config_dict.get('symbols', []),
                 timeframes=bot_config_dict.get('timeframes', []),
                 trade_mode=bot_config_dict.get('trade_mode', 'BOTH'),
-                signal_mode=bool(bot_config_dict.get('signal_mode', False)),
+                signal_mode=signal_mode,
                 entry2_enabled=entry2_enabled,
                 entry2_allowed=allowed_entry2,
                 target_loss_usd=bot_config_dict.get('target_loss_usd', 5.0),

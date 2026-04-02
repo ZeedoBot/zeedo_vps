@@ -188,6 +188,50 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
   },
 };
 
+const UPGRADE_TOOLTIP_STRATEGIES =
+  "Faça Upgrade para o Plano Pro para automatizar seus Trades e testar diferentes Estratégias validadas e pré definidas.";
+const UPGRADE_TOOLTIP_RISK =
+  "Faça Upgrade para o Plano Pro para automatizar seus Trades e personalizar seu próprio gerenciamento de risco de forma automática.";
+
+function ProPlanLockHint({
+  message,
+  hintKey,
+  openKey,
+  setOpenKey,
+}: {
+  message: string;
+  hintKey: "risk" | "strategy";
+  openKey: "risk" | "strategy" | null;
+  setOpenKey: (k: "risk" | "strategy" | null) => void;
+}) {
+  const open = openKey === hintKey;
+  return (
+    <span className="relative inline-flex items-center align-middle">
+      <button
+        type="button"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-zeedo-orange hover:bg-zeedo-orange/15 focus:outline-none focus:ring-2 focus:ring-zeedo-orange"
+        title={message}
+        aria-expanded={open}
+        aria-label="Informação sobre upgrade ao plano Pro"
+        onClick={() => setOpenKey(open ? null : hintKey)}
+      >
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+          />
+        </svg>
+      </button>
+      {open ? (
+        <span className="absolute left-0 top-full z-30 mt-1 w-[min(100vw-2rem,18rem)] rounded-lg border border-zeedo-orange/25 bg-zeedo-white p-2 text-xs text-zeedo-black shadow-md dark:bg-zeedo-black dark:text-zeedo-white">
+          {message}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export default function BotPage() {
   const [config, setConfig] = useState<BotConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -200,6 +244,7 @@ export default function BotPage() {
   const [maxSinglePosition, setMaxSinglePosition] = useState<number | "">(1250);
   const [entry2Enabled, setEntry2Enabled] = useState(true);
   const [signalMode, setSignalMode] = useState(false);
+  const [lockHintOpen, setLockHintOpen] = useState<"risk" | "strategy" | null>(null);
 
   // Estados para alvos e stop customizados
   const [stopMultiplier, setStopMultiplier] = useState<number | string>("1.8");
@@ -238,7 +283,9 @@ export default function BotPage() {
         const maxSingle = data.max_single_pos_exposure ?? 1250;
         setMaxSinglePosition(pl ? Math.min(maxSingle, pl.max_single_position_usd) : maxSingle);
         setEntry2Enabled(data.entry2_enabled ?? true);
-        setSignalMode(data.signal_mode ?? false);
+        setSignalMode(
+          data.plan_limits?.plan === "basic" ? true : (data.signal_mode ?? false),
+        );
 
         // Carrega alvos e stop customizados (valores persistidos no banco)
         setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
@@ -439,23 +486,26 @@ export default function BotPage() {
         : null;
     const entry2AdjSave = presetForSave?.entry2AdjustLastTarget ?? entry2AdjustLastTarget;
     try {
+      const isBasicSave = limits.plan === "basic";
       const payload: Record<string, unknown> = {
         symbols: symbolsInput,
         timeframes: timeframesInput,
         trade_mode: config?.trade_mode ?? "BOTH",
-        signal_mode: signalMode,
-        target_loss_usd: tl,
-        max_global_exposure: limits.max_global_exposure_usd,
-        max_single_pos_exposure: msp,
-        max_positions: mp,
+        signal_mode: isBasicSave ? true : signalMode,
       };
-      if (limits?.allowed_entry2) {
-        payload.entry2_enabled = entry2Enabled;
-        payload.entry2_adjust_last_target = entry2AdjSave;
+      if (!isBasicSave) {
+        payload.target_loss_usd = tl;
+        payload.max_global_exposure = limits.max_global_exposure_usd;
+        payload.max_single_pos_exposure = msp;
+        payload.max_positions = mp;
+        if (limits?.allowed_entry2) {
+          payload.entry2_enabled = entry2Enabled;
+          payload.entry2_adjust_last_target = entry2AdjSave;
+        }
       }
       
       // Adiciona alvos e stop customizados se o plano permitir
-      if (limits?.can_customize_stop) {
+      if (!isBasicSave && limits?.can_customize_stop) {
         const stopSrc = presetForSave?.stopMultiplier ?? stopMultiplier;
         const entry1Src = presetForSave?.entry1Multiplier ?? entry1Multiplier;
         const entry2Src = presetForSave?.entry2Multiplier ?? entry2Multiplier;
@@ -475,7 +525,7 @@ export default function BotPage() {
           payload.entry2_multiplier = entry2Num;
         }
       }
-      if (limits?.can_customize_targets) {
+      if (!isBasicSave && limits?.can_customize_targets) {
         const t1Src = presetForSave?.target1Level ?? target1Level;
         const t1p = presetForSave?.target1Percent ?? target1Percent;
         const t1Normalized = typeof t1Src === "string" ? normalizeDecimalInput(t1Src) : t1Src.toString();
@@ -509,12 +559,12 @@ export default function BotPage() {
           payload.target3_percent = 0;
         }
       }
-      if (limits?.can_customize_targets || limits?.can_customize_stop) {
+      if (!isBasicSave && (limits?.can_customize_targets || limits?.can_customize_stop)) {
         payload.strategy_preset = selectedStrategy;
       }
 
       // Alvos após entrada 2 (quando o toggle estiver ativo)
-      if (limits?.allowed_entry2 && limits?.can_customize_targets) {
+      if (!isBasicSave && limits?.allowed_entry2 && limits?.can_customize_targets) {
         payload.entry2_adjust_last_target = entry2AdjSave;
         if (entry2AdjSave) {
           const e1Src = presetForSave?.entry2Target1Level ?? entry2Target1Level;
@@ -552,7 +602,7 @@ export default function BotPage() {
         payload,
         session.access_token
       );
-      if (selectedStrategy !== "CUSTOM") {
+      if (!isBasicSave && selectedStrategy !== "CUSTOM") {
         applyStrategyPreset(selectedStrategy as Exclude<StrategyKey, "CUSTOM">);
       }
       setConfig((c) =>
@@ -561,21 +611,30 @@ export default function BotPage() {
               ...c,
               symbols: symbolsInput,
               timeframes: timeframesInput,
-              entry2_enabled: limits?.allowed_entry2 ? entry2Enabled : c.entry2_enabled,
-              target_loss_usd: tl,
-              max_positions: mp,
-              max_single_pos_exposure: msp,
-              signal_mode: signalMode,
-              strategy_preset:
-                limits?.can_customize_targets || limits?.can_customize_stop
-                  ? selectedStrategy
-                  : c.strategy_preset,
+              ...(isBasicSave
+                ? { signal_mode: true as boolean }
+                : {
+                    entry2_enabled: limits?.allowed_entry2 ? entry2Enabled : c.entry2_enabled,
+                    target_loss_usd: tl,
+                    max_positions: mp,
+                    max_single_pos_exposure: msp,
+                    signal_mode: signalMode,
+                    strategy_preset:
+                      limits?.can_customize_targets || limits?.can_customize_stop
+                        ? selectedStrategy
+                        : c.strategy_preset,
+                  }),
             }
           : null
       );
-      setTargetLoss(tl);
-      setMaxPositions(mp);
-      setMaxSinglePosition(msp);
+      if (!isBasicSave) {
+        setTargetLoss(tl);
+        setMaxPositions(mp);
+        setMaxSinglePosition(msp);
+      }
+      if (isBasicSave) {
+        setSignalMode(true);
+      }
       setMessage({ type: "ok", text: "Configuração salva. O bot será reiniciado em até 30 segundos se estiver ligado." });
     } catch (err) {
       setMessage({ type: "err", text: err instanceof Error ? err.message : "Erro ao salvar." });
@@ -602,6 +661,7 @@ export default function BotPage() {
   const symbolsOptions = limits.allowed_symbols;
   const timeframesOptions = limits.allowed_timeframes;
   const tradeModeOptions = limits.allowed_trade_modes;
+  const isBasicPlan = limits.plan === "basic";
 
   return (
     <div>
@@ -682,77 +742,119 @@ export default function BotPage() {
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-3">
-              <label htmlFor="signal-mode" className="text-sm font-medium text-zeedo-orange cursor-pointer">
-                Modo Sinal:
-              </label>
-              <button
-                type="button"
-                id="signal-mode"
-                role="switch"
-                aria-checked={signalMode}
-                onClick={() => setSignalMode((v) => !v)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
-                  signalMode ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
-                    signalMode ? "translate-x-5" : "translate-x-1"
-                  }`}
-                />
-              </button>
-              <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
-                {signalMode ? "Ativado" : "Desativado"}
-              </span>
+              <span className="text-sm font-medium text-zeedo-orange">Modo Sinal:</span>
+              {isBasicPlan ? (
+                <>
+                  <span
+                    className="relative inline-flex h-6 w-11 shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-zeedo-orange opacity-90"
+                    aria-hidden
+                  >
+                    <span className="pointer-events-none inline-block h-5 w-5 translate-x-5 transform rounded-full bg-white shadow ring-0" />
+                  </span>
+                  <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">Sempre ativado</span>
+                </>
+              ) : (
+                <>
+                  <label htmlFor="signal-mode" className="sr-only">
+                    Modo Sinal
+                  </label>
+                  <button
+                    type="button"
+                    id="signal-mode"
+                    role="switch"
+                    aria-checked={signalMode}
+                    onClick={() => setSignalMode((v) => !v)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
+                      signalMode ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                        signalMode ? "translate-x-5" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
+                    {signalMode ? "Ativado" : "Desativado"}
+                  </span>
+                </>
+              )}
             </div>
             <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-              Ative o Modo Sinal se não desejar que o Zeedo ative nenhum trade automáticamente.
+              {isBasicPlan
+                ? "No plano Basic o Zeedo envia apenas sinais (Telegram); não executa trades automaticamente pela plataforma."
+                : "Ative o Modo Sinal se não desejar que o Zeedo ative nenhum trade automáticamente."}
             </p>
           </div>
 
-          <div className={`space-y-2 ${!limits?.allowed_entry2 ? "opacity-60" : ""}`}>
-            <div className="flex flex-wrap items-center gap-3">
-              <label htmlFor="entry2" className={`text-sm font-medium text-zeedo-orange ${limits?.allowed_entry2 ? "cursor-pointer" : "cursor-not-allowed"}`}>
-                Segunda entrada:
-              </label>
-              <button
-                type="button"
-                id="entry2"
-                role="switch"
-                aria-checked={limits?.allowed_entry2 ? entry2Enabled : false}
-                aria-disabled={!limits?.allowed_entry2}
-                onClick={() => limits?.allowed_entry2 && setEntry2Enabled((v) => !v)}
-                disabled={!limits?.allowed_entry2}
-                className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
-                  !limits?.allowed_entry2
-                    ? "cursor-not-allowed bg-zeedo-black/20 dark:bg-white/10"
-                    : `cursor-pointer ${entry2Enabled ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"}`
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
-                    limits?.allowed_entry2 && entry2Enabled ? "translate-x-5" : "translate-x-1"
+          {!isBasicPlan && (
+            <div className={`space-y-2 ${!limits?.allowed_entry2 ? "opacity-60" : ""}`}>
+              <div className="flex flex-wrap items-center gap-3">
+                <label htmlFor="entry2" className={`text-sm font-medium text-zeedo-orange ${limits?.allowed_entry2 ? "cursor-pointer" : "cursor-not-allowed"}`}>
+                  Segunda entrada:
+                </label>
+                <button
+                  type="button"
+                  id="entry2"
+                  role="switch"
+                  aria-checked={limits?.allowed_entry2 ? entry2Enabled : false}
+                  aria-disabled={!limits?.allowed_entry2}
+                  onClick={() => limits?.allowed_entry2 && setEntry2Enabled((v) => !v)}
+                  disabled={!limits?.allowed_entry2}
+                  className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
+                    !limits?.allowed_entry2
+                      ? "cursor-not-allowed bg-zeedo-black/20 dark:bg-white/10"
+                      : `cursor-pointer ${entry2Enabled ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"}`
                   }`}
-                />
-              </button>
-              {limits?.allowed_entry2 ? (
-                <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
-                  {entry2Enabled ? "Ativada" : "Desativada"}
-                </span>
-              ) : (
-                <span className="text-sm text-amber-600 dark:text-amber-500">
-                  Indisponível no plano atual. Faça upgrade para o plano Pro para ter acesso.
-                </span>
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                      limits?.allowed_entry2 && entry2Enabled ? "translate-x-5" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+                {limits?.allowed_entry2 ? (
+                  <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
+                    {entry2Enabled ? "Ativada" : "Desativada"}
+                  </span>
+                ) : (
+                  <span className="text-sm text-amber-600 dark:text-amber-500">
+                    Indisponível no plano atual. Faça upgrade para o plano Pro para ter acesso.
+                  </span>
+                )}
+              </div>
+              {limits?.allowed_entry2 && (
+                <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+                  Se estiver ligada, Zeedo colocará uma ordem automática de segunda entrada. Caso você não queira automatizar a segunda entrada, deixe desmarcado.
+                </p>
               )}
             </div>
-            {limits?.allowed_entry2 && (
-              <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                Se estiver ligada, Zeedo colocará uma ordem automática de segunda entrada. Caso você não queira automatizar a segunda entrada, deixe desmarcado.
-              </p>
-            )}
-          </div>
+          )}
 
           <hr className="border-zeedo-orange/20" />
+          {isBasicPlan ? (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">Controles de risco</h3>
+                <ProPlanLockHint
+                  message={UPGRADE_TOOLTIP_RISK}
+                  hintKey="risk"
+                  openKey={lockHintOpen}
+                  setOpenKey={setLockHintOpen}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">Estratégias</h3>
+                <ProPlanLockHint
+                  message={UPGRADE_TOOLTIP_STRATEGIES}
+                  hintKey="strategy"
+                  openKey={lockHintOpen}
+                  setOpenKey={setLockHintOpen}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
           <h3 className="font-medium text-zeedo-black dark:text-zeedo-white">Controles de risco</h3>
 
           <div className="space-y-4">
@@ -855,6 +957,8 @@ export default function BotPage() {
               </p>
             </div>
           </div>
+            </>
+          )}
 
           {/* Estratégias (apenas Pro e Satoshi) */}
           {(limits?.can_customize_targets || limits?.can_customize_stop) && (
