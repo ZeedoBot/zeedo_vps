@@ -696,12 +696,30 @@ def _infer_position_side_from_fill(fill: dict) -> Optional[str]:
     return None
 
 
+def _merge_tracker_db_into_memory(entry_tracker: dict, storage) -> None:
+    """
+    Símbolos só no bot_tracker (ex.: execute-blocked-trade no site) entram na memória.
+    Não sobrescreve chaves já em entry_tracker — o bot continua a poder remover com pop + save.
+    """
+    if not hasattr(storage, "get_entry_tracker"):
+        return
+    try:
+        fresh = storage.get_entry_tracker()
+        for sym, data in (fresh or {}).items():
+            if sym and isinstance(data, dict) and sym not in entry_tracker:
+                entry_tracker[sym] = data
+    except Exception as e:
+        logging.warning("merge_tracker_db_into_memory: %s", e)
+
+
 def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
     try:
         # Limite: só considera trades após criação da conta no Zeedo (multiusuário)
         min_ts_ms = None
         if hasattr(storage, 'get_user_created_at_timestamp_ms'):
             min_ts_ms = storage.get_user_created_at_timestamp_ms()
+
+        _merge_tracker_db_into_memory(entry_tracker, storage)
 
         # Busca saldo atual da conta para calcular PNL % correto
         account_value = 0.0
@@ -716,16 +734,6 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         user_fills = info.user_fills(wallet)
         if not user_fills:
             return
-
-        # Alinha RAM com bot_tracker no storage (ex.: trade acionado no site) antes de classificar fills
-        if hasattr(storage, "get_entry_tracker"):
-            try:
-                fresh = storage.get_entry_tracker()
-                for sym, data in (fresh or {}).items():
-                    if sym and isinstance(data, dict):
-                        entry_tracker[sym] = data
-            except Exception as e:
-                logging.warning("sync_trade_history: merge tracker: %s", e)
 
         trades_db = storage.get_trades_db()
         if not isinstance(trades_db, list):
@@ -1771,7 +1779,9 @@ def run_main_loop(info, exchange, wallet, storage, config_overrides=None):
                 else:
                     logging.error(f"Erro API Geral: {e}")
                     time.sleep(5)
-                    continue 
+                    continue
+
+            _merge_tracker_db_into_memory(entry_tracker, storage)
 
             if time.time() - last_history_sync > 20:
                 sync_trade_history(info, wallet, entry_tracker, history_tracker, storage)
