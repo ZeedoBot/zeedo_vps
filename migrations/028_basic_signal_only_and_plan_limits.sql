@@ -2,7 +2,7 @@
 -- Força signal_mode no bot_config para assinantes basic (consistência com API)
 
 UPDATE plan_limits SET
-  allowed_symbols = ARRAY['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'HYPE', 'LINK', 'AVAX', 'DOGE']::text[],
+  allowed_symbols = ARRAY['BTC', 'ETH', 'SOL', 'AVAX', 'LINK', 'HYPE', 'ADA', 'AAVE', 'SUI']::text[],
   allowed_timeframes = ARRAY['15m', '30m', '1h']::text[],
   updated_at = NOW()
 WHERE plan = 'basic';
