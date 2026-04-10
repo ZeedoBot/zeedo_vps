@@ -59,9 +59,11 @@ function parseStoredStrategy(v: unknown): StrategyKey | null {
 
 type StrategyPreset = {
   label: string;
-  description: string;
-  rr: string;
-  accuracy: string;
+  /** Linha curta (ex.: Stop mais longo) */
+  tagline: string;
+  assertividadePct: string;
+  alvo2RR: string;
+  alvo3RR: string;
   stopMultiplier: string;
   entry1Multiplier: string;
   target1Level: string;
@@ -75,9 +77,10 @@ type StrategyPreset = {
 const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> = {
   CONSERVADOR: {
     label: "Conservador",
-    description: "Stop mais longo; se o preço tocar fib -1,8, os alvos passam a 0,618 (5%) e 1,5 (95%).",
-    rr: "R:R conforme alvos",
-    accuracy: "Maior assertividade relativa, retorno mais contido.",
+    tagline: "Stop mais longo",
+    assertividadePct: "~85%",
+    alvo2RR: "0.5",
+    alvo3RR: "1.25",
     stopMultiplier: "3.1",
     entry1Multiplier: "0.618",
     target1Level: "0.5",
@@ -89,23 +92,25 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
   },
   MEDIANO: {
     label: "Mediano",
-    description: "Meio termo; mesma lógica de ajuste ao tocar -1,8 que o Conservador.",
-    rr: "R:R conforme alvos",
-    accuracy: "Assertividade e retorno equilibrados.",
+    tagline: "Stop em ponto médio",
+    assertividadePct: "~60%",
+    alvo2RR: "1.0",
+    alvo3RR: "2.25",
     stopMultiplier: "2",
     entry1Multiplier: "0.618",
     target1Level: "0.5",
     target1Percent: 3,
     target2Level: "1.6",
-    target2Percent: 47,
+    target2Percent: 62,
     target3Level: "4.4",
-    target3Percent: 50,
+    target3Percent: 35,
   },
   AGRESSIVO: {
     label: "Agressivo",
-    description: "Stop mais curto; sem ajuste ao -1,8 (stop antes dessa extensão).",
-    rr: "R:R conforme alvos",
-    accuracy: "Mais trades ativados, retorno potencial maior.",
+    tagline: "Stop curto",
+    assertividadePct: "~45%",
+    alvo2RR: "1.4",
+    alvo3RR: "4.5",
     stopMultiplier: "1.4",
     entry1Multiplier: "0.618",
     target1Level: "0.5",
@@ -117,9 +122,10 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
   },
   DEGEN: {
     label: "Degen",
-    description: "Stop apertado; sem ajuste ao -1,8.",
-    rr: "R:R conforme alvos",
-    accuracy: "Menor assertividade, retorno potencial elevado.",
+    tagline: "Stop muito curto",
+    assertividadePct: "~30%",
+    alvo2RR: "2.5",
+    alvo3RR: "7.9",
     stopMultiplier: "1.07",
     entry1Multiplier: "0.618",
     target1Level: "0.618",
@@ -510,7 +516,7 @@ export default function BotPage() {
         <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60 mb-4">
           Clique nas opções que você deseja que o Zeedo opere.
           <br />
-          Símbolos e timeframes em laranja significam ativos.
+          Opções em laranja significam ativos.
           <br />
           Não esqueça de sempre clicar em Salvar Configurações.
         </p>
@@ -649,7 +655,7 @@ export default function BotPage() {
           <div className="space-y-4">
             <div title={`Limite do plano: ${limits.target_loss_min} – ${limits.target_loss_max} USD`}>
               <label htmlFor="target_loss" className="block text-sm font-medium text-zeedo-orange mb-1">
-                Target Loss (Valor em USD que você arrisca perder por trade)
+                Target Loss
               </label>
               <input
                 id="target_loss"
@@ -678,7 +684,7 @@ export default function BotPage() {
                 {limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.target_loss_min} – ${limits.target_loss_max} USD`}
               </p>
               <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
-                O target loss usa a distância entre o preço de entrada e o stop para dimensionar a posição.
+                Valor em USD que você arrisca por trade.
               </p>
             </div>
             <div title={`Limite do plano: 1 – ${limits.max_positions}`}>
@@ -786,18 +792,24 @@ export default function BotPage() {
               </div>
 
               {selectedStrategy !== "CUSTOM" ? (
-                <div className="rounded-lg border border-zeedo-orange/30 bg-zeedo-orange/5 p-4">
+                <div className="rounded-lg border border-zeedo-orange/30 bg-zeedo-orange/5 p-4 space-y-1">
                   <p className="text-sm font-semibold text-zeedo-black dark:text-zeedo-white">
                     {STRATEGY_PRESETS[selectedStrategy].label}
                   </p>
-                  <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
-                    {STRATEGY_PRESETS[selectedStrategy].description}
+                  <p className="text-xs text-zeedo-black/80 dark:text-zeedo-white/80">
+                    {STRATEGY_PRESETS[selectedStrategy].tagline}
                   </p>
-                  <p className="mt-1 text-xs text-zeedo-orange">
-                    {STRATEGY_PRESETS[selectedStrategy].rr} (uma entrada + alvos)
+                  <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
+                    Assertividade Média: {STRATEGY_PRESETS[selectedStrategy].assertividadePct}
                   </p>
-                  <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                    {STRATEGY_PRESETS[selectedStrategy].accuracy}
+                  <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
+                    Risco Retorno Médio:
+                  </p>
+                  <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70 pl-2">
+                    Alvo 2 = {STRATEGY_PRESETS[selectedStrategy].alvo2RR}
+                  </p>
+                  <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70 pl-2">
+                    Alvo 3 = {STRATEGY_PRESETS[selectedStrategy].alvo3RR}
                   </p>
                 </div>
               ) : (
