@@ -61,19 +61,14 @@ class BotInstance:
             # 4. Cria Telegram client
             self.telegram = TelegramClient(self.user_id, self.storage)
             
-            # Plano e entrada 2: basic=só entrada 1; pro/satoshi=entrada 1+2 com toggle
             plan = self._get_user_plan()
-            allowed_entry2 = plan in ('pro', 'satoshi')
-            entry2_enabled = bool(bot_config_dict.get('entry2_enabled', True))
 
             # 5. Monta config de Fibo (alvos e stop) a partir do bot_config
             stop_mult = float(bot_config_dict.get('stop_multiplier', 1.8) or 1.8)
             entry1_mult = float(bot_config_dict.get('entry1_multiplier', 0.618) or 0.618)
-            entry2_mult = float(bot_config_dict.get('entry2_multiplier', 1.414) or 1.414)
+            strategy_preset = str(bot_config_dict.get('strategy_preset') or '').strip()
 
             fib_levels: list[tuple[float, float]] = []
-            entry2_adjust_last_target = bool(bot_config_dict.get('entry2_adjust_last_target', True))
-            entry2_fib_levels_after: list[tuple[float, float]] = []
             try:
                 t1_level = bot_config_dict.get('target1_level')
                 t1_pct = bot_config_dict.get('target1_percent')
@@ -102,39 +97,9 @@ class BotInstance:
                 # Em caso de qualquer problema de parsing, deixa fib_levels vazio e usa defaults
                 fib_levels = []
 
-            # Alvos após entrada 2 (opcionais; se houver, substituem todos os alvos quando entrada 2 executar)
-            try:
-                e1_level = bot_config_dict.get('entry2_target1_level')
-                e1_pct = bot_config_dict.get('entry2_target1_percent')
-                if e1_level is not None and e1_pct is not None:
-                    lvl = float(e1_level)
-                    pct = float(e1_pct or 0)
-                    if pct > 0:
-                        entry2_fib_levels_after.append((lvl, pct / 100.0))
-
-                e2_level = bot_config_dict.get('entry2_target2_level')
-                e2_pct = bot_config_dict.get('entry2_target2_percent')
-                if e2_level is not None and e2_pct is not None:
-                    lvl = float(e2_level)
-                    pct = float(e2_pct or 0)
-                    if pct > 0:
-                        entry2_fib_levels_after.append((lvl, pct / 100.0))
-
-                e3_level = bot_config_dict.get('entry2_target3_level')
-                e3_pct = bot_config_dict.get('entry2_target3_percent')
-                if e3_level is not None and e3_pct is not None:
-                    lvl = float(e3_level)
-                    pct = float(e3_pct or 0)
-                    if pct > 0:
-                        entry2_fib_levels_after.append((lvl, pct / 100.0))
-            except Exception:
-                entry2_fib_levels_after = []
-
             fib_kwargs = {}
             if fib_levels:
                 fib_kwargs["fib_levels"] = fib_levels
-            if entry2_fib_levels_after:
-                fib_kwargs["entry2_fib_levels_after"] = entry2_fib_levels_after
 
             # 6. Cria BotConfig
             # Plano Basic: sempre Modo Sinal (sem execução automática de trades pelo motor)
@@ -147,8 +112,7 @@ class BotInstance:
                 timeframes=bot_config_dict.get('timeframes', []),
                 trade_mode=bot_config_dict.get('trade_mode', 'BOTH'),
                 signal_mode=signal_mode,
-                entry2_enabled=entry2_enabled,
-                entry2_allowed=allowed_entry2,
+                strategy_preset=strategy_preset,
                 target_loss_usd=bot_config_dict.get('target_loss_usd', 5.0),
                 max_global_exposure=bot_config_dict.get('max_global_exposure', 5000.0),
                 max_single_pos_exposure=bot_config_dict.get('max_single_pos_exposure', 2500.0),
@@ -156,8 +120,6 @@ class BotInstance:
                 is_mainnet=credentials.get('network', 'mainnet') == 'mainnet',
                 fib_stop_level=stop_mult,
                 entry1_multiplier=entry1_mult,
-                fib_entry2_level=entry2_mult,
-                entry2_adjust_last_target=entry2_adjust_last_target,
                 **fib_kwargs,
             )
             

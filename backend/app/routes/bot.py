@@ -48,7 +48,6 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
 class BotConfigUpdate(BaseModel):
     bot_enabled: Optional[bool] = None
     signal_mode: Optional[bool] = None
-    entry2_enabled: Optional[bool] = None
     symbols: Optional[List[str]] = None
     timeframes: Optional[List[str]] = None
     trade_mode: Optional[str] = Field(None, pattern="^(BOTH|LONG_ONLY|SHORT_ONLY)$")
@@ -58,14 +57,6 @@ class BotConfigUpdate(BaseModel):
     max_positions: Optional[int] = None
     stop_multiplier: Optional[float] = Field(None, ge=1.0, le=10.0)
     entry1_multiplier: Optional[float] = Field(None, ge=0.0, le=3.0)
-    entry2_multiplier: Optional[float] = Field(None, ge=0.618, le=5.0)
-    entry2_adjust_last_target: Optional[bool] = None
-    entry2_target1_level: Optional[float] = Field(None, ge=-5.0, le=5.0)
-    entry2_target1_percent: Optional[int] = Field(None, ge=0, le=100)
-    entry2_target2_level: Optional[float] = Field(None, ge=-5.0, le=5.0)
-    entry2_target2_percent: Optional[int] = Field(None, ge=0, le=100)
-    entry2_target3_level: Optional[float] = Field(None, ge=-5.0, le=5.0)
-    entry2_target3_percent: Optional[int] = Field(None, ge=0, le=100)
     target1_level: Optional[float] = Field(None, ge=0.0, le=5.0)
     target1_percent: Optional[int] = Field(None, ge=1, le=100)
     target2_level: Optional[float] = Field(None, ge=0.0, le=5.0)
@@ -87,17 +78,15 @@ def get_config(user_id: str = Depends(get_current_user_id)):
     trial_ended = sub_status == "expired"
     limits = _get_plan_limits(supabase, user_id)
     r = supabase.table("bot_config").select(
-        "symbols, timeframes, trade_mode, bot_enabled, entry2_enabled, signal_mode, "
+        "symbols, timeframes, trade_mode, bot_enabled, signal_mode, "
         "target_loss_usd, max_global_exposure, max_single_pos_exposure, max_positions, "
-        "stop_multiplier, entry1_multiplier, entry2_multiplier, entry2_adjust_last_target, "
-        "entry2_target1_level, entry2_target1_percent, entry2_target2_level, entry2_target2_percent, entry2_target3_level, entry2_target3_percent, "
+        "stop_multiplier, entry1_multiplier, "
         "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent, "
         "strategy_preset, updated_at"
     ).eq("user_id", user_id).limit(1).execute()
     out = {
         "bot_enabled": False,
         "signal_mode": False,
-        "entry2_enabled": True,
         "symbols": [],
         "timeframes": [],
         "trade_mode": "BOTH",
@@ -107,14 +96,6 @@ def get_config(user_id: str = Depends(get_current_user_id)):
         "max_positions": 2,
         "stop_multiplier": 1.8,
         "entry1_multiplier": 0.618,
-        "entry2_multiplier": 1.414,
-        "entry2_adjust_last_target": True,
-        "entry2_target1_level": None,
-        "entry2_target1_percent": None,
-        "entry2_target2_level": None,
-        "entry2_target2_percent": None,
-        "entry2_target3_level": None,
-        "entry2_target3_percent": None,
         "target1_level": 0.618,
         "target1_percent": 50,
         "target2_level": 1.0,
@@ -153,8 +134,6 @@ def update_config(
         payload["signal_mode"] = True
 
     # Validação contra plan_limits
-    if body.entry2_enabled is not None and body.entry2_enabled and not limits.get("allowed_entry2", False):
-        raise HTTPException(400, "Entrada 2 disponível apenas nos planos Pro e Enterprise.")
     if body.target_loss_usd is not None:
         if body.target_loss_usd < limits["target_loss_min"] or body.target_loss_usd > limits["target_loss_max"]:
             raise HTTPException(400, f"target_loss deve estar entre {limits['target_loss_min']} e {limits['target_loss_max']} (plano {limits['plan']})")
@@ -191,21 +170,11 @@ def update_config(
     if body.entry1_multiplier is not None and not can_customize_stop:
         raise HTTPException(400, "Customização da entrada 1 disponível apenas nos planos Pro e Satoshi.")
     
-    if body.entry2_multiplier is not None and not can_customize_stop:
-        raise HTTPException(400, "Customização da entrada 2 disponível apenas nos planos Pro e Satoshi.")
-    
     if any([body.target1_level is not None, body.target1_percent is not None, 
             body.target2_level is not None, body.target2_percent is not None,
             body.target3_level is not None, body.target3_percent is not None]) and not can_customize_targets:
         raise HTTPException(400, "Customização de alvos disponível apenas nos planos Pro e Satoshi.")
 
-    if any([
-        body.entry2_target1_level is not None, body.entry2_target1_percent is not None,
-        body.entry2_target2_level is not None, body.entry2_target2_percent is not None,
-        body.entry2_target3_level is not None, body.entry2_target3_percent is not None,
-    ]) and not can_customize_targets:
-        raise HTTPException(400, "Customização de alvos após entrada 2 disponível apenas nos planos Pro e Satoshi.")
-    
     # Validação de consistência dos alvos (soma deve ser 100%)
     if any([body.target1_percent is not None, body.target2_percent is not None, body.target3_percent is not None]):
         # Busca valores atuais
@@ -221,22 +190,6 @@ def update_config(
         total = t1 + t2 + t3
         if total != 100:
             raise HTTPException(400, f"A soma dos percentuais dos alvos deve ser 100% (atual: {total}%)")
-
-    # Validação de consistência dos alvos após entrada 2 (soma deve ser 100%)
-    if any([
-        body.entry2_target1_percent is not None, body.entry2_target2_percent is not None, body.entry2_target3_percent is not None,
-    ]):
-        current = supabase.table("bot_config").select(
-            "entry2_target1_percent, entry2_target2_percent, entry2_target3_percent"
-        ).eq("user_id", user_id).limit(1).execute()
-        e1 = body.entry2_target1_percent if body.entry2_target1_percent is not None else (current.data[0].get("entry2_target1_percent") if current.data else None)
-        e2 = body.entry2_target2_percent if body.entry2_target2_percent is not None else (current.data[0].get("entry2_target2_percent") if current.data else None)
-        e3 = body.entry2_target3_percent if body.entry2_target3_percent is not None else (current.data[0].get("entry2_target3_percent") if current.data else None)
-        if e1 is None or e1 <= 0:
-            raise HTTPException(400, "Alvo após entrada 2 #1 é obrigatório e deve ter percentual maior que 0%")
-        total = int(e1) + int(e2 or 0) + int(e3 or 0)
-        if total != 100:
-            raise HTTPException(400, f"A soma dos percentuais dos alvos após entrada 2 deve ser 100% (atual: {total}%)")
 
     # Só permite ligar o bot se carteira E telegram estiverem conectados
     if body.bot_enabled is True:

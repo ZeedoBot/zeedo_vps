@@ -43,9 +43,9 @@ class BotEngine:
             "LOCAL_LOW_WINDOW": self.config.local_low_window,
             "FIB_LEVELS": self.config.fib_levels,
             "FIB_STOP_LEVEL": self.config.fib_stop_level,
-            "FIB_ENTRY2_LEVEL": self.config.fib_entry2_level,
-            "ENTRY2_ADJUST_LAST_TARGET": self.config.entry2_adjust_last_target,
-            "ENTRY2_FIB_LEVELS_AFTER": self.config.entry2_fib_levels_after,
+            "FIB_DEEP_TRIGGER_LEVEL": self.config.fib_deep_trigger_level,
+            "DEEP_FIB_LEVELS_AFTER": self.config.deep_fib_levels_after,
+            "STRATEGY_PRESET": self.config.strategy_preset,
             "ENTRY1_MULTIPLIER": self.config.entry1_multiplier,
             "LSR_TIMEFRAME": self.config.lsr_timeframe,
             "LSR_LIMIT": self.config.lsr_limit,
@@ -58,8 +58,6 @@ class BotEngine:
             "LSR_SPECIAL_1_SYMBOLS": self.config.lsr_special_1_symbols,
             "LSR_SPECIAL_2_SYMBOLS": self.config.lsr_special_2_symbols,
             "STRENGTH_UPDATE_INTERVAL": self.config.strength_update_interval,
-            "ENTRY2_ENABLED": self.config.entry2_enabled,
-            "ENTRY2_ALLOWED": self.config.entry2_allowed,
             "SIGNAL_MODE": self.config.signal_mode,
         }
 

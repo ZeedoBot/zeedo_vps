@@ -135,15 +135,10 @@ class InstanceManager:
         # Compara campos relevantes (qualquer um alterado = reiniciar bot)
         relevant_fields = [
             'symbols', 'timeframes', 'trade_mode', 'signal_mode', 'bot_enabled',
-            # Controles de risco
-            'entry2_enabled', 'target_loss_usd', 'max_global_exposure',
+            'target_loss_usd', 'max_global_exposure',
             'max_single_pos_exposure', 'max_positions',
-            # Configurações avançadas
             'strategy_preset',
-            'stop_multiplier', 'entry1_multiplier', 'entry2_multiplier', 'entry2_adjust_last_target',
-            'entry2_target1_level', 'entry2_target1_percent',
-            'entry2_target2_level', 'entry2_target2_percent',
-            'entry2_target3_level', 'entry2_target3_percent',
+            'stop_multiplier', 'entry1_multiplier',
             'target1_level', 'target1_percent',
             'target2_level', 'target2_percent',
             'target3_level', 'target3_percent',

@@ -23,7 +23,6 @@ type BlockedTrade = {
   tf: string;
   side: string;
   entry_px: number;
-  entry2_px: number;
   stop_real: number;
   qty: number;
   reason: string;
@@ -368,8 +367,7 @@ export default function TradesPage() {
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Lado</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Motivo</th>
                     <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">Hora</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">1ª entrada</th>
-                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">2ª entrada</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Entrada</th>
                     <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">Stop</th>
                     <th className={`px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase ${STICKY_ACTION_TH_LG}`}>Ação</th>
                   </tr>
@@ -392,7 +390,6 @@ export default function TradesPage() {
                         </div>
                       </td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry_px?.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry2_px?.toFixed(2)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.stop_real?.toFixed(2)}</td>
                       <td className={`px-4 py-2 text-sm text-right ${STICKY_ACTION_TD_LG}`}>
                         <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-2">

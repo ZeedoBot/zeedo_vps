@@ -164,7 +164,7 @@ export default function ChoosePlanPage() {
                       <div className="text-sm pt-2">
                         <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
                         <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                          <li>Segunda entrada automática</li>
+                          <li>Estratégias pré-definidas</li>
                           <li>Only Long/Short</li>
                           <li>Alvos e Stop Personalizados</li>
                         </ul>
@@ -192,7 +192,7 @@ export default function ChoosePlanPage() {
                       <div className="text-sm pt-2">
                         <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
                         <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                          <li>Segunda entrada automática</li>
+                          <li>Estratégias pré-definidas</li>
                           <li>Only Long/Short</li>
                           <li>Alvos e Stop Personalizados</li>
                           <li>Mentoria Individual Mensal</li>

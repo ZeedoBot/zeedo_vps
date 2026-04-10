@@ -28,7 +28,7 @@ const PLANS = [
       "Ativos: Todos disponíveis",
       "Timeframes: 15m, 30m, 1h e 4h",
       "Trades simultâneos: máx. 5",
-      "Segunda entrada automática",
+      "Estratégias pré-definidas e alvos personalizados",
       "Função Only",
       "Alvos e Stop Personalizados",
     ],
@@ -43,7 +43,7 @@ const PLANS = [
       "Ativos: Todos disponíveis",
       "Timeframes: 5m, 15m, 30m, 1h, 4h e 1d",
       "Trades simultâneos: Ilimitado",
-      "Segunda entrada automática",
+      "Estratégias pré-definidas e alvos personalizados",
       "Função Only",
       "Alvos e Stop Personalizados",
       "Mentoria Individual Mensal",
@@ -641,7 +641,7 @@ export default function BotPage() {
                           <div className="text-sm pt-2">
                             <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
                             <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                              <li>Segunda entrada automática</li>
+                              <li>Estratégias pré-definidas e alvos personalizados</li>
                               <li>Only Long/Short</li>
                               <li>Alvos e Stop Personalizados</li>
                             </ul>
@@ -669,7 +669,7 @@ export default function BotPage() {
                           <div className="text-sm pt-2">
                             <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
                             <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                              <li>Segunda entrada automática</li>
+                              <li>Estratégias pré-definidas e alvos personalizados</li>
                               <li>Only Long/Short</li>
                               <li>Alvos e Stop Personalizados</li>
                               <li>Mentoria Individual Mensal</li>

@@ -259,8 +259,7 @@ class SupabaseStorage(StorageBase):
         try:
             user_id = user_id or self._user_id
             query = self._client.table(TABLE_CONFIG).select(
-                "symbols, timeframes, trade_mode, signal_mode, strategy_preset, stop_multiplier, entry1_multiplier, entry2_multiplier, entry2_adjust_last_target, "
-                "entry2_target1_level, entry2_target1_percent, entry2_target2_level, entry2_target2_percent, entry2_target3_level, entry2_target3_percent, "
+                "symbols, timeframes, trade_mode, signal_mode, strategy_preset, stop_multiplier, entry1_multiplier, "
                 "target1_level, target1_percent, target2_level, target2_percent, target3_level, target3_percent"
             )
             
@@ -279,14 +278,6 @@ class SupabaseStorage(StorageBase):
                 "strategy_preset": row.get("strategy_preset"),
                 "stop_multiplier": row.get("stop_multiplier", 1.8),
                 "entry1_multiplier": row.get("entry1_multiplier", 0.618),
-                "entry2_multiplier": row.get("entry2_multiplier", 1.414),
-                "entry2_adjust_last_target": row.get("entry2_adjust_last_target", True),
-                "entry2_target1_level": row.get("entry2_target1_level"),
-                "entry2_target1_percent": row.get("entry2_target1_percent"),
-                "entry2_target2_level": row.get("entry2_target2_level"),
-                "entry2_target2_percent": row.get("entry2_target2_percent"),
-                "entry2_target3_level": row.get("entry2_target3_level"),
-                "entry2_target3_percent": row.get("entry2_target3_percent"),
                 "target1_level": row.get("target1_level", 0.618),
                 "target1_percent": row.get("target1_percent", 50),
                 "target2_level": row.get("target2_level", 1.0),

@@ -129,7 +129,7 @@ const BENEFITS = [
   },
   {
     title: "Controle total",
-    desc: "Target loss, exposição máxima e segunda entrada, tudo configurável por você.",
+    desc: "Target loss, exposição máxima e estratégias, tudo configurável por você.",
     image: "/Zeedos/6.png?v=2",
   },
   {

@@ -263,7 +263,9 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
 
     blocked = []
     try:
-        bt = supabase.table("blocked_trades").select("id, symbol, tf, side, entry_px, entry2_px, stop_real, qty, reason, created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
+        bt = supabase.table("blocked_trades").select(
+            "id, symbol, tf, side, entry_px, stop_real, qty, reason, created_at"
+        ).eq("user_id", user_id).order("created_at", desc=True).execute()
         if bt.data:
             for row in bt.data:
                 blocked.append({
@@ -272,7 +274,6 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                     "tf": row.get("tf", "-"),
                     "side": row.get("side", ""),
                     "entry_px": float(row.get("entry_px", 0)),
-                    "entry2_px": float(row.get("entry2_px", 0)),
                     "stop_real": float(row.get("stop_real", 0)),
                     "qty": float(row.get("qty", 0)),
                     "reason": row.get("reason", ""),
@@ -540,7 +541,6 @@ def get_blocked_trades(user_id: str = Depends(get_current_user_id)) -> dict[str,
             "tf": row.get("tf", "-"),
             "side": row.get("side", ""),
             "entry_px": float(row.get("entry_px", 0)),
-            "entry2_px": float(row.get("entry2_px", 0)),
             "stop_real": float(row.get("stop_real", 0)),
             "qty": float(row.get("qty", 0)),
             "reason": row.get("reason", ""),
@@ -569,7 +569,6 @@ def execute_blocked_trade(
     side = (row.get("side") or "long").lower()
     tf = row.get("tf") or "-"
     entry_px = float(row.get("entry_px", 0))
-    entry2_px = float(row.get("entry2_px", 0))
     stop_real = float(row.get("stop_real", 0))
     qty = float(row.get("qty", 0))
     signal_ts = int(row.get("signal_ts", 0))
@@ -616,11 +615,10 @@ def execute_blocked_trade(
         logger.exception("Erro ao descriptografar chave")
         raise HTTPException(status_code=500, detail="Erro ao acessar carteira.")
 
-    # Entry2: busca config
-    cfg = supabase.table("bot_config").select("entry2_enabled").eq("user_id", user_id).limit(1).execute()
-    entry2_enabled = True
+    cfg = supabase.table("bot_config").select("strategy_preset").eq("user_id", user_id).limit(1).execute()
+    strategy_preset = ""
     if cfg.data and len(cfg.data) > 0:
-        entry2_enabled = bool(cfg.data[0].get("entry2_enabled", True))
+        strategy_preset = str(cfg.data[0].get("strategy_preset") or "").strip()
 
     from hyperliquid.exchange import Exchange
     from hyperliquid.utils import constants
@@ -656,10 +654,6 @@ def execute_blocked_trade(
         if st.get("error"):
             raise HTTPException(status_code=400, detail=f"Hyperliquid: {st['error']}")
 
-    second_qty = qty if entry2_enabled else 0
-    qty_entry_1 = qty
-    qty_entry_2 = qty + second_qty
-
     tracker_data = {
         "side": side,
         "tf": tf,
@@ -671,18 +665,13 @@ def execute_blocked_trade(
         "setup_low": setup_low,
         "entry_px": entry_px,
         "qty": qty,
-        "qty_entry_1": qty_entry_1,
-        "qty_entry_2": qty_entry_2,
+        "qty_entry_1": qty,
+        "qty_entry_2": qty,
         "trade_id": trade_id,
         "pnl_realized": 0.0,
         "last_size": 0.0,
+        "strategy_preset": strategy_preset,
     }
-    if entry2_enabled:
-        tracker_data["entry2_px"] = entry2_px
-        tracker_data["entry2_qty"] = second_qty
-        tracker_data["entry2_placed"] = False
-    else:
-        tracker_data["entry2_placed"] = True
 
     supabase.table("bot_tracker").upsert({
         "user_id": user_id,
@@ -709,4 +698,4 @@ def execute_blocked_trade(
 
     supabase.table("blocked_trades").delete().eq("id", body.id).eq("user_id", user_id).execute()
 
-    return {"success": True, "message": f"Trade {symbol} acionado. Ordem limit colocada na entrada 1."}
+    return {"success": True, "message": f"Trade {symbol} acionado. Ordem limit colocada na entrada."}

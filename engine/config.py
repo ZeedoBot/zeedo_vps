@@ -23,10 +23,6 @@ class BotConfig:
     # Network
     is_mainnet: bool = True
     
-    # Entrada 2 (Pro/Enterprise): -1.414 fib. Basic=só entrada 1.
-    entry2_enabled: bool = True
-    entry2_allowed: bool = True  # Por plano: basic=False, pro/satoshi=True
-
     # Modo Sinal: não coloca ordens; envia alerta e regista trade bloqueado.
     signal_mode: bool = False
 
@@ -53,11 +49,11 @@ class BotConfig:
     # Ex: 0.618 => long: setup_high - tech_base*0.618 (equivale a "entrada -0.618")
     entry1_multiplier: float = 0.618
     fib_stop_level: float = 1.8
-    fib_entry2_level: float = 1.414
-    # Se true, quando entrada 2 executar o último alvo vai para 0.0 (retorno ao setup)
-    entry2_adjust_last_target: bool = True
-    # Alvos alternativos quando entrada 2 executar (se vazio, usa fallback do último alvo→0.0)
-    entry2_fib_levels_after: List[Tuple[float, float]] = field(default_factory=list)
+    strategy_preset: str = ""
+    fib_deep_trigger_level: float = 1.8
+    deep_fib_levels_after: List[Tuple[float, float]] = field(
+        default_factory=lambda: [(0.618, 0.05), (1.5, 0.95)]
+    )
     
     # LSR Binance
     lsr_timeframe: str = "30m"

@@ -82,17 +82,15 @@ FIB_LEVELS = [
     (0.618, 0.50),  # Alvo 1 (0.618) - 50%
     (1.0, 0.50),    # Alvo 2 (1.0) - 50%
 ]
-FIB_STOP_LEVEL = 1.8  # Padrão: -1.8 fib
-FIB_ENTRY2_LEVEL = 1.414  # Padrão: -1.414 fib (customizável: 0.619-5.0)
-ENTRY2_ADJUST_LAST_TARGET = True  # Se true, último alvo vai para 0.0 quando entrada 2 executar
-ENTRY2_FIB_LEVELS_AFTER = []  # Alvos alternativos após entrada 2 (se setado)
+FIB_STOP_LEVEL = 1.8  # Padrão: -1.8 fib (extensão stop)
+# Conservador/Mediano: ao preço tocar extensão -1.8, TPs passam a estes níveis (fixos no código)
+FIB_DEEP_TRIGGER_LEVEL = 1.8
+DEEP_FIB_LEVELS_AFTER = [(0.618, 0.05), (1.5, 0.95)]
+STRATEGY_PRESET = ""  # ex.: CONSERVADOR — preenchido em load_config
 
 # Entrada 1: default (predefinida) em -0.618 para LONG e +0.618 para SHORT.
 ENTRY1_MULTIPLIER = 0.618
 
-# ENTRADA 2 (Pro/Enterprise): plano permite e usuário pode ativar/desativar
-ENTRY2_ALLOWED = True   # Definido por plan (basic=False, pro/satoshi=True)
-ENTRY2_ENABLED = True   # Toggle do usuário em bot_config.entry2_enabled
 SIGNAL_MODE = False     # Modo Sinal: não executa trades; bot_config.signal_mode (SaaS)
 
 # CONEXÃO
@@ -137,7 +135,7 @@ def tg_send(msg):
 
 def load_config(storage):
     """Carrega config do storage (local ou Supabase) e atualiza SYMBOLS, TIMEFRAMES, TRADE_MODE, alvos e stop."""
-    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, FIB_ENTRY2_LEVEL, ENTRY1_MULTIPLIER, ENTRY2_ADJUST_LAST_TARGET, ENTRY2_FIB_LEVELS_AFTER, SIGNAL_MODE
+    global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, ENTRY1_MULTIPLIER, SIGNAL_MODE, STRATEGY_PRESET
     config = storage.get_config()
     if config:
         if "symbols" in config and config["symbols"]:
@@ -162,36 +160,33 @@ def load_config(storage):
         if t3_level is not None and t3_level > 0 and t3_pct > 0:
             FIB_LEVELS.append((t3_level, t3_pct))
         
-        # Carrega stop e entrada 2 customizados
         FIB_STOP_LEVEL = config.get("stop_multiplier", 1.8)
-        FIB_ENTRY2_LEVEL = config.get("entry2_multiplier", 1.414)
         ENTRY1_MULTIPLIER = config.get("entry1_multiplier", 0.618)
-        ENTRY2_ADJUST_LAST_TARGET = config.get("entry2_adjust_last_target", True)
+        raw_preset = config.get("strategy_preset")
+        STRATEGY_PRESET = (str(raw_preset).strip() if raw_preset is not None else "") or ""
 
-        # Alvos após entrada 2 (opcionais)
-        e1_level = config.get("entry2_target1_level")
-        e1_pct = config.get("entry2_target1_percent")
-        e2_level = config.get("entry2_target2_level")
-        e2_pct = config.get("entry2_target2_percent")
-        e3_level = config.get("entry2_target3_level")
-        e3_pct = config.get("entry2_target3_percent")
-        entry2_levels = []
-        try:
-            if e1_level is not None and e1_pct is not None and float(e1_pct) > 0:
-                entry2_levels.append((float(e1_level), float(e1_pct) / 100.0))
-            if e2_level is not None and e2_pct is not None and float(e2_pct) > 0:
-                entry2_levels.append((float(e2_level), float(e2_pct) / 100.0))
-            if e3_level is not None and e3_pct is not None and float(e3_pct) > 0:
-                entry2_levels.append((float(e3_level), float(e3_pct) / 100.0))
-        except Exception:
-            entry2_levels = []
-        ENTRY2_FIB_LEVELS_AFTER = entry2_levels
-        
         logging.info(
-            f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada1: -{ENTRY1_MULTIPLIER}, Entrada2: -{FIB_ENTRY2_LEVEL}"
-            + (f" | Alvos pós-entrada2: {ENTRY2_FIB_LEVELS_AFTER}" if ENTRY2_FIB_LEVELS_AFTER else "")
-            + (f" | preset={config.get('strategy_preset')!r}" if config.get("strategy_preset") else "")
+            f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada1: -{ENTRY1_MULTIPLIER}"
+            + (f" | preset={STRATEGY_PRESET!r}" if STRATEGY_PRESET else "")
         )
+
+
+def _tracker_allows_deep_fib(mem_data: dict) -> bool:
+    """Conservador/Mediano: permitem rebalance de TPs ao tocar extensão -1.8."""
+    p = (mem_data.get("strategy_preset") or STRATEGY_PRESET or "").strip().upper()
+    return p in ("CONSERVADOR", "MEDIANO")
+
+
+def _price_hit_deep_fib_extension(side: str, curr_price: float, setup_high, setup_low, tech_base: float) -> bool:
+    if tech_base is None or tech_base <= 0 or setup_high is None or setup_low is None:
+        return False
+    lv = FIB_DEEP_TRIGGER_LEVEL
+    if side == "long":
+        deep_px = float(setup_high) - tech_base * lv
+        return curr_price <= deep_px
+    deep_px = float(setup_low) + tech_base * lv
+    return curr_price >= deep_px
+
 
 def get_precision(meta, coin):
     if not meta:
@@ -439,12 +434,6 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     curr_hl = df_hl.iloc[-1]
     prev_hl = df_hl.iloc[-2]
 
-    def entry_2(high_p, low_p, side):
-        base = high_p - low_p
-        if side == "long":
-            return high_p - (base * FIB_ENTRY2_LEVEL)
-        return low_p + (base * FIB_ENTRY2_LEVEL)
-    
     def format_ref_info(px, ts):
         if not px or not ts: return ""
         dt = datetime.fromtimestamp(ts/1000).strftime('%H:%M')
@@ -456,7 +445,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     local_max_window = recent_window["body_high"].max()
     prefix = f"[{symbol} {timeframe}]"
     signal_ts = int(curr["timestamp"])
-    signal = {"take": False, "side": None, "trigger": 0.0, "entry2_px": 0.0}
+    signal = {"take": False, "side": None, "trigger": 0.0}
     #LONG
     if "HAMMER_BULL" in patterns:
         if div_type == "BULL":
@@ -466,14 +455,11 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 tech_base = setup_high_hl - setup_low_hl
                 
                 trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER) #ENTRADA 1: LIMIT -valor (LONG)
-                entry2_px = entry_2(setup_high_hl, setup_low_hl, "long")
-                
                 ref_info = format_ref_info(div_px, div_ts)
                 stop_inicial = round_px(setup_high_hl - FIB_STOP_LEVEL * tech_base)
                 signal = {
                     "take": True, "side": "long", 
                     "trigger": trigger_hl,
-                    "entry2_px": entry2_px, 
                     "stop_real": stop_inicial,
                     "tech_base": tech_base, 
                     "setup_high": setup_high_hl, 
@@ -493,12 +479,11 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_low_hl = prev_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
                 trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER)
-                entry2_px = entry_2(setup_high_hl, setup_low_hl, "long")
                 stop_inicial = round_px(setup_high_hl - FIB_STOP_LEVEL * tech_base)
                 logging.info(f"{prefix} 🚫 Engolfo Bull ignorado (high extremo)")
                 return {
                     "take": False, "blocked": True, "reason": "high_extremo", "side": "long",
-                    "trigger": trigger_hl, "entry2_px": entry2_px, "stop_real": stop_inicial,
+                    "trigger": trigger_hl, "stop_real": stop_inicial,
                     "tech_base": tech_base, "setup_high": setup_high_hl, "setup_low": setup_low_hl,
                     "signal_ts": signal_ts
                 }
@@ -510,14 +495,11 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
 
                 # Primeira entrada: LIMIT no nível da fib (customizável)
                 trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER)
-                entry2_px = entry_2(setup_high_hl, setup_low_hl, "long")
-                
                 ref_info = format_ref_info(div_px, div_ts)
                 stop_inicial = round_px(setup_high_hl - FIB_STOP_LEVEL * tech_base)
                 signal = {
                     "take": True, "side": "long", 
                     "trigger": trigger_hl,
-                    "entry2_px": entry2_px, 
                     "stop_real": stop_inicial,
                     "tech_base": tech_base, 
                     "setup_high": setup_high_hl,
@@ -536,14 +518,11 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 
                 # Primeira entrada: LIMIT no nível da fib (customizável)
                 trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
-                entry2_px = entry_2(setup_high_hl, setup_low_hl, "short")
-                
                 ref_info = format_ref_info(div_px, div_ts)
                 stop_inicial = round_px(setup_low_hl + FIB_STOP_LEVEL * tech_base)
                 signal = {
                     "take": True, "side": "short", 
                     "trigger": trigger_hl,
-                    "entry2_px": entry2_px, 
                     "stop_real": stop_inicial,
                     "tech_base": tech_base, 
                     "setup_high": setup_high_hl,
@@ -563,12 +542,11 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 setup_low_hl = curr_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
                 trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
-                entry2_px = entry_2(setup_high_hl, setup_low_hl, "short")
                 stop_inicial = round_px(setup_low_hl + FIB_STOP_LEVEL * tech_base)
                 logging.info(f"{prefix} 🚫 Engolfo Bear ignorado (low extremo)")
                 return {
                     "take": False, "blocked": True, "reason": "low_extremo", "side": "short",
-                    "trigger": trigger_hl, "entry2_px": entry2_px, "stop_real": stop_inicial,
+                    "trigger": trigger_hl, "stop_real": stop_inicial,
                     "tech_base": tech_base, "setup_high": setup_high_hl, "setup_low": setup_low_hl,
                     "signal_ts": signal_ts
                 }
@@ -580,14 +558,11 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 
                 # Primeira entrada: LIMIT no nível da fib (customizável)
                 trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
-                entry2_px = entry_2(setup_high_hl, setup_low_hl, "short")
-                
                 ref_info = format_ref_info(div_px, div_ts)
                 stop_inicial = round_px(setup_low_hl + FIB_STOP_LEVEL * tech_base)
                 signal = {
                     "take": True, "side": "short", 
                     "trigger": trigger_hl,
-                    "entry2_px": entry2_px, 
                     "stop_real": stop_inicial,
                     "tech_base": tech_base, 
                     "setup_high": setup_high_hl, 
@@ -603,7 +578,7 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
     Simplificado: não usa mais STOP LIMIT, apenas LIMIT direto.
     """
     is_buy = True if side == "long" else False
-    logging.info(f"📥 1ª Entrada Pendente: {side.upper()} {symbol} | Qty:{qty} | Entry:{entry_px:.4f}") 
+    logging.info(f"📥 Entrada pendente: {side.upper()} {symbol} | Qty:{qty} | Entry:{entry_px:.4f}") 
     
     trade_id = f"{symbol}-{int(time.time())}"  
     try:
@@ -614,32 +589,20 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         logging.error(f"Erro Entry LIMIT: {e}")
         return None, None
 
-def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, entry2_filled=False):
-    """Coloca TPs customizados. Se entry2_filled E ENTRY2_ADJUST_LAST_TARGET=true, último TP vai para 0.0."""
+def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, deep_fib_reached=False):
+    """Coloca TPs customizados. Se deep_fib_reached (Conservador/Mediano após tocar -1.8), usa DEEP_FIB_LEVELS_AFTER."""
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
 
     start_px = anchor_px if anchor_px else entry_px
     is_buy_tp = False if side == "long" else True
-    
-    # Se entry2_filled e usuário quer ajustar:
-    # - se houver alvos alternativos configurados, usa eles para TODOS os TPs
-    # - senão, fallback: mantém alvos e move o último para 0.0 (retorno ao setup)
-    if entry2_filled and ENTRY2_ADJUST_LAST_TARGET:
-        if ENTRY2_FIB_LEVELS_AFTER:
-            fib_levels = ENTRY2_FIB_LEVELS_AFTER
-        elif len(FIB_LEVELS) >= 1:
-            fib_levels = list(FIB_LEVELS)
-            fib_levels[-1] = (0.0, fib_levels[-1][1])
-        else:
-            fib_levels = FIB_LEVELS
-    else:
-        fib_levels = FIB_LEVELS
-    
+
+    fib_levels = DEEP_FIB_LEVELS_AFTER if deep_fib_reached else FIB_LEVELS
+
     logging.info(
         f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}"
-        + (f" | Ajuste pós-entrada2: {fib_levels}" if (entry2_filled and ENTRY2_ADJUST_LAST_TARGET) else "")
+        + (f" | Ajuste pós-fib-{FIB_DEEP_TRIGGER_LEVEL}: {fib_levels}" if deep_fib_reached else "")
     )
 
     for idx, (fib_mult, pct) in enumerate(fib_levels, start=1):
@@ -972,29 +935,23 @@ def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
     """Monta dict para save_blocked_trade. Retorna None se qty inválido. `reason` pode ser 'a | b' para vários motivos."""
     try:
         entry_px = round_px(sig["trigger"])
-        entry2_px = round_px(sig["entry2_px"])
         stop_real = round_px(sig["stop_real"])
-        avg_entry = (entry_px + entry2_px) / 2
-        use_two = ENTRY2_ALLOWED and ENTRY2_ENABLED
-        risk_per_unit = abs(avg_entry - stop_real) if use_two else abs(entry_px - stop_real)
+        risk_per_unit = abs(entry_px - stop_real)
         if risk_per_unit == 0:
             return None
         total_size = TARGET_LOSS_USD / risk_per_unit
         limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
-        anchor_entry = avg_entry if use_two else entry_px
-        # Respeitar AMBOS: target loss E patrimônio. Usar o menor size para nunca exceder $35.
-        size_for_cap = limit_notional / anchor_entry
+        size_for_cap = limit_notional / entry_px
         total_size = min(total_size, size_for_cap)
-        qty_first = total_size / 2 if use_two else total_size
-        qty_second = total_size / 2 if use_two else 0
         sz_dec = get_precision(meta, sym)
-        final_qty = round_sz(qty_first, sz_dec)
+        final_qty = round_sz(total_size, sz_dec)
         if final_qty * entry_px < 10:
             return None
         target1_level = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
         return {
             "symbol": sym, "tf": tf, "side": sig["side"],
-            "entry_px": entry_px, "entry2_px": entry2_px, "stop_real": stop_real,
+            "entry_px": entry_px, "entry2_px": entry_px,
+            "stop_real": stop_real,
             "qty": final_qty, "reason": reason, "signal_ts": sig["signal_ts"],
             "tech_base": sig.get("tech_base", 0), "setup_high": sig.get("setup_high", 0),
             "setup_low": sig.get("setup_low", 0), "target1_level": target1_level,
@@ -1154,31 +1111,19 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
             if sig_ts <= last_ts:
                 analyzed_candles[candle_id] = True
                 continue
-            try:        
+            try:
                 entry_px = round_px(sig["trigger"])
-                entry2_px = round_px(sig["entry2_px"])
                 stop_real = round_px(sig["stop_real"])
-                avg_entry = (entry_px + entry2_px) / 2
-                use_two_entries = ENTRY2_ALLOWED and ENTRY2_ENABLED
-                risk_per_unit = abs(avg_entry - stop_real) if use_two_entries else abs(entry_px - stop_real)
-                if risk_per_unit == 0: 
+                risk_per_unit = abs(entry_px - stop_real)
+                if risk_per_unit == 0:
                     analyzed_candles[candle_id] = True
                     continue
                 total_size = TARGET_LOSS_USD / risk_per_unit
                 limit_notional = min(available_exposure, MAX_SINGLE_POS_EXPOSURE)
-                anchor_entry = avg_entry if use_two_entries else entry_px
-                # Respeitar AMBOS: target loss E patrimônio. Usar o menor size para nunca exceder target loss.
-                size_for_cap = limit_notional / anchor_entry
+                size_for_cap = limit_notional / entry_px
                 total_size = min(total_size, size_for_cap)
-                if use_two_entries:
-                    qty_first = total_size / 2
-                    qty_second = total_size / 2
-                else:
-                    qty_first = total_size
-                    qty_second = 0
                 sz_dec = get_precision(meta, sym)
-                final_qty = round_sz(qty_first, sz_dec)
-                second_qty = round_sz(qty_second, sz_dec) if use_two_entries else 0
+                final_qty = round_sz(total_size, sz_dec)
                 if final_qty * entry_px < 10: 
                     analyzed_candles[candle_id] = True
                     continue
@@ -1190,8 +1135,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                         f"📡 NOVO SINAL DE TRADE\n"
                         f"🚫 TRADE BLOQUEADO: {sym} já ativo/pendente no TF {other_tf}\n"
                         f"{sig['side'].upper()} {sym} | {tf}\n"
-                        f"1ª entrada: {entry_px:.4f}\n"
-                        f"2ª entrada: {entry2_px:.4f}\n"
+                        f"Entrada: {entry_px:.4f}\n"
                         f"Stop: {stop_real:.4f}\n"
                         f"https://app.hyperliquid.xyz/trade/{sym}"
                     )
@@ -1212,15 +1156,14 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                         f"📡 NOVO SINAL DE TRADE\n"
                         f"🚫ENTRADA NÃO ACIONADA! (Limite de trades simultâneos)\n"
                         f"{sig['side'].upper()} {sym} | {tf}\n"
-                        f"1ª entrada: {entry_px:.4f}\n"
-                        f"2ª entrada: {entry2_px:.4f}\n"
+                        f"Entrada: {entry_px:.4f}\n"
                         f"Stop: {stop_real:.4f}\n"
                         f"https://app.hyperliquid.xyz/trade/{sym}\n"
                         f"Recomendação: Analise os trades ativos/pendentes e compare qual o melhor. Você também pode dividir o capital entre os trades."
                     )
                     btd = {
                         "symbol": sym, "tf": tf, "side": sig["side"],
-                        "entry_px": entry_px, "entry2_px": entry2_px, "stop_real": stop_real,
+                        "entry_px": entry_px, "entry2_px": entry_px, "stop_real": stop_real,
                         "qty": final_qty, "reason": "limite_trades", "signal_ts": sig_ts,
                         "tech_base": sig.get("tech_base", 0), "setup_high": sig.get("setup_high", 0),
                         "setup_low": sig.get("setup_low", 0),
@@ -1240,8 +1183,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     f"📡 NOVO SINAL DE TRADE\n"
                     f"{sym} | TF {tf}\n"
                     f"Side: {sig['side'].upper()}\n"
-                    f"1ª entrada: {entry_px:.4f}\n"
-                    f"2ª entrada: {entry2_px:.4f}\n"
+                    f"Entrada: {entry_px:.4f}\n"
                     f"Stop: {stop_real:.4f}\n"
                     f"https://app.hyperliquid.xyz/trade/{sym}"   
                 )
@@ -1249,9 +1191,9 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 res, trade_id = place_trade_entry(exchange, sym, sig["side"], final_qty, entry_px)
                 signal_ts_sec = sig["signal_ts"] / 1000
                 if res:
-                    # 1ª entrada: -0.618 (fixo). 2ª entrada (se permitido): -1.414. Apenas 2 entradas.
-                    qty_entry_1 = final_qty  # 1ª entrada
-                    qty_entry_2 = final_qty + second_qty  # 1ª + 2ª (apenas se ENTRY2_ALLOWED e ENTRY2_ENABLED)
+                    cfg_snap = storage.get_config() if hasattr(storage, "get_config") else {}
+                    preset_snap = (cfg_snap.get("strategy_preset") or STRATEGY_PRESET or "").strip()
+                    qty_entry_1 = final_qty
                     tracker_data = {
                         'side': sig["side"],
                         'tf': tf,
@@ -1264,17 +1206,12 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                         'entry_px': entry_px,
                         'qty': final_qty,
                         'qty_entry_1': qty_entry_1,
-                        'qty_entry_2': qty_entry_2,
+                        'qty_entry_2': qty_entry_1,
                         'trade_id': trade_id,
                         'pnl_realized': 0.0,
-                        'last_size': 0.0
+                        'last_size': 0.0,
+                        'strategy_preset': preset_snap,
                     }
-                    if ENTRY2_ALLOWED and ENTRY2_ENABLED:
-                        tracker_data['entry2_px'] = entry2_px
-                        tracker_data['entry2_qty'] = second_qty
-                        tracker_data['entry2_placed'] = False
-                    else:
-                        tracker_data['entry2_placed'] = True  # Bloqueia entrada 2
                     entry_tracker[sym] = tracker_data
                     storage.save_entry_tracker(entry_tracker)
                     
@@ -1303,7 +1240,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
         order_symbols = {o["coin"] for o in all_open_orders if not o["reduceOnly"]}
         now = time.time()
 
-        # Se o preço tocar no alvo 1, cancela ordens ativas (ex.: 2ª entrada pendente).
+        # Se o preço tocar no alvo 1, cancela ordens ativas não-reduce (ex.: adds manuais).
         # Com fib do 1º alvo = 0, o nível coincide com setup_high/setup_low e disparava
         # cancelamento indevido — nesse caso não usamos esta heurística.
         target1_fib_cancel = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
@@ -1374,12 +1311,9 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             entry = float(pos["entryPx"])
             side = "long" if raw_size > 0 else "short"
             
-            # Só aplica detecção de entrada 1/2 para trades do bot (não manuais)
+            # Só aplica detecção de fill da entrada para trades do bot (não manuais)
             is_bot_trade = mem_data.get('tf') is not None and mem_data.get('origin') != 'MANUAL'
-            
-            # Identificação determinística baseada em qty esperado (apenas 2 entradas)
             qty_entry_1 = mem_data.get('qty_entry_1')
-            qty_entry_2 = mem_data.get('qty_entry_2')
             
             # Tolerância para arredondamentos de precisão (0.1% ou mínimo 0.01)
             def qty_matches(expected, actual):
@@ -1395,9 +1329,9 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             # Entrada 1 confirmada (apenas para trade do bot)
             if is_bot_trade and qty_entry_1 and qty_matches(qty_entry_1, size) and (last_size == 0 or not qty_matches(qty_entry_1, last_size)):
                 usd_value = size * entry
-                logging.info(f"🚀 ENTRADA 1 CONFIRMADA: {side.upper()} {sym} | Qty:{size:.2f} | Preço:{entry:.4f} | Valor: ${usd_value:.2f}")
+                logging.info(f"🚀 ENTRADA CONFIRMADA: {side.upper()} {sym} | Qty:{size:.2f} | Preço:{entry:.4f} | Valor: ${usd_value:.2f}")
                 tg_send(
-                    f"🚀 ENTRADA 1 CONFIRMADA\n"
+                    f"🚀 ENTRADA CONFIRMADA\n"
                     f"{side.upper()} {sym} {mem_data.get('tf')}\n"
                     f"Entrada: {entry:.4f}\n"
                     f"Tamanho: {size:.2f}\n"
@@ -1406,28 +1340,6 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 entry_tracker[sym]["last_size"] = size
                 storage.save_entry_tracker(entry_tracker)
             
-            # Entrada 2 confirmada (apenas para trade do bot; só dispara uma vez ao atingir qty_entry_2)
-            elif is_bot_trade and qty_entry_2 and qty_matches(qty_entry_2, size) and size_changed and (not qty_matches(qty_entry_1, size) if qty_entry_1 else True) and (not qty_matches(qty_entry_2, last_size) if last_size > 0 else True):
-                usd_value = size * entry
-                logging.info(f"🚀 ENTRADA 2 CONFIRMADA: {side.upper()} {sym} | Qty:{size:.2f} | Preço:{entry:.4f} | Valor: ${usd_value:.2f}")
-                tg_send(
-                    f"🚀 ENTRADA 2 CONFIRMADA\n"
-                    f"{side.upper()} {sym} {mem_data.get('tf')}\n"
-                    f"Entrada: {entry:.4f}\n"
-                    f"Total: {size:.2f}\n"
-                    f"Valor: ${usd_value:.2f}"
-                )
-                
-                # Cancela SL/TP para recalcular
-                for o in all_open_orders:
-                    if o["coin"] == sym and o.get("reduceOnly", False):
-                        try:
-                            exchange.cancel(sym, o["oid"])
-                        except Exception as e:
-                            logging.error(f"Erro ao cancelar SL/TP {sym}: {e}")
-                
-                entry_tracker[sym]["last_size"] = size
-                storage.save_entry_tracker(entry_tracker)
             curr_price = float(all_mids.get(sym, entry))
 
             my_orders = [o for o in all_open_orders if o["coin"] == sym]
@@ -1449,76 +1361,58 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 logging.info(f"🛡️ Pânico: Posição sem Stop em {sym}! Colocando...")
                 stop_px = planned_stop if planned_stop else round_px(entry * (1 - FALLBACK_STOP_PCT) if side == "long" else entry * (1 + FALLBACK_STOP_PCT))
                 
-                # Se segunda entrada automática está ativada, stop cobre AMBAS as entradas desde o início
                 stop_qty = size
-                if not mem_data.get('entry2_placed', True):  # Se entrada 2 ainda não foi colocada/executada
-                    entry2_qty = mem_data.get('entry2_qty', 0)
-                    if entry2_qty > 0:
-                        stop_qty = size + entry2_qty  # Quantidade total (entrada 1 + entrada 2)
-                        logging.info(f"🛡️ Stop com proteção para 2 entradas: {stop_qty} (atual: {size} + futura: {entry2_qty})")
-                
                 exchange.order(sym, not (side=="long"), stop_qty, stop_px, {"trigger": {"triggerPx": stop_px, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
                 if sym in entry_tracker:
                     entry_tracker[sym]['planned_stop'] = stop_px
                     storage.save_entry_tracker(entry_tracker)
             
-            if not has_tp and not is_manual:
-                logging.info(f"💰 Posição sem TP em {sym}. Colocando Fibs...")
+            if not is_manual:
                 sz_dec = get_precision(meta, sym)
-
                 if tech_base and setup_high and setup_low:
                     base_to_use = tech_base
-
-                    if side == "long":
-                        anchor = setup_high
-                    else:
-                        anchor = setup_low
-
-                    logging.info(f"📐 Fibs técnicos | Base={base_to_use:.4f} | Anchor={anchor}")
+                    anchor = setup_high if side == "long" else setup_low
                 else:
                     base_to_use = abs(entry * FALLBACK_STOP_PCT)
                     anchor = entry
-                    logging.warning(f"⚠️ Fallback Fib para {sym}")
 
-                qty_entry_2 = mem_data.get('qty_entry_2')
-                qty_entry_1 = mem_data.get('qty_entry_1')
-                entry2_qty = mem_data.get('entry2_qty', 0) or 0
-                def _qty_matches(exp, act):
-                    if exp is None: return False
-                    tol = max(exp * 0.001, 0.01)
-                    return abs(act - exp) <= tol
-                # Só considera entrada 2 preenchida se realmente há entrada 2 (entry2_qty > 0)
-                # e o tamanho da posição atingiu qty_entry_2 (1ª + 2ª)
-                has_entry2 = entry2_qty > 0 and qty_entry_2 and qty_entry_1 and qty_entry_2 > qty_entry_1
-                entry2_filled = bool(has_entry2 and _qty_matches(qty_entry_2, abs(size)))
-                place_fib_tps(exchange, sym, side, entry, None, abs(size), sz_dec, custom_base=base_to_use, anchor_px=anchor, entry2_filled=entry2_filled)
+                allow_deep = _tracker_allows_deep_fib(mem_data)
+                deep_hit = _price_hit_deep_fib_extension(side, curr_price, setup_high, setup_low, tech_base or 0)
+                apply_deep = (
+                    allow_deep
+                    and deep_hit
+                    and not mem_data.get("deep_fib_rebalance_done")
+                )
 
-            # Segunda entrada (limit) no nível fib da 2ª entrada (Pro/Satoshi, se ativada)
-            if not is_manual and not mem_data.get('entry2_placed', True):
-                if mem_data.get("pnl_realized", 0) > 0:
-                    entry_tracker[sym]['entry2_placed'] = True
-                    storage.save_entry_tracker(entry_tracker)
-                    logging.info(f"🚫 2ª entrada bloqueada em {sym}: PnL já realizado (TP parcial).")
-                else:
-                    entry2_px = mem_data.get('entry2_px')
-                    entry2_qty = mem_data.get('entry2_qty')
-                    if entry2_px is not None and entry2_qty and entry2_qty > 0:
-                        my_add_orders = [o for o in my_orders if not o.get("reduceOnly") and not o.get("isTrigger", False)]
-                        if my_add_orders:
-                            entry_tracker[sym]['entry2_placed'] = True
-                            storage.save_entry_tracker(entry_tracker)
-                            logging.info(f"📥 2ª entrada já existente em {sym} (ordem limit ativa). Marcando como colocada.")
-                        else:
+                if apply_deep:
+                    logging.info(f"📐 Fib -{FIB_DEEP_TRIGGER_LEVEL} tocado em {sym}: recolocando TPs (Conservador/Mediano)")
+                    for o in all_open_orders:
+                        if o["coin"] == sym and o.get("reduceOnly", False) and not is_stop_order(o):
                             try:
-                                is_buy_add = (side == "long")
-                                trade_id = mem_data.get('trade_id', sym)
-                                client_oid = f"{trade_id}_{int(time.time()*1000)}".replace(" ", "_").replace("-", "_")
-                                exchange.order(sym, is_buy_add, entry2_qty, round_px(entry2_px), {"limit": {"tif": "Gtc"}, "clientOrderId": client_oid}, reduce_only=False)
-                                logging.info(f"📥 2ª entrada pendente: {sym} @ {entry2_px} qty {entry2_qty} | oid={client_oid}")
-                                entry_tracker[sym]['entry2_placed'] = True
-                                storage.save_entry_tracker(entry_tracker)
+                                exchange.cancel(sym, o["oid"])
                             except Exception as e:
-                                logging.error(f"Erro ao colocar 2ª entrada {sym}: {e}")
+                                logging.error(f"Erro ao cancelar TP {sym}: {e}")
+                    place_fib_tps(
+                        exchange, sym, side, entry, None, abs(size), sz_dec,
+                        custom_base=base_to_use, anchor_px=anchor, deep_fib_reached=True,
+                    )
+                    entry_tracker[sym]["deep_fib_rebalance_done"] = True
+                    storage.save_entry_tracker(entry_tracker)
+                elif not has_tp:
+                    logging.info(f"💰 Posição sem TP em {sym}. Colocando Fibs...")
+                    if tech_base and setup_high and setup_low:
+                        logging.info(f"📐 Fibs técnicos | Base={base_to_use:.4f} | Anchor={anchor}")
+                    else:
+                        logging.warning(f"⚠️ Fallback Fib para {sym}")
+                    use_deep_on_first = allow_deep and deep_hit
+                    place_fib_tps(
+                        exchange, sym, side, entry, None, abs(size), sz_dec,
+                        custom_base=base_to_use, anchor_px=anchor,
+                        deep_fib_reached=use_deep_on_first,
+                    )
+                    if use_deep_on_first:
+                        entry_tracker[sym]["deep_fib_rebalance_done"] = True
+                        storage.save_entry_tracker(entry_tracker)
 
             pnl_pct = (curr_price - entry) / entry if side == "long" else (entry - curr_price) / entry
             sl_order = next((o for o in my_orders if is_stop_order(o)), None)
@@ -1530,8 +1424,12 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 breakeven_moved = mem_data.get('breakeven_moved', False)
                 pnl_realized = mem_data.get("pnl_realized", 0)
                 
-                # Usa o primeiro alvo configurado para trailing stop
-                target1_fib = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
+                # Primeiro alvo ativo (após rebalance -1.8 usa o 1º alvo do perfil profundo)
+                target1_fib = (
+                    DEEP_FIB_LEVELS_AFTER[0][0]
+                    if mem_data.get("deep_fib_rebalance_done")
+                    else (FIB_LEVELS[0][0] if FIB_LEVELS else 0.618)
+                )
                 
                 # Usa o mesmo anchor do TP1 (setup_high/setup_low) para garantir que breakeven e TP1 sejam no mesmo preço
                 if side == "long":
@@ -1576,8 +1474,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     exchange.cancel(sym, sl_order["oid"])
                     new_sl = round_px(new_sl)
 
-                    # Ao mover para breakeven, cancelamos qualquer ordem de 2ª entrada pendente
-                    # (ordens adicionais não-reduceOnly) para este símbolo
+                    # Ao mover para breakeven, cancelamos ordens não-reduce pendentes neste símbolo
                     for o in my_orders:
                         try:
                             if o["coin"] == sym and not o.get("reduceOnly", False) and not o.get("isTrigger", False):
@@ -1599,9 +1496,6 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     if sym in entry_tracker:
                         entry_tracker[sym]["planned_stop"] = new_sl
                         entry_tracker[sym]["breakeven_moved"] = True
-                        # Marca entrada 2 como desativada para este trade
-                        entry_tracker[sym]["entry2_placed"] = True
-                        entry_tracker[sym]["entry2_qty"] = 0
                         storage.save_entry_tracker(entry_tracker)
 
             # Atualiza last_size apenas se mudou significativamente (para manter estado sincronizado)

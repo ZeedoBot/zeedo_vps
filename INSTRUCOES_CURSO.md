@@ -102,7 +102,7 @@ WHERE id = 7;
    - Stop loss, alvos e gestão de capital
 
 5. **Configurações Avançadas** (4:30)
-   - Personalizando alvos, stop e entrada 2
+   - Personalizando alvos e stop
 
 6. **Análise de Resultados** (5:15)
    - Como interpretar suas estatísticas de trading

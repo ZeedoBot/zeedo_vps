@@ -15,7 +15,6 @@ type PlanLimits = {
   allowed_symbols: string[];
   allowed_timeframes: string[];
   allowed_trade_modes: string[];
-  allowed_entry2?: boolean;
   can_customize_targets?: boolean;
   can_customize_stop?: boolean;
 };
@@ -23,7 +22,6 @@ type PlanLimits = {
 type BotConfig = {
   bot_enabled: boolean;
   signal_mode?: boolean;
-  entry2_enabled?: boolean;
   symbols: string[];
   timeframes: string[];
   trade_mode: string;
@@ -32,14 +30,6 @@ type BotConfig = {
   max_positions: number;
   stop_multiplier?: number;
   entry1_multiplier?: number;
-  entry2_multiplier?: number;
-  entry2_adjust_last_target?: boolean;
-  entry2_target1_level?: number | null;
-  entry2_target1_percent?: number | null;
-  entry2_target2_level?: number | null;
-  entry2_target2_percent?: number | null;
-  entry2_target3_level?: number | null;
-  entry2_target3_percent?: number | null;
   target1_level?: number;
   target1_percent?: number;
   target2_level?: number;
@@ -67,13 +57,6 @@ function parseStoredStrategy(v: unknown): StrategyKey | null {
   return STRATEGY_KEYS.includes(s as StrategyKey) ? (s as StrategyKey) : null;
 }
 
-/** PostgREST às vezes devolve boolean como string — normaliza para match de preset. */
-function coerceBool(v: unknown, fallback: boolean): boolean {
-  if (v === true || v === "true" || v === 1 || v === "1") return true;
-  if (v === false || v === "false" || v === 0 || v === "0") return false;
-  return fallback;
-}
-
 type StrategyPreset = {
   label: string;
   description: string;
@@ -81,14 +64,6 @@ type StrategyPreset = {
   accuracy: string;
   stopMultiplier: string;
   entry1Multiplier: string;
-  entry2Multiplier: string;
-  entry2AdjustLastTarget: boolean;
-  entry2Target1Level: string;
-  entry2Target1Percent: number;
-  entry2Target2Level: string;
-  entry2Target2Percent: number;
-  entry2Target3Level: string;
-  entry2Target3Percent: number;
   target1Level: string;
   target1Percent: number;
   target2Level: string;
@@ -100,91 +75,59 @@ type StrategyPreset = {
 const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> = {
   CONSERVADOR: {
     label: "Conservador",
-    description: "Menos trades ativados, stop mais longo.",
-    rr: "R:R ~ 1.25:1",
-    accuracy: "Maior assertividade, com retorno menor.",
-    stopMultiplier: "2.7",
-    entry1Multiplier: "1.2",
-    entry2Multiplier: "1.9",
-    entry2AdjustLastTarget: true,
-    entry2Target1Level: "-0.618",
-    entry2Target1Percent: 40,
-    entry2Target2Level: "0",
-    entry2Target2Percent: 60,
-    entry2Target3Level: "0",
-    entry2Target3Percent: 0,
-    target1Level: "0",
-    target1Percent: 40,
-    target2Level: "0.618",
-    target2Percent: 60,
-    target3Level: "0",
-    target3Percent: 0,
+    description: "Stop mais longo; se o preço tocar fib -1,8, os alvos passam a 0,618 (5%) e 1,5 (95%).",
+    rr: "R:R conforme alvos",
+    accuracy: "Maior assertividade relativa, retorno mais contido.",
+    stopMultiplier: "3.1",
+    entry1Multiplier: "0.618",
+    target1Level: "0.5",
+    target1Percent: 5,
+    target2Level: "1.6",
+    target2Percent: 55,
+    target3Level: "4.0",
+    target3Percent: 40,
   },
   MEDIANO: {
     label: "Mediano",
-    description: "Meio termo entre Conservador e Agressivo.",
-    rr: "R:R ~ 1.68:1",
-    accuracy: "Assertividade média, com retorno equilibrado.",
-    stopMultiplier: "2.1",
+    description: "Meio termo; mesma lógica de ajuste ao tocar -1,8 que o Conservador.",
+    rr: "R:R conforme alvos",
+    accuracy: "Assertividade e retorno equilibrados.",
+    stopMultiplier: "2",
     entry1Multiplier: "0.618",
-    entry2Multiplier: "1.4",
-    entry2AdjustLastTarget: true,
-    entry2Target1Level: "0",
-    entry2Target1Percent: 50,
-    entry2Target2Level: "0.618",
-    entry2Target2Percent: 50,
-    entry2Target3Level: "0",
-    entry2Target3Percent: 0,
-    target1Level: "0.618",
-    target1Percent: 20,
-    target2Level: "1.0",
-    target2Percent: 50,
-    target3Level: "1.618",
-    target3Percent: 30,
+    target1Level: "0.5",
+    target1Percent: 3,
+    target2Level: "1.6",
+    target2Percent: 47,
+    target3Level: "4.4",
+    target3Percent: 50,
   },
   AGRESSIVO: {
     label: "Agressivo",
-    description: "Mais trades ativados, stop mais curto.",
-    rr: "R:R ~ 2.65:1",
-    accuracy: "Menor assertividade, com retorno alto.",
-    stopMultiplier: "1.6",
+    description: "Stop mais curto; sem ajuste ao -1,8 (stop antes dessa extensão).",
+    rr: "R:R conforme alvos",
+    accuracy: "Mais trades ativados, retorno potencial maior.",
+    stopMultiplier: "1.4",
     entry1Multiplier: "0.618",
-    entry2Multiplier: "1.2",
-    entry2AdjustLastTarget: true,
-    entry2Target1Level: "0.618",
-    entry2Target1Percent: 30,
-    entry2Target2Level: "1.0",
-    entry2Target2Percent: 70,
-    entry2Target3Level: "0",
-    entry2Target3Percent: 0,
-    target1Level: "0.618",
-    target1Percent: 20,
-    target2Level: "1.0",
+    target1Level: "0.5",
+    target1Percent: 2,
+    target2Level: "1.6",
     target2Percent: 50,
-    target3Level: "1.618",
-    target3Percent: 30,
+    target3Level: "4.4",
+    target3Percent: 48,
   },
   DEGEN: {
     label: "Degen",
-    description: "Entrada e stop parecidos com Agressivo, com mais alvos.",
-    rr: "R:R ~ 3.67:1",
-    accuracy: "Assertividade menor, com retorno mais elevado.",
-    stopMultiplier: "1.52",
+    description: "Stop apertado; sem ajuste ao -1,8.",
+    rr: "R:R conforme alvos",
+    accuracy: "Menor assertividade, retorno potencial elevado.",
+    stopMultiplier: "1.07",
     entry1Multiplier: "0.618",
-    entry2Multiplier: "1.0",
-    entry2AdjustLastTarget: true,
-    entry2Target1Level: "0.618",
-    entry2Target1Percent: 30,
-    entry2Target2Level: "1.0",
-    entry2Target2Percent: 40,
-    entry2Target3Level: "1.618",
-    entry2Target3Percent: 30,
-    target1Level: "1.0",
-    target1Percent: 30,
-    target2Level: "1.618",
-    target2Percent: 40,
-    target3Level: "2.4",
-    target3Percent: 30,
+    target1Level: "0.618",
+    target1Percent: 2,
+    target2Level: "1.6",
+    target2Percent: 50,
+    target3Level: "4.4",
+    target3Percent: 48,
   },
 };
 
@@ -242,21 +185,12 @@ export default function BotPage() {
   const [targetLoss, setTargetLoss] = useState<number | "">(5);
   const [maxPositions, setMaxPositions] = useState<number | "">(2);
   const [maxSinglePosition, setMaxSinglePosition] = useState<number | "">(1250);
-  const [entry2Enabled, setEntry2Enabled] = useState(true);
   const [signalMode, setSignalMode] = useState(false);
   const [lockHintOpen, setLockHintOpen] = useState<"risk" | "strategy" | null>(null);
 
   // Estados para alvos e stop customizados
   const [stopMultiplier, setStopMultiplier] = useState<number | string>("1.8");
   const [entry1Multiplier, setEntry1Multiplier] = useState<number | string>("0.618");
-  const [entry2Multiplier, setEntry2Multiplier] = useState<number | string>("1.414");
-  const [entry2AdjustLastTarget, setEntry2AdjustLastTarget] = useState(true);
-  const [entry2Target1Level, setEntry2Target1Level] = useState<number | string>("-0.618");
-  const [entry2Target1Percent, setEntry2Target1Percent] = useState<number | "">(40);
-  const [entry2Target2Level, setEntry2Target2Level] = useState<number | string>("0");
-  const [entry2Target2Percent, setEntry2Target2Percent] = useState<number | "">(60);
-  const [entry2Target3Level, setEntry2Target3Level] = useState<number | string>("0");
-  const [entry2Target3Percent, setEntry2Target3Percent] = useState<number | "">(0);
   const [target1Level, setTarget1Level] = useState<number | string>("0.618");
   const [target1Percent, setTarget1Percent] = useState<number | "">(50);
   const [target2Level, setTarget2Level] = useState<number | string>("1.0");
@@ -282,7 +216,6 @@ export default function BotPage() {
         setMaxPositions(data.max_positions ?? 2);
         const maxSingle = data.max_single_pos_exposure ?? 1250;
         setMaxSinglePosition(pl ? Math.min(maxSingle, pl.max_single_position_usd) : maxSingle);
-        setEntry2Enabled(data.entry2_enabled ?? true);
         setSignalMode(
           data.plan_limits?.plan === "basic" ? true : (data.signal_mode ?? false),
         );
@@ -290,14 +223,6 @@ export default function BotPage() {
         // Carrega alvos e stop customizados (valores persistidos no banco)
         setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
         setEntry1Multiplier((data.entry1_multiplier ?? 0.618).toString());
-        setEntry2Multiplier((data.entry2_multiplier ?? 1.414).toString());
-        setEntry2AdjustLastTarget(coerceBool(data.entry2_adjust_last_target, true));
-        setEntry2Target1Level((data.entry2_target1_level ?? -0.618).toString());
-        setEntry2Target1Percent((data.entry2_target1_percent ?? 40) as number);
-        setEntry2Target2Level((data.entry2_target2_level ?? 0).toString());
-        setEntry2Target2Percent((data.entry2_target2_percent ?? 60) as number);
-        setEntry2Target3Level((data.entry2_target3_level ?? 0).toString());
-        setEntry2Target3Percent((data.entry2_target3_percent ?? 0) as number);
         setTarget1Level((data.target1_level ?? 0.618).toString());
         setTarget1Percent(data.target1_percent ?? 50);
         setTarget2Level((data.target2_level ?? 1.0).toString());
@@ -307,14 +232,6 @@ export default function BotPage() {
         const inferred = detectStrategy({
           stopMultiplier: data.stop_multiplier,
           entry1Multiplier: data.entry1_multiplier,
-          entry2Multiplier: data.entry2_multiplier,
-          entry2AdjustLastTarget: data.entry2_adjust_last_target,
-          entry2Target1Level: data.entry2_target1_level ?? -0.618,
-          entry2Target1Percent: data.entry2_target1_percent ?? 40,
-          entry2Target2Level: data.entry2_target2_level ?? 0,
-          entry2Target2Percent: data.entry2_target2_percent ?? 60,
-          entry2Target3Level: data.entry2_target3_level ?? 0,
-          entry2Target3Percent: data.entry2_target3_percent ?? 0,
           target1Level: data.target1_level,
           target1Percent: data.target1_percent,
           target2Level: data.target2_level ?? 0,
@@ -365,35 +282,22 @@ export default function BotPage() {
     return Math.abs(a - b) <= tolerance;
   }
 
-  function matchesPreset(values: {
-    stopMultiplier: number;
-    entry1Multiplier: number;
-    entry2Multiplier: number;
-    entry2AdjustLastTarget: boolean;
-    entry2Target1Level: number;
-    entry2Target1Percent: number;
-    entry2Target2Level: number;
-    entry2Target2Percent: number;
-    entry2Target3Level: number;
-    entry2Target3Percent: number;
-    target1Level: number;
-    target1Percent: number;
-    target2Level: number;
-    target2Percent: number;
-    target3Level: number;
-    target3Percent: number;
-  }, preset: StrategyPreset): boolean {
+  function matchesPreset(
+    values: {
+      stopMultiplier: number;
+      entry1Multiplier: number;
+      target1Level: number;
+      target1Percent: number;
+      target2Level: number;
+      target2Percent: number;
+      target3Level: number;
+      target3Percent: number;
+    },
+    preset: StrategyPreset,
+  ): boolean {
     return (
       isSameValue(values.stopMultiplier, toNumber(preset.stopMultiplier, 0)) &&
       isSameValue(values.entry1Multiplier, toNumber(preset.entry1Multiplier, 0)) &&
-      isSameValue(values.entry2Multiplier, toNumber(preset.entry2Multiplier, 0)) &&
-      values.entry2AdjustLastTarget === preset.entry2AdjustLastTarget &&
-      isSameValue(values.entry2Target1Level, toNumber(preset.entry2Target1Level, 0)) &&
-      values.entry2Target1Percent === preset.entry2Target1Percent &&
-      isSameValue(values.entry2Target2Level, toNumber(preset.entry2Target2Level, 0)) &&
-      values.entry2Target2Percent === preset.entry2Target2Percent &&
-      isSameValue(values.entry2Target3Level, toNumber(preset.entry2Target3Level, 0)) &&
-      values.entry2Target3Percent === preset.entry2Target3Percent &&
       isSameValue(values.target1Level, toNumber(preset.target1Level, 0)) &&
       values.target1Percent === preset.target1Percent &&
       isSameValue(values.target2Level, toNumber(preset.target2Level, 0)) &&
@@ -406,14 +310,6 @@ export default function BotPage() {
   function detectStrategy(values: {
     stopMultiplier?: number | string | null;
     entry1Multiplier?: number | string | null;
-    entry2Multiplier?: number | string | null;
-    entry2AdjustLastTarget?: boolean;
-    entry2Target1Level?: number | string | null;
-    entry2Target1Percent?: number | string | null;
-    entry2Target2Level?: number | string | null;
-    entry2Target2Percent?: number | string | null;
-    entry2Target3Level?: number | string | null;
-    entry2Target3Percent?: number | string | null;
     target1Level?: number | string | null;
     target1Percent?: number | string | null;
     target2Level?: number | string | null;
@@ -424,14 +320,6 @@ export default function BotPage() {
     const normalized = {
       stopMultiplier: toNumber(values.stopMultiplier, 1.8),
       entry1Multiplier: toNumber(values.entry1Multiplier, 0.618),
-      entry2Multiplier: toNumber(values.entry2Multiplier, 1.414),
-      entry2AdjustLastTarget: coerceBool(values.entry2AdjustLastTarget, true),
-      entry2Target1Level: toNumber(values.entry2Target1Level, -0.618),
-      entry2Target1Percent: Math.round(toNumber(values.entry2Target1Percent, 40)),
-      entry2Target2Level: toNumber(values.entry2Target2Level, 0),
-      entry2Target2Percent: Math.round(toNumber(values.entry2Target2Percent, 60)),
-      entry2Target3Level: toNumber(values.entry2Target3Level, 0),
-      entry2Target3Percent: Math.round(toNumber(values.entry2Target3Percent, 0)),
       target1Level: toNumber(values.target1Level, 0.618),
       target1Percent: Math.round(toNumber(values.target1Percent, 50)),
       target2Level: toNumber(values.target2Level, 0),
@@ -453,14 +341,6 @@ export default function BotPage() {
     const preset = STRATEGY_PRESETS[key];
     setStopMultiplier(preset.stopMultiplier);
     setEntry1Multiplier(preset.entry1Multiplier);
-    setEntry2Multiplier(preset.entry2Multiplier);
-    setEntry2AdjustLastTarget(preset.entry2AdjustLastTarget);
-    setEntry2Target1Level(preset.entry2Target1Level);
-    setEntry2Target1Percent(preset.entry2Target1Percent);
-    setEntry2Target2Level(preset.entry2Target2Level);
-    setEntry2Target2Percent(preset.entry2Target2Percent);
-    setEntry2Target3Level(preset.entry2Target3Level);
-    setEntry2Target3Percent(preset.entry2Target3Percent);
     setTarget1Level(preset.target1Level);
     setTarget1Percent(preset.target1Percent);
     setTarget2Level(preset.target2Level);
@@ -484,7 +364,6 @@ export default function BotPage() {
       selectedStrategy !== "CUSTOM"
         ? STRATEGY_PRESETS[selectedStrategy as Exclude<StrategyKey, "CUSTOM">]
         : null;
-    const entry2AdjSave = presetForSave?.entry2AdjustLastTarget ?? entry2AdjustLastTarget;
     try {
       const isBasicSave = limits.plan === "basic";
       const payload: Record<string, unknown> = {
@@ -498,17 +377,11 @@ export default function BotPage() {
         payload.max_global_exposure = limits.max_global_exposure_usd;
         payload.max_single_pos_exposure = msp;
         payload.max_positions = mp;
-        if (limits?.allowed_entry2) {
-          payload.entry2_enabled = entry2Enabled;
-          payload.entry2_adjust_last_target = entry2AdjSave;
-        }
       }
-      
-      // Adiciona alvos e stop customizados se o plano permitir
+
       if (!isBasicSave && limits?.can_customize_stop) {
         const stopSrc = presetForSave?.stopMultiplier ?? stopMultiplier;
         const entry1Src = presetForSave?.entry1Multiplier ?? entry1Multiplier;
-        const entry2Src = presetForSave?.entry2Multiplier ?? entry2Multiplier;
         const stopNormalized = typeof stopSrc === "string" ? normalizeDecimalInput(stopSrc) : stopSrc.toString();
         const stopNum = parseFloat(stopNormalized);
         if (!isNaN(stopNum)) {
@@ -518,11 +391,6 @@ export default function BotPage() {
         const entry1Num = parseFloat(entry1Normalized);
         if (!isNaN(entry1Num)) {
           payload.entry1_multiplier = entry1Num;
-        }
-        const entry2Normalized = typeof entry2Src === "string" ? normalizeDecimalInput(entry2Src) : entry2Src.toString();
-        const entry2Num = parseFloat(entry2Normalized);
-        if (!isNaN(entry2Num)) {
-          payload.entry2_multiplier = entry2Num;
         }
       }
       if (!isBasicSave && limits?.can_customize_targets) {
@@ -563,40 +431,6 @@ export default function BotPage() {
         payload.strategy_preset = selectedStrategy;
       }
 
-      // Alvos após entrada 2 (quando o toggle estiver ativo)
-      if (!isBasicSave && limits?.allowed_entry2 && limits?.can_customize_targets) {
-        payload.entry2_adjust_last_target = entry2AdjSave;
-        if (entry2AdjSave) {
-          const e1Src = presetForSave?.entry2Target1Level ?? entry2Target1Level;
-          const e1p = presetForSave?.entry2Target1Percent ?? entry2Target1Percent;
-          const e1Normalized = typeof e1Src === "string" ? normalizeDecimalInput(e1Src) : e1Src.toString();
-          const e1Level = parseFloat(e1Normalized);
-          if (!isNaN(e1Level)) payload.entry2_target1_level = e1Level;
-          if (typeof e1p === "number") payload.entry2_target1_percent = e1p;
-
-          const e2Src = presetForSave?.entry2Target2Level ?? entry2Target2Level;
-          const e2p = presetForSave?.entry2Target2Percent ?? entry2Target2Percent;
-          const e2Normalized = typeof e2Src === "string" ? normalizeDecimalInput(e2Src) : e2Src.toString();
-          const e2Level = parseFloat(e2Normalized);
-          if (!isNaN(e2Level)) payload.entry2_target2_level = e2Level;
-          if (typeof e2p === "number") payload.entry2_target2_percent = e2p;
-
-          const e3Src = presetForSave?.entry2Target3Level ?? entry2Target3Level;
-          const e3p = presetForSave?.entry2Target3Percent ?? entry2Target3Percent;
-          const e3Normalized = typeof e3Src === "string" ? normalizeDecimalInput(e3Src) : e3Src.toString();
-          const e3Level = parseFloat(e3Normalized);
-          if (!isNaN(e3Level)) payload.entry2_target3_level = e3Level;
-          if (typeof e3p === "number") payload.entry2_target3_percent = e3p;
-        } else {
-          payload.entry2_target1_level = null;
-          payload.entry2_target1_percent = null;
-          payload.entry2_target2_level = null;
-          payload.entry2_target2_percent = null;
-          payload.entry2_target3_level = null;
-          payload.entry2_target3_percent = null;
-        }
-      }
-
       await apiPut(
         "/bot/config",
         payload,
@@ -614,7 +448,6 @@ export default function BotPage() {
               ...(isBasicSave
                 ? { signal_mode: true as boolean }
                 : {
-                    entry2_enabled: limits?.allowed_entry2 ? entry2Enabled : c.entry2_enabled,
                     target_loss_usd: tl,
                     max_positions: mp,
                     max_single_pos_exposure: msp,
@@ -787,50 +620,6 @@ export default function BotPage() {
             </p>
           </div>
 
-          {!isBasicPlan && (
-            <div className={`space-y-2 ${!limits?.allowed_entry2 ? "opacity-60" : ""}`}>
-              <div className="flex flex-wrap items-center gap-3">
-                <label htmlFor="entry2" className={`text-sm font-medium text-zeedo-orange ${limits?.allowed_entry2 ? "cursor-pointer" : "cursor-not-allowed"}`}>
-                  Segunda entrada:
-                </label>
-                <button
-                  type="button"
-                  id="entry2"
-                  role="switch"
-                  aria-checked={limits?.allowed_entry2 ? entry2Enabled : false}
-                  aria-disabled={!limits?.allowed_entry2}
-                  onClick={() => limits?.allowed_entry2 && setEntry2Enabled((v) => !v)}
-                  disabled={!limits?.allowed_entry2}
-                  className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-zeedo-orange focus:ring-offset-2 ${
-                    !limits?.allowed_entry2
-                      ? "cursor-not-allowed bg-zeedo-black/20 dark:bg-white/10"
-                      : `cursor-pointer ${entry2Enabled ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"}`
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
-                      limits?.allowed_entry2 && entry2Enabled ? "translate-x-5" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-                {limits?.allowed_entry2 ? (
-                  <span className="text-sm text-zeedo-black/60 dark:text-zeedo-white/60">
-                    {entry2Enabled ? "Ativada" : "Desativada"}
-                  </span>
-                ) : (
-                  <span className="text-sm text-amber-600 dark:text-amber-500">
-                    Indisponível no plano atual. Faça upgrade para o plano Pro para ter acesso.
-                  </span>
-                )}
-              </div>
-              {limits?.allowed_entry2 && (
-                <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                  Se estiver ligada, Zeedo colocará uma ordem automática de segunda entrada. Caso você não queira automatizar a segunda entrada, deixe desmarcado.
-                </p>
-              )}
-            </div>
-          )}
-
           <hr className="border-zeedo-orange/20" />
           {isBasicPlan ? (
             <div className="space-y-5">
@@ -889,9 +678,7 @@ export default function BotPage() {
                 {limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.target_loss_min} – ${limits.target_loss_max} USD`}
               </p>
               <p className="mt-1 text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
-                {entry2Enabled
-                  ? "O target loss considera a média entre a 1ª e 2ª entrada. Se o stop for acionado apenas com a 1ª entrada, a perda será menor."
-                  : "Target loss considera apenas a 1ª entrada."}
+                O target loss usa a distância entre o preço de entrada e o stop para dimensionar a posição.
               </p>
             </div>
             <div title={`Limite do plano: 1 – ${limits.max_positions}`}>
@@ -1007,7 +794,7 @@ export default function BotPage() {
                     {STRATEGY_PRESETS[selectedStrategy].description}
                   </p>
                   <p className="mt-1 text-xs text-zeedo-orange">
-                    {STRATEGY_PRESETS[selectedStrategy].rr} (2 entradas + todos alvos)
+                    {STRATEGY_PRESETS[selectedStrategy].rr} (uma entrada + alvos)
                   </p>
                   <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
                     {STRATEGY_PRESETS[selectedStrategy].accuracy}
@@ -1044,9 +831,7 @@ export default function BotPage() {
                   type="button"
                   onClick={() => {
                     setStopMultiplier("1.8");
-                  setEntry1Multiplier("0.618");
-                    setEntry2Multiplier("1.414");
-                    setEntry2AdjustLastTarget(true);
+                    setEntry1Multiplier("0.618");
                     setTarget1Level("0.618");
                     setTarget1Percent(50);
                     setTarget2Level("1.0");
@@ -1099,7 +884,7 @@ export default function BotPage() {
 
                   <div>
                     <label htmlFor="entry1_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
-                      Entrada 1 (Fib / trigger)
+                      Entrada (Fib / trigger)
                     </label>
                     <input
                       id="entry1_multiplier"
@@ -1128,40 +913,6 @@ export default function BotPage() {
                       className="input-field max-w-xs"
                     />
                   </div>
-
-                  {limits?.allowed_entry2 && (
-                      <div>
-                        <label htmlFor="entry2_multiplier" className="block text-sm font-medium text-zeedo-orange mb-1">
-                          Entrada 2
-                        </label>
-                        <input
-                          id="entry2_multiplier"
-                          type="text"
-                          inputMode="decimal"
-                          value={entry2Multiplier}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (isValidDecimal(val)) {
-                              setEntry2Multiplier(val);
-                            }
-                          }}
-                          onBlur={() => {
-                            const normalized = normalizeDecimalInput(entry2Multiplier);
-                            if (normalized === "" || normalized === ".") {
-                              setEntry2Multiplier("1.414");
-                            } else {
-                              const num = Number(normalized);
-                              if (!isNaN(num)) {
-                                setEntry2Multiplier(clampValue(num, 0.618, 5.0).toString());
-                              } else {
-                                setEntry2Multiplier("1.414");
-                              }
-                            }
-                          }}
-                          className="input-field max-w-xs"
-                        />
-                      </div>
-                  )}
                 </div>
               )}
 
@@ -1389,152 +1140,6 @@ export default function BotPage() {
                       </p>
                     )}
                   </div>
-
-                  {limits?.allowed_entry2 && (
-                    <>
-                      <div>
-                        <label className="flex items-center gap-3 cursor-pointer">
-                          <span className="text-sm font-medium text-zeedo-black dark:text-zeedo-white">
-                            Ajustar alvo após entrada 2?
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setEntry2AdjustLastTarget(!entry2AdjustLastTarget)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              entry2AdjustLastTarget ? "bg-zeedo-orange" : "bg-zeedo-black/30 dark:bg-white/20"
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
-                                entry2AdjustLastTarget ? "translate-x-6" : "translate-x-1"
-                              }`}
-                            />
-                          </button>
-                        </label>
-                        <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                          Se ativado: Ao pegar a entrada 2, você pode alterar os alvos
-                        </p>
-                      </div>
-
-                      {entry2AdjustLastTarget && (
-                        <div className="space-y-3">
-                          <div>
-                            <h3 className="text-base font-semibold text-zeedo-orange mb-1">
-                              Alvos após entrada 2
-                            </h3>
-                            <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-tight">
-                              Alvo 1 é obrigatório.<br />
-                              Alvos 2 e 3 são opcionais (deixe em 0 para desativar).<br />
-                              A soma dos percentuais deve ser 100%.
-                            </p>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-zeedo-orange mb-1">
-                                Alvo 1 (Nível Fib) <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={entry2Target1Level}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (isValidSignedDecimal(val)) setEntry2Target1Level(val);
-                                }}
-                                onBlur={() => {
-                                  const normalized = normalizeDecimalInput(entry2Target1Level);
-                                  if (normalized === "" || normalized === "." || normalized === "-" || normalized === "-.") {
-                                    setEntry2Target1Level("-0.618");
-                                  }
-                                }}
-                                className="input-field"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-zeedo-orange mb-1">
-                                Alvo 1 (%) <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                type="number"
-                                min={1}
-                                max={100}
-                                value={entry2Target1Percent}
-                                onChange={(e) => setEntry2Target1Percent(e.target.value === "" ? "" : Number(e.target.value))}
-                                className="input-field"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-zeedo-orange mb-1">Alvo 2 (Nível Fib)</label>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={entry2Target2Level}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (isValidSignedDecimal(val)) setEntry2Target2Level(val);
-                                }}
-                                onBlur={() => {
-                                  const normalized = normalizeDecimalInput(entry2Target2Level);
-                                  if (normalized === "" || normalized === "." || normalized === "-" || normalized === "-.") {
-                                    setEntry2Target2Level("0");
-                                  }
-                                }}
-                                className="input-field"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-zeedo-orange mb-1">Alvo 2 (%)</label>
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={entry2Target2Percent}
-                                onChange={(e) => setEntry2Target2Percent(e.target.value === "" ? "" : Number(e.target.value))}
-                                className="input-field"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-zeedo-orange mb-1">Alvo 3 (Nível Fib)</label>
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={entry2Target3Level}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (isValidSignedDecimal(val)) setEntry2Target3Level(val);
-                                }}
-                                onBlur={() => {
-                                  const normalized = normalizeDecimalInput(entry2Target3Level);
-                                  if (normalized === "" || normalized === "." || normalized === "-" || normalized === "-.") {
-                                    setEntry2Target3Level("0");
-                                  }
-                                }}
-                                className="input-field"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-zeedo-orange mb-1">Alvo 3 (%)</label>
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={entry2Target3Percent}
-                                onChange={(e) => setEntry2Target3Percent(e.target.value === "" ? "" : Number(e.target.value))}
-                                className="input-field"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
                 </div>
               )}
             </>
