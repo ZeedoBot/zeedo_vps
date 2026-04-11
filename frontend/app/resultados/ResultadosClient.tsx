@@ -27,6 +27,20 @@ function fmtNum(n: number | null | undefined): string {
   return String(n);
 }
 
+/** Rótulos amigáveis na coluna Detalhes (dados da planilha mantêm FR/FO e LE/HE). */
+function fmtDetalhes(motivos: string, side: ResultadoTrade["side"]): string {
+  let s = motivos;
+  if (s.includes("FR/FO")) {
+    const repl = side === "LONG" ? "Fraco 24h" : "Forte 24h";
+    s = s.replace(/FR\/FO/g, repl);
+  }
+  if (s.includes("LE/HE")) {
+    const repl = side === "LONG" ? "High Extremo" : "Low Extremo";
+    s = s.replace(/LE\/HE/g, repl);
+  }
+  return s;
+}
+
 function fmtPnlUsd(n: number | null, factor: number): string {
   if (n === null) return "—";
   const v = n * factor;
@@ -64,20 +78,6 @@ function cellStrategy(col: StrategyCol | null, factor: number): ReactNode {
       <span className="text-[0.65rem] uppercase tracking-wide text-zeedo-black/50 dark:text-zeedo-white/50">{hit}</span>
       <span className={pnlClass}>{fmtPnlUsd(pnl, factor)}</span>
     </div>
-  );
-}
-
-function SimNao(v: boolean): ReactNode {
-  return (
-    <span
-      className={
-        v
-          ? "rounded px-1.5 py-0.5 text-xs font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-          : "rounded px-1.5 py-0.5 text-xs font-medium bg-red-500/15 text-red-700 dark:text-red-300"
-      }
-    >
-      {v ? "Sim" : "Não"}
-    </span>
   );
 }
 
@@ -290,8 +290,8 @@ export function ResultadosClient() {
             Histórico dos Trades: {ROTULO_SELECAO_MES[mes]}
           </h2>
           <p className="mb-3 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-            <strong>100%</strong>: sem motivos de bloqueio no setup. <strong>Motivos</strong>: filtros (ex.: LSR, FR/FO,
-            LE/HE). Cada estratégia mostra o alvo atingido (1, 2, 3 ou STOP) e o PnL em USD proporcional ao Target Loss.
+            Cada estratégia mostra o alvo atingido (1, 2, 3 ou STOP) e o PnL em USD espelhado da planilha, proporcional ao
+            Target Loss.
           </p>
 
           <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20 shadow-sm">
@@ -306,8 +306,7 @@ export function ResultadosClient() {
                   <th className="px-2 py-2 font-medium">Lado</th>
                   <th className="px-2 py-2 font-medium">Stop</th>
                   <th className="px-2 py-2 font-medium">Alvo</th>
-                  <th className="px-2 py-2 font-medium">100%</th>
-                  <th className="px-2 py-2 font-medium min-w-[5rem]">Motivos</th>
+                  <th className="px-2 py-2 font-medium min-w-[5rem]">Detalhes</th>
                   <th className="px-2 py-2 font-medium border-l border-zeedo-orange/20 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200 min-w-[4.5rem]">
                     Cons.
                   </th>
@@ -333,8 +332,9 @@ export function ResultadosClient() {
                     <td className="px-2 py-1.5 whitespace-nowrap">{t.side}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap tabular-nums">{fmtNum(t.stop)}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap tabular-nums">{fmtNum(t.alvo)}</td>
-                    <td className="px-2 py-1.5">{SimNao(t.filtro100)}</td>
-                    <td className="px-2 py-1.5 text-zeedo-black/80 dark:text-zeedo-white/80">{t.motivos}</td>
+                    <td className="px-2 py-1.5 text-zeedo-black/80 dark:text-zeedo-white/80">
+                      {fmtDetalhes(t.motivos, t.side)}
+                    </td>
                     <td className="border-l border-zeedo-orange/15 px-2 py-1.5 bg-cyan-500/5">
                       {cellStrategy(t.conservador, factor)}
                     </td>

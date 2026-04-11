@@ -17,10 +17,8 @@ export type ResultadoTrade = {
   dataLabel: string;
   stop: number | null;
   alvo: number | null;
-  /** Códigos (LSR, FR/FO, …) ou "-" quando vazio */
+  /** Texto da planilha (coluna “Detalhes” na UI): LSR, FR/FO, … ou "-" */
   motivos: string;
-  /** Coluna "100%": sem motivos de bloqueio para o setup */
-  filtro100: boolean;
   conservador: StrategyCol | null;
   mediano: StrategyCol | null;
   agressivo: StrategyCol | null;

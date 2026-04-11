@@ -108,13 +108,6 @@ const allStop25 = (): Pick<
 
 type StratPick = Pick<ResultadoTrade, "conservador" | "mediano" | "agressivo" | "degen">;
 
-const vazio: StratPick = {
-  conservador: null,
-  mediano: null,
-  agressivo: null,
-  degen: null,
-};
-
 /** Alvo 1 — quatro estratégias (planilha). */
 const winT1: StratPick = {
   conservador: S("1", 0.56),
@@ -155,6 +148,35 @@ const winT1c063RestStop: StratPick = {
   degen: S("STOP", -25),
 };
 
+/** PnL USD por estratégia exatamente como na planilha (hit para exibição). */
+function pn(c: number, m: number, a: number, d: number): StratPick {
+  const hitOf = (v: number): StrategyCol["hit"] => {
+    if (v <= -24.5) return "STOP";
+    if (
+      Math.abs(v - 31.14) < 0.02 ||
+      Math.abs(v - 56.08) < 0.02 ||
+      Math.abs(v - 113.17) < 0.02 ||
+      Math.abs(v - 204.15) < 0.02
+    )
+      return "3";
+    if (
+      Math.abs(v - 12.72) < 0.02 ||
+      Math.abs(v - 25.23) < 0.02 ||
+      Math.abs(v - 36.17) < 0.02 ||
+      Math.abs(v - 68.16) < 0.02 ||
+      Math.abs(v - 21.11) < 0.02
+    )
+      return "2";
+    return "1";
+  };
+  return {
+    conservador: S(hitOf(c), c),
+    mediano: S(hitOf(m), m),
+    agressivo: S(hitOf(a), a),
+    degen: S(hitOf(d), d),
+  };
+}
+
 export const RESULTADOS_TRADES: ResultadoTrade[] = [
   // —— Fevereiro (planilha FEVEREIRO) ——
   {
@@ -167,7 +189,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.95,
     alvo: 0,
     motivos: "-",
-    filtro100: true,
     conservador: S("STOP", -25),
     mediano: S("STOP", -25),
     agressivo: S("STOP", -25),
@@ -183,7 +204,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.51,
     alvo: 0,
     motivos: "-",
-    filtro100: true,
     conservador: S("STOP", -25),
     mediano: S("STOP", -25),
     agressivo: S("STOP", -25),
@@ -199,7 +219,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.95,
     alvo: 3,
     motivos: "-",
-    filtro100: true,
     conservador: S("2", 12.72),
     mediano: S("2", 25.23),
     agressivo: S("2", 36.17),
@@ -215,7 +234,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 18,
     motivos: "-",
-    filtro100: true,
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
@@ -231,7 +249,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.05,
     alvo: 18,
     motivos: "-",
-    filtro100: true,
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
@@ -247,7 +264,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 1.618,
     motivos: "-",
-    filtro100: true,
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
@@ -263,7 +279,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.5,
     alvo: 0.618,
     motivos: "-",
-    filtro100: true,
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("STOP", -25),
@@ -279,7 +294,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.6,
     alvo: 2.4,
     motivos: "-",
-    filtro100: true,
     conservador: S("2", 21.11),
     mediano: S("STOP", -25),
     agressivo: S("2", 36.17),
@@ -295,7 +309,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 1,
     motivos: "-",
-    filtro100: true,
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("1", 0.71),
@@ -311,7 +324,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.25,
     alvo: 2.4,
     motivos: "-",
-    filtro100: true,
     conservador: S("2", 12.72),
     mediano: S("2", 25.23),
     agressivo: S("2", 36.17),
@@ -327,7 +339,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.45,
     alvo: 0.618,
     motivos: "-",
-    filtro100: true,
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("STOP", -25),
@@ -343,7 +354,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.8,
     alvo: 1,
     motivos: "-",
-    filtro100: true,
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("1", 0.71),
@@ -359,7 +369,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.94,
     alvo: 9,
     motivos: "-",
-    filtro100: true,
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
@@ -375,7 +384,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.4,
     alvo: -0.618,
     motivos: "-",
-    filtro100: true,
     conservador: S("STOP", -25),
     mediano: S("STOP", -25),
     agressivo: S("STOP", -25),
@@ -391,7 +399,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.414,
     alvo: 0.618,
     motivos: "-",
-    filtro100: true,
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("STOP", -25),
@@ -407,7 +414,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.06,
     alvo: 10,
     motivos: "-",
-    filtro100: true,
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
@@ -423,7 +429,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.2,
     alvo: 13.5,
     motivos: "-",
-    filtro100: true,
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
@@ -439,7 +444,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.4,
     alvo: 0,
     motivos: "-",
-    filtro100: true,
     conservador: S("STOP", -25),
     mediano: S("STOP", -25),
     agressivo: S("STOP", -25),
@@ -455,7 +459,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.4,
     alvo: 0.618,
     motivos: "-",
-    filtro100: true,
     conservador: S("1", 0.63),
     mediano: S("STOP", -25),
     agressivo: S("STOP", -25),
@@ -473,8 +476,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.87,
     alvo: 0.9,
     motivos: "FR/FO",
-    filtro100: false,
-    ...vazio,
+    ...pn(0.63, 1.14, 0.71, 0.68),
   },
   {
     id: 21,
@@ -486,8 +488,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.83,
     alvo: 0.2,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 22,
@@ -499,8 +500,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.32,
     alvo: 0.7,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(0.63, 1.14, -25, -25),
   },
   {
     id: 23,
@@ -512,8 +512,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.15,
     alvo: 0.7,
     motivos: "FR/FO",
-    filtro100: false,
-    ...vazio,
+    ...pn(0.63, 1.14, -25, -25),
   },
   {
     id: 24,
@@ -525,8 +524,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.48,
     alvo: 0.1,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 25,
@@ -538,8 +536,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 1.5,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(0.56, 0.6, 0.71, 0.68),
   },
   {
     id: 26,
@@ -551,8 +548,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.21,
     alvo: 1.3,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(0.56, 0.6, 0.71, 0.68),
   },
   {
     id: 27,
@@ -564,8 +560,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.19,
     alvo: -0.4,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 28,
@@ -577,8 +572,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.5,
     alvo: 2.4,
     motivos: "LE/HE",
-    filtro100: false,
-    ...vazio,
+    ...pn(12.72, 25.23, 36.17, 68.16),
   },
   {
     id: 29,
@@ -590,8 +584,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 2.2,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(12.72, 25.23, 36.17, 68.16),
   },
 
   {
@@ -604,8 +597,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.59,
     alvo: 0.6,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(0.56, 0.6, -25, -25),
   },
   {
     id: 31,
@@ -617,8 +609,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.35,
     alvo: 0.9,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(0.63, -25, -25, -25),
   },
   {
     id: 32,
@@ -630,8 +621,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.05,
     alvo: -0.4,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 33,
@@ -643,8 +633,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.32,
     alvo: 1.6,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(12.72, 25.23, 36.17, 68.16),
   },
   {
     id: 34,
@@ -656,8 +645,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.7,
     alvo: 1.0,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(0.56, 0.6, -25, -25),
   },
   {
     id: 35,
@@ -669,8 +657,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.7,
     alvo: 6.5,
     motivos: "FR/FO",
-    filtro100: false,
-    ...vazio,
+    ...pn(31.14, 56.08, 113.17, 204.15),
   },
   {
     id: 36,
@@ -682,8 +669,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.8,
     alvo: 7.1,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(31.14, 56.08, 113.17, 204.15),
   },
   {
     id: 37,
@@ -695,8 +681,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 5.4,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(31.14, 56.08, 113.17, 204.15),
   },
   {
     id: 38,
@@ -708,8 +693,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.48,
     alvo: -0.1,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 39,
@@ -721,8 +705,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.3,
     alvo: 1.6,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(12.72, 25.23, 36.17, 68.16),
   },
   {
     id: 40,
@@ -734,8 +717,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.7,
     alvo: 5.1,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(31.14, 56.08, 113.17, 204.15),
   },
   {
     id: 41,
@@ -747,8 +729,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.7,
     alvo: -0.6,
     motivos: "LE/HE",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 42,
@@ -760,8 +741,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 2.3,
     motivos: "LE/HE",
-    filtro100: false,
-    ...vazio,
+    ...pn(12.72, 25.23, 36.17, 68.16),
   },
   {
     id: 43,
@@ -773,8 +753,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.414,
     alvo: -0.3,
     motivos: "LE/HE",
-    filtro100: false,
-    ...allStop25(),
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 44,
@@ -786,8 +765,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.59,
     alvo: -0.5,
     motivos: "FR/FO",
-    filtro100: false,
-    ...allStop25(),
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 45,
@@ -799,8 +777,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.11,
     alvo: -0.5,
     motivos: "LE/HE",
-    filtro100: false,
-    ...allStop25(),
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 46,
@@ -812,8 +789,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.52,
     alvo: 0,
     motivos: "-",
-    filtro100: true,
-    ...allStop25(),
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 47,
@@ -825,8 +801,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.3,
     alvo: 1.5,
     motivos: "FR/FO",
-    filtro100: false,
-    ...vazio,
+    ...pn(21.11, -25, -25, -25),
   },
 
   {
@@ -839,7 +814,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT1,
   },
   {
@@ -852,7 +826,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: false,
     ...allStop25(),
   },
   {
@@ -865,7 +838,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: false,
     ...allStop25(),
   },
   {
@@ -878,7 +850,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT2MedStop,
   },
   {
@@ -891,7 +862,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT1,
   },
   {
@@ -904,7 +874,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT1,
   },
   {
@@ -917,7 +886,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT1,
   },
   {
@@ -930,7 +898,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT1,
   },
   {
@@ -943,7 +910,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT1,
   },
   {
@@ -956,7 +922,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT2,
   },
   {
@@ -969,7 +934,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT3,
   },
   {
@@ -982,7 +946,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT3,
   },
   {
@@ -995,7 +958,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT3,
   },
   {
@@ -1008,7 +970,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT3,
   },
   {
@@ -1021,7 +982,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT3,
   },
   {
@@ -1034,7 +994,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT3,
   },
   {
@@ -1047,7 +1006,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: false,
     ...allStop25(),
   },
   {
@@ -1060,7 +1018,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT2,
   },
   {
@@ -1073,7 +1030,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT2,
   },
   {
@@ -1086,7 +1042,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: null,
     alvo: null,
     motivos: "-",
-    filtro100: true,
     ...winT1c063RestStop,
   },
   {
@@ -1099,7 +1054,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.7,
     alvo: 0.8,
     motivos: "LE/HE",
-    filtro100: false,
     ...winT1,
   },
   {
@@ -1112,7 +1066,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.86,
     alvo: 1.9,
     motivos: "LSR",
-    filtro100: false,
     ...winT2MedStop,
   },
   {
@@ -1125,7 +1078,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.7,
     alvo: 11.3,
     motivos: "-",
-    filtro100: true,
     ...winT3,
   },
   {
@@ -1138,7 +1090,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.9,
     alvo: -0.6,
     motivos: "-",
-    filtro100: true,
     ...allStop25(),
   },
   {
@@ -1151,7 +1102,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.075,
     alvo: 0.6,
     motivos: "LSR",
-    filtro100: false,
     ...winT1,
   },
   {
@@ -1164,7 +1114,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.94,
     alvo: 1.5,
     motivos: "LSR",
-    filtro100: false,
     ...winT1,
   },
   {
@@ -1177,7 +1126,6 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.618,
     alvo: 1.7,
     motivos: "LSR",
-    filtro100: false,
     ...winT2,
   },
 
@@ -1191,21 +1139,19 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.11,
     alvo: 0.6,
     motivos: "FR/FO",
-    filtro100: false,
-    ...vazio,
+    ...pn(0.63, 1.14, 0.71, 0.68),
   },
   {
     id: 76,
     mes: "MAR",
     symbol: "ETH",
-    tf: "15m",
+    tf: "30m",
     side: "SHORT",
     dataLabel: "12/03",
     stop: -2.32,
     alvo: -0.8,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 77,
@@ -1217,8 +1163,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -3.42,
     alvo: 1.2,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 78,
@@ -1230,8 +1175,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -3.41,
     alvo: 1.2,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 79,
@@ -1243,8 +1187,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -5.6,
     alvo: 2.1,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 80,
@@ -1256,8 +1199,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.75,
     alvo: 2.0,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...winT2MedStop,
   },
   {
     id: 81,
@@ -1269,8 +1211,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.38,
     alvo: 1.0,
     motivos: "FR/FO",
-    filtro100: false,
-    ...vazio,
+    ...winT1,
   },
   {
     id: 82,
@@ -1282,8 +1223,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.32,
     alvo: 12.0,
     motivos: "LE/HE",
-    filtro100: false,
-    ...vazio,
+    ...winT3,
   },
   {
     id: 83,
@@ -1295,8 +1235,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -7,
     alvo: null,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 84,
@@ -1308,8 +1247,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -6,
     alvo: null,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 85,
@@ -1321,8 +1259,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -10,
     alvo: null,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 86,
@@ -1334,8 +1271,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.72,
     alvo: 10.4,
     motivos: "LE/HE",
-    filtro100: false,
-    ...vazio,
+    ...winT3,
   },
   {
     id: 87,
@@ -1347,8 +1283,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.105,
     alvo: 4.7,
     motivos: "LE/HE",
-    filtro100: false,
-    ...vazio,
+    ...winT3,
   },
   {
     id: 88,
@@ -1360,8 +1295,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -0.62,
     alvo: 0.6,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...winT1,
   },
   {
     id: 89,
@@ -1373,8 +1307,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -13.3,
     alvo: null,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...pn(-25, -25, -25, -25),
   },
   {
     id: 90,
@@ -1386,8 +1319,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -1.275,
     alvo: 3.4,
     motivos: "-",
-    filtro100: true,
-    ...vazio,
+    ...winT2,
   },
   {
     id: 91,
@@ -1399,8 +1331,128 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     stop: -2.035,
     alvo: 3.7,
     motivos: "LSR",
-    filtro100: false,
-    ...vazio,
+    ...winT2MedStop,
+  },
+
+  {
+    id: 92,
+    mes: "MAR",
+    symbol: "XRP",
+    tf: "15m",
+    side: "SHORT",
+    dataLabel: "16/03",
+    stop: null,
+    alvo: null,
+    motivos: "-",
+    ...pn(-25, -25, -25, -25),
+  },
+  {
+    id: 93,
+    mes: "MAR",
+    symbol: "SUI",
+    tf: "30m",
+    side: "SHORT",
+    dataLabel: "16/03",
+    stop: null,
+    alvo: null,
+    motivos: "-",
+    ...winT3,
+  },
+  {
+    id: 94,
+    mes: "MAR",
+    symbol: "DOGE",
+    tf: "15m",
+    side: "SHORT",
+    dataLabel: "16/03",
+    stop: null,
+    alvo: null,
+    motivos: "LSR",
+    ...winT2MedStop,
+  },
+  {
+    id: 95,
+    mes: "MAR",
+    symbol: "ADA",
+    tf: "1h",
+    side: "SHORT",
+    dataLabel: "17/03",
+    stop: null,
+    alvo: null,
+    motivos: "LE/HE",
+    ...winT3,
+  },
+  {
+    id: 96,
+    mes: "MAR",
+    symbol: "UNI",
+    tf: "15m",
+    side: "LONG",
+    dataLabel: "17/03",
+    stop: null,
+    alvo: null,
+    motivos: "LSR",
+    ...pn(-25, -25, -25, -25),
+  },
+  {
+    id: 97,
+    mes: "MAR",
+    symbol: "UNI",
+    tf: "15m",
+    side: "LONG",
+    dataLabel: "17/03",
+    stop: null,
+    alvo: null,
+    motivos: "FR/FO",
+    ...winT1,
+  },
+  {
+    id: 98,
+    mes: "MAR",
+    symbol: "XRP",
+    tf: "15m",
+    side: "LONG",
+    dataLabel: "17/03",
+    stop: null,
+    alvo: null,
+    motivos: "-",
+    ...pn(-25, -25, -25, -25),
+  },
+  {
+    id: 99,
+    mes: "MAR",
+    symbol: "HYPE",
+    tf: "15m",
+    side: "SHORT",
+    dataLabel: "17/03",
+    stop: null,
+    alvo: null,
+    motivos: "LSR",
+    ...winT3,
+  },
+  {
+    id: 100,
+    mes: "MAR",
+    symbol: "HYPE",
+    tf: "15m",
+    side: "SHORT",
+    dataLabel: "17/03",
+    stop: null,
+    alvo: null,
+    motivos: "LSR",
+    ...winT1,
+  },
+  {
+    id: 101,
+    mes: "MAR",
+    symbol: "ADA",
+    tf: "15m",
+    side: "SHORT",
+    dataLabel: "18/03",
+    stop: null,
+    alvo: null,
+    motivos: "FR/FO",
+    ...winT2MedStop,
   },
 
 ];
