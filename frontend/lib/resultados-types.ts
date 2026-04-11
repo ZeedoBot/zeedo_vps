@@ -13,7 +13,7 @@ export type ResultadoTrade = {
   symbol: string;
   tf: string;
   side: "LONG" | "SHORT";
-  /** Ex.: 09/02 ou 5/3 */
+  /** Ex.: 09/02 ou 05/03 */
   dataLabel: string;
   stop: number | null;
   alvo: number | null;

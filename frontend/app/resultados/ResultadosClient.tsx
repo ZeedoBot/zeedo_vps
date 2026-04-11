@@ -170,43 +170,6 @@ export function ResultadosClient() {
   const footerDiario =
     mes !== "AGG" ? RESUMO_POR_MES[mes as MesResultadoKey].diarioFooter : undefined;
 
-  const tituloResumoUnico = (
-    <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-3 flex flex-wrap items-end gap-x-3 gap-y-2">
-      <span className="flex flex-wrap items-center gap-3">
-        <span className="text-zeedo-black dark:text-zeedo-white">Resumo —</span>
-        <select
-          value={mes}
-          onChange={(e) => {
-            setMes(e.target.value as MesSelecao);
-            setPagina(0);
-          }}
-          className="rounded-lg border border-zeedo-orange/30 bg-zeedo-white px-3 py-1.5 text-base font-semibold text-zeedo-black dark:bg-zeedo-black dark:text-zeedo-white dark:border-zeedo-orange/40 min-w-[10rem]"
-        >
-          {SELECAO_MESES_ORDEM.map((m) => (
-            <option key={m} value={m}>
-              {ROTULO_SELECAO_MES[m]}
-            </option>
-          ))}
-        </select>
-        <span className="text-zeedo-black/40 dark:text-zeedo-white/40">·</span>
-        <label className="flex flex-wrap items-center gap-2 text-sm font-normal text-zeedo-black dark:text-zeedo-white">
-          <span className="text-xs font-medium uppercase tracking-wide text-zeedo-orange">Target Loss (USD)</span>
-          <input
-            type="number"
-            min={1}
-            step={1}
-            value={targetLossUsd}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              if (!Number.isNaN(v) && v >= 1) setTargetLossUsd(v);
-            }}
-            className="w-24 rounded-lg border border-zeedo-orange/30 bg-zeedo-white px-2 py-1 text-sm tabular-nums dark:bg-zeedo-black dark:text-zeedo-white dark:border-zeedo-orange/40"
-          />
-        </label>
-      </span>
-    </h2>
-  );
-
   return (
     <div className="min-h-screen bg-zeedo-white dark:bg-zeedo-black text-zeedo-black dark:text-zeedo-white">
       <header className="border-b border-zeedo-orange/15 px-4 py-4 sm:px-6">
@@ -235,7 +198,41 @@ export function ResultadosClient() {
         </p>
 
         <section>
-          {tituloResumoUnico}
+          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-2">
+            Filtro de Mês e Target Loss
+          </h2>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <select
+              value={mes}
+              onChange={(e) => {
+                setMes(e.target.value as MesSelecao);
+                setPagina(0);
+              }}
+              className="rounded-lg border border-zeedo-orange/30 bg-zeedo-white px-3 py-1.5 text-base font-semibold text-zeedo-black dark:bg-zeedo-black dark:text-zeedo-white dark:border-zeedo-orange/40 min-w-[10rem]"
+            >
+              {SELECAO_MESES_ORDEM.map((m) => (
+                <option key={m} value={m}>
+                  {ROTULO_SELECAO_MES[m]}
+                </option>
+              ))}
+            </select>
+            <label className="flex flex-wrap items-center gap-2 text-sm text-zeedo-black dark:text-zeedo-white">
+              <span className="text-xs font-medium uppercase tracking-wide text-zeedo-orange">Target Loss (USD)</span>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={targetLossUsd}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  if (!Number.isNaN(v) && v >= 1) setTargetLossUsd(v);
+                }}
+                className="w-24 rounded-lg border border-zeedo-orange/30 bg-zeedo-white px-2 py-1 text-sm tabular-nums dark:bg-zeedo-black dark:text-zeedo-white dark:border-zeedo-orange/40"
+              />
+            </label>
+          </div>
+
+          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-3">Resumo</h2>
 
           <div className="mb-3 flex flex-wrap items-center gap-3">
             <button
@@ -290,39 +287,12 @@ export function ResultadosClient() {
 
         <section>
           <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-1">
-            Trades — {ROTULO_SELECAO_MES[mes]}
+            Histórico dos Trades: {ROTULO_SELECAO_MES[mes]}
           </h2>
-          <p className="mb-3 text-sm text-zeedo-black/55 dark:text-zeedo-white/55">
-            {tradesOrdenados.length} {tradesOrdenados.length === 1 ? "linha" : "linhas"}
-            {tradesOrdenados.length > PAGE_SIZE
-              ? ` · Página ${paginaSegura + 1} de ${totalPaginas} (${PAGE_SIZE} por página)`
-              : null}
-          </p>
           <p className="mb-3 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
             <strong>100%</strong>: sem motivos de bloqueio no setup. <strong>Motivos</strong>: filtros (ex.: LSR, FR/FO,
             LE/HE). Cada estratégia mostra o alvo atingido (1, 2, 3 ou STOP) e o PnL em USD proporcional ao Target Loss.
           </p>
-
-          {tradesOrdenados.length > PAGE_SIZE ? (
-            <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-              <button
-                type="button"
-                disabled={paginaSegura <= 0}
-                onClick={() => setPagina((p) => Math.max(0, p - 1))}
-                className="rounded border border-zeedo-orange/30 px-2 py-1 disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                disabled={paginaSegura >= totalPaginas - 1}
-                onClick={() => setPagina((p) => Math.min(totalPaginas - 1, p + 1))}
-                className="rounded border border-zeedo-orange/30 px-2 py-1 disabled:opacity-40"
-              >
-                Próxima
-              </button>
-            </div>
-          ) : null}
 
           <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20 shadow-sm">
             <table className="w-full min-w-[960px] text-xs sm:text-sm">
@@ -375,6 +345,35 @@ export function ResultadosClient() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <p className="text-sm text-zeedo-black/55 dark:text-zeedo-white/55">
+              {tradesOrdenados.length} {tradesOrdenados.length === 1 ? "linha" : "linhas"}
+              {tradesOrdenados.length > PAGE_SIZE
+                ? ` · Página ${paginaSegura + 1} de ${totalPaginas} (${PAGE_SIZE} por página)`
+                : null}
+            </p>
+            {tradesOrdenados.length > PAGE_SIZE ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <button
+                  type="button"
+                  disabled={paginaSegura <= 0}
+                  onClick={() => setPagina((p) => Math.max(0, p - 1))}
+                  className="rounded border border-zeedo-orange/30 px-2 py-1 disabled:opacity-40"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={paginaSegura >= totalPaginas - 1}
+                  onClick={() => setPagina((p) => Math.min(totalPaginas - 1, p + 1))}
+                  className="rounded border border-zeedo-orange/30 px-2 py-1 disabled:opacity-40"
+                >
+                  Próxima
+                </button>
+              </div>
+            ) : null}
           </div>
         </section>
 
