@@ -9,10 +9,15 @@ const nextConfig = {
         destination: "/",
         permanent: true,
       },
-      // Variante sem acento (opcional)
+      // Rotas antigas da landing → raiz
       {
         source: "/pagina-inicial",
-        destination: "/página-inicial",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/página-inicial",
+        destination: "/",
         permanent: true,
       },
     ];

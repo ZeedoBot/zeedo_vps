@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase";
@@ -18,6 +18,20 @@ function LoginContent() {
   const [resetMessage, setResetMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [sendingReset, setSendingReset] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session) return;
+      const dest = nextPath === "/segredo" ? "/segredo" : "/dashboard";
+      router.replace(dest);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router, nextPath]);
 
   async function handleForgotPassword(e: React.FormEvent) {
     e.preventDefault();

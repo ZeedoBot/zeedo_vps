@@ -21,8 +21,6 @@ export type ResultadoTrade = {
   motivos: string;
   /** Coluna "100%": sem motivos de bloqueio para o setup */
   filtro100: boolean;
-  /** Trade ativado pelo Zeedo */
-  ativouBot: boolean;
   conservador: StrategyCol | null;
   mediano: StrategyCol | null;
   agressivo: StrategyCol | null;
@@ -43,4 +41,13 @@ export type ResumoDiario = {
   diasNegativos: number;
   winRateDiasPct: number;
   mediaDiariaBrl: number;
+};
+
+export type MesResultadoKey = "FEV" | "MAR";
+
+/** Resumo exibido por mês (tabela + rodapé; diário opcional). */
+export type ResumoMesConfig = {
+  estrategias: ResumoEstrategia[];
+  footerTexto: string;
+  diario?: ResumoDiario[];
 };
