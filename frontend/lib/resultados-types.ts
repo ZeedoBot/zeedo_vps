@@ -35,19 +35,30 @@ export type ResumoEstrategia = {
   lucroBrl: number;
 };
 
+/** Métricas diárias por estratégia (modal). */
 export type ResumoDiario = {
   nome: string;
-  diasPositivos: number;
-  diasNegativos: number;
-  winRateDiasPct: number;
+  diasLucro: number;
+  diasPrejuizo: number;
+  diasLucroPct: number;
+  mediaDiariaUsd: number;
+  mediaDiariaBrl: number;
+};
+
+export type DiarioFooter = {
+  diasLucroPct: number;
+  mediaDiariaUsd: number;
   mediaDiariaBrl: number;
 };
 
 export type MesResultadoKey = "FEV" | "MAR";
 
-/** Resumo exibido por mês (tabela + rodapé; diário opcional). */
+/** Inclui visão agregada de todos os meses. */
+export type MesSelecao = MesResultadoKey | "AGG";
+
+/** Resumo exibido por mês (diário opcional + rodapé do diário). */
 export type ResumoMesConfig = {
   estrategias: ResumoEstrategia[];
-  footerTexto: string;
   diario?: ResumoDiario[];
+  diarioFooter?: DiarioFooter;
 };

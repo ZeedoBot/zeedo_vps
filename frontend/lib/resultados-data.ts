@@ -3,7 +3,9 @@
  * Linhas sem transcrição completa na conversa: símbolo vazio; edite aqui.
  */
 import type {
+  DiarioFooter,
   MesResultadoKey,
+  MesSelecao,
   ResumoDiario,
   ResumoEstrategia,
   ResumoMesConfig,
@@ -11,8 +13,11 @@ import type {
   StrategyCol,
 } from "./resultados-types";
 
+/** Valores de PnL e resumos na planilha assumem este risco por trade (USD). */
+export const TARGET_LOSS_BASE_USD = 25;
+
 export const RESULTADOS_META = {
-  targetLossUsd: 25,
+  targetLossUsd: TARGET_LOSS_BASE_USD,
   dolarBrlFev: 5.2,
   dolarBrlMar: 5.2,
 };
@@ -31,17 +36,47 @@ export const RESUMO_MAR: ResumoEstrategia[] = [
   { nome: "DEGEN", lucroUsd: 2951.1, winRatePct: 31.46, ranking: 1, lucroBrl: 15345.71 },
 ];
 
-export const RESUMO_MAR_DIARIO: ResumoDiario[] = [
-  { nome: "Conservador", diasPositivos: 17, diasNegativos: 10, winRateDiasPct: 63, mediaDiariaBrl: 182.29 },
-  { nome: "Mediano", diasPositivos: 19, diasNegativos: 8, winRateDiasPct: 70, mediaDiariaBrl: 253.44 },
-  { nome: "Agressivo", diasPositivos: 16, diasNegativos: 11, winRateDiasPct: 59, mediaDiariaBrl: 460.44 },
-  { nome: "Degen", diasPositivos: 14, diasNegativos: 13, winRateDiasPct: 52, mediaDiariaBrl: 529.16 },
+/** Diário — Fevereiro (planilha). */
+export const RESUMO_FEV_DIARIO: ResumoDiario[] = [
+  { nome: "Conservador", diasLucro: 10, diasPrejuizo: 2, diasLucroPct: 83, mediaDiariaUsd: 9.87, mediaDiariaBrl: 51.31 },
+  { nome: "Mediano", diasLucro: 9, diasPrejuizo: 3, diasLucroPct: 75, mediaDiariaUsd: 17.42, mediaDiariaBrl: 90.61 },
+  { nome: "Agressivo", diasLucro: 8, diasPrejuizo: 4, diasLucroPct: 67, mediaDiariaUsd: 37.57, mediaDiariaBrl: 195.34 },
+  { nome: "Degen", diasLucro: 6, diasPrejuizo: 6, diasLucroPct: 50, mediaDiariaUsd: 56.61, mediaDiariaBrl: 294.36 },
 ];
 
-/** Mês mais recente primeiro (selector na página de resultados). */
+export const RESUMO_FEV_DIARIO_FOOTER: DiarioFooter = {
+  diasLucroPct: 69,
+  mediaDiariaUsd: 30.37,
+  mediaDiariaBrl: 157.9,
+};
+
+const dMar = RESULTADOS_META.dolarBrlMar;
+
+/** Diário — Março. */
+export const RESUMO_MAR_DIARIO: ResumoDiario[] = [
+  { nome: "Conservador", diasLucro: 17, diasPrejuizo: 10, diasLucroPct: 63, mediaDiariaUsd: 182.29 / dMar, mediaDiariaBrl: 182.29 },
+  { nome: "Mediano", diasLucro: 19, diasPrejuizo: 8, diasLucroPct: 70, mediaDiariaUsd: 253.44 / dMar, mediaDiariaBrl: 253.44 },
+  { nome: "Agressivo", diasLucro: 16, diasPrejuizo: 11, diasLucroPct: 59, mediaDiariaUsd: 460.44 / dMar, mediaDiariaBrl: 460.44 },
+  { nome: "Degen", diasLucro: 14, diasPrejuizo: 13, diasLucroPct: 52, mediaDiariaUsd: 529.16 / dMar, mediaDiariaBrl: 529.16 },
+];
+
+export const RESUMO_MAR_DIARIO_FOOTER: DiarioFooter = {
+  diasLucroPct: Math.round(
+    RESUMO_MAR_DIARIO.reduce((s, r) => s + r.diasLucroPct, 0) / RESUMO_MAR_DIARIO.length,
+  ),
+  mediaDiariaUsd:
+    RESUMO_MAR_DIARIO.reduce((s, r) => s + r.mediaDiariaUsd, 0) / RESUMO_MAR_DIARIO.length,
+  mediaDiariaBrl:
+    RESUMO_MAR_DIARIO.reduce((s, r) => s + r.mediaDiariaBrl, 0) / RESUMO_MAR_DIARIO.length,
+};
+
+/** Meses com dados (ordem de exibição após Agregado). */
 export const MESES_RESULTADO_ORDEM: MesResultadoKey[] = ["MAR", "FEV"];
 
-export const ROTULO_MES: Record<MesResultadoKey, string> = {
+export const SELECAO_MESES_ORDEM: MesSelecao[] = ["AGG", ...MESES_RESULTADO_ORDEM];
+
+export const ROTULO_SELECAO_MES: Record<MesSelecao, string> = {
+  AGG: "Agregado",
   FEV: "Fevereiro",
   MAR: "Março",
 };
@@ -49,14 +84,13 @@ export const ROTULO_MES: Record<MesResultadoKey, string> = {
 export const RESUMO_POR_MES: Record<MesResultadoKey, ResumoMesConfig> = {
   FEV: {
     estrategias: RESUMO_FEV,
-    footerTexto:
-      "Média das estratégias (Fev): ~US$ 364,39 · Win rate médio ~60,53% · Média 30 dias US$ 910,99 · Média diária ~US$ 30,37 (~R$ 157,90).",
+    diario: RESUMO_FEV_DIARIO,
+    diarioFooter: RESUMO_FEV_DIARIO_FOOTER,
   },
   MAR: {
     estrategias: RESUMO_MAR,
-    footerTexto:
-      "Média (Mar): US$ 1.987,23 · Win rate médio 53,37% · Média 30 dias US$ 2.055,75 · Média diária US$ 68,53 (~R$ 356,33).",
     diario: RESUMO_MAR_DIARIO,
+    diarioFooter: RESUMO_MAR_DIARIO_FOOTER,
   },
 };
 
@@ -193,7 +227,10 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     alvo: 1.618,
     motivos: "-",
     filtro100: true,
-    ...vazio,
+    conservador: S("3", 31.14),
+    mediano: S("3", 56.08),
+    agressivo: S("3", 113.17),
+    degen: S("3", 204.15),
   },
   {
     id: 7,
