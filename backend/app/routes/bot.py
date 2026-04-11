@@ -4,6 +4,8 @@ O manager (manager.py) lê bot_config e instance_status; não precisamos chamar 
 diretamente da API — basta atualizar bot_config e o manager reage no próximo ciclo.
 Validação contra plan_limits por plano do usuário.
 """
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -43,6 +45,43 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
         "can_customize_targets": bool(row.get("can_customize_targets", False)),
         "can_customize_stop": bool(row.get("can_customize_stop", False)),
     }
+
+
+def _parse_user_created_at(created) -> datetime | None:
+    """Converte created_at da tabela users para datetime UTC."""
+    if not created:
+        return None
+    try:
+        if isinstance(created, str):
+            return datetime.fromisoformat(created.replace("Z", "+00:00"))
+        if isinstance(created, datetime):
+            if created.tzinfo is None:
+                return created.replace(tzinfo=timezone.utc)
+            return created.astimezone(timezone.utc)
+    except (ValueError, TypeError):
+        return None
+    return None
+
+
+def _degen_strategy_unlocked(supabase, user_id: str) -> bool:
+    """
+    Degen só após 7 dias completos desde created_at em public.users.
+    Sem data válida: não libera (evita bypass).
+    """
+    r = supabase.table("users").select("created_at").eq("id", user_id).limit(1).execute()
+    if not r.data:
+        return False
+    created_dt = _parse_user_created_at(r.data[0].get("created_at"))
+    if created_dt is None:
+        return False
+    now = datetime.now(timezone.utc)
+    return now >= created_dt + timedelta(days=7)
+
+
+DEGEN_LOCKED_MESSAGE = (
+    "Devido ao alto risco e baixo WinRate, essa estratégia só é liberada após uma semana de uso. "
+    "Primeiro, entenda como as estratégias do Zeedo funcionam antes de usá-la."
+)
 
 
 class BotConfigUpdate(BaseModel):
@@ -110,6 +149,7 @@ def get_config(user_id: str = Depends(get_current_user_id)):
         out["signal_mode"] = True
     out["plan_limits"] = limits
     out["trial_ended"] = trial_ended
+    out["degen_strategy_unlocked"] = _degen_strategy_unlocked(supabase, user_id)
     return out
 
 
@@ -159,6 +199,10 @@ def update_config(
     if body.trade_mode is not None:
         if body.trade_mode not in limits["allowed_trade_modes"]:
             raise HTTPException(400, f"Modo {body.trade_mode} não permitido no plano {limits['plan']}")
+
+    if body.strategy_preset is not None and body.strategy_preset.upper() == "DEGEN":
+        if not _degen_strategy_unlocked(supabase, user_id):
+            raise HTTPException(400, DEGEN_LOCKED_MESSAGE)
     
     # Validação de alvos e stop customizados (apenas Pro e Satoshi)
     can_customize_targets = limits.get("can_customize_targets", False)

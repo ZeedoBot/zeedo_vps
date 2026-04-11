@@ -13,11 +13,14 @@ const PLANS = [
   { id: "satoshi", name: "Satoshi", price: 299, color: "purple" },
 ] as const;
 
+const TELEGRAM_SUPPORT_URL = "https://t.me/suportezeedo";
+
 export default function ChoosePlanPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasPlan, setHasPlan] = useState(false);
   const [canceled, setCanceled] = useState(false);
+  const [planExpired, setPlanExpired] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +38,12 @@ export default function ChoosePlanPage() {
         return;
       }
       try {
-        const me = await apiGet<{ subscription_tier?: string }>("/auth/me", session.access_token);
+        const me = await apiGet<{ subscription_tier?: string; subscription_status?: string }>(
+          "/auth/me",
+          session.access_token,
+        );
+        const status = (me.subscription_status || "").toLowerCase();
+        setPlanExpired(status === "expired");
         if (me.subscription_tier && ["basic", "pro", "satoshi"].includes(me.subscription_tier)) {
           setHasPlan(true);
         }
@@ -98,6 +106,26 @@ export default function ChoosePlanPage() {
         )}
         {error && (
           <p className="mb-4 text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+        )}
+        {planExpired && (
+          <div
+            role="alert"
+            className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100"
+          >
+            <p className="text-center leading-relaxed">
+              Seu plano expirou, para ter acesso a plataforma, efetue o pagamento. Se você já realizou o pagamento
+              atualize a página, se o acesso não foi liberado, entre em contato com o{" "}
+              <a
+                href={TELEGRAM_SUPPORT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-zeedo-orange underline underline-offset-2 hover:no-underline"
+              >
+                suporte
+              </a>
+              .
+            </p>
+          </div>
         )}
         <div className="grid gap-4 sm:grid-cols-3 items-stretch">
           {PLANS.map((plan) => (

@@ -39,6 +39,8 @@ type BotConfig = {
   /** CONSERVADOR | MEDIANO | AGRESSIVO | DEGEN | CUSTOM | null (inferir pelos números) */
   strategy_preset?: string | null;
   plan_limits?: PlanLimits;
+  /** false = conta com menos de 7 dias; preset Degen bloqueado na UI e na API */
+  degen_strategy_unlocked?: boolean;
 };
 
 const TRADE_MODE_LABELS: Record<string, string> = {
@@ -141,6 +143,8 @@ const UPGRADE_TOOLTIP_STRATEGIES =
   "Faça Upgrade para o Plano Pro para automatizar seus Trades e testar diferentes Estratégias validadas e pré definidas.";
 const UPGRADE_TOOLTIP_RISK =
   "Faça Upgrade para o Plano Pro para automatizar seus Trades e personalizar seu próprio gerenciamento de risco de forma automática.";
+const DEGEN_LOCK_MESSAGE =
+  "Devido ao alto risco e baixo WinRate, essa estratégia só é liberada após uma semana de uso. Primeiro, entenda como as estratégias do Zeedo funcionam antes de usá-la.";
 
 function ProPlanLockHint({
   message,
@@ -193,6 +197,8 @@ export default function BotPage() {
   const [maxSinglePosition, setMaxSinglePosition] = useState<number | "">(1250);
   const [signalMode, setSignalMode] = useState(false);
   const [lockHintOpen, setLockHintOpen] = useState<"risk" | "strategy" | null>(null);
+  const [degenStrategyUnlocked, setDegenStrategyUnlocked] = useState(true);
+  const [degenLockHintOpen, setDegenLockHintOpen] = useState(false);
 
   // Estados para alvos e stop customizados
   const [stopMultiplier, setStopMultiplier] = useState<number | string>("1.8");
@@ -226,15 +232,6 @@ export default function BotPage() {
           data.plan_limits?.plan === "basic" ? true : (data.signal_mode ?? false),
         );
 
-        // Carrega alvos e stop customizados (valores persistidos no banco)
-        setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
-        setEntry1Multiplier((data.entry1_multiplier ?? 0.618).toString());
-        setTarget1Level((data.target1_level ?? 0.618).toString());
-        setTarget1Percent(data.target1_percent ?? 50);
-        setTarget2Level((data.target2_level ?? 1.0).toString());
-        setTarget2Percent(data.target2_percent ?? 50);
-        setTarget3Level((data.target3_level ?? 0).toString());
-        setTarget3Percent(data.target3_percent ?? 0);
         const inferred = detectStrategy({
           stopMultiplier: data.stop_multiplier,
           entry1Multiplier: data.entry1_multiplier,
@@ -246,7 +243,31 @@ export default function BotPage() {
           target3Percent: data.target3_percent ?? 0,
         });
         const stored = parseStoredStrategy(data.strategy_preset);
-        setSelectedStrategy(stored ?? inferred);
+        const degenOk = data.degen_strategy_unlocked !== false;
+        setDegenStrategyUnlocked(degenOk);
+        let strategy: StrategyKey = stored ?? inferred;
+        if (!degenOk && strategy === "DEGEN") {
+          strategy = "MEDIANO";
+          const m = STRATEGY_PRESETS.MEDIANO;
+          setStopMultiplier(m.stopMultiplier);
+          setEntry1Multiplier(m.entry1Multiplier);
+          setTarget1Level(m.target1Level);
+          setTarget1Percent(m.target1Percent);
+          setTarget2Level(m.target2Level);
+          setTarget2Percent(m.target2Percent);
+          setTarget3Level(m.target3Level);
+          setTarget3Percent(m.target3Percent);
+        } else {
+          setStopMultiplier((data.stop_multiplier ?? 1.8).toString());
+          setEntry1Multiplier((data.entry1_multiplier ?? 0.618).toString());
+          setTarget1Level((data.target1_level ?? 0.618).toString());
+          setTarget1Percent(data.target1_percent ?? 50);
+          setTarget2Level((data.target2_level ?? 1.0).toString());
+          setTarget2Percent(data.target2_percent ?? 50);
+          setTarget3Level((data.target3_level ?? 0).toString());
+          setTarget3Percent(data.target3_percent ?? 0);
+        }
+        setSelectedStrategy(strategy);
       } finally {
         setLoading(false);
       }
@@ -358,6 +379,10 @@ export default function BotPage() {
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     if (!limits) return;
+    if (selectedStrategy === "DEGEN" && !degenStrategyUnlocked) {
+      setMessage({ type: "err", text: DEGEN_LOCK_MESSAGE });
+      return;
+    }
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) return;
@@ -761,23 +786,63 @@ export default function BotPage() {
                 Estratégias
               </h3>
               <div className="space-y-2">
-                {(Object.entries(STRATEGY_PRESETS) as [Exclude<StrategyKey, "CUSTOM">, StrategyPreset][]).map(([key, preset]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStrategy(key);
-                      applyStrategyPreset(key);
-                    }}
-                    className={`w-full rounded-lg px-3 py-2 text-left text-sm border transition-colors ${
-                      selectedStrategy === key
-                        ? "bg-zeedo-orange text-white border-zeedo-orange"
-                        : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                {(Object.entries(STRATEGY_PRESETS) as [Exclude<StrategyKey, "CUSTOM">, StrategyPreset][]).map(([key, preset]) => {
+                  const degenLocked = key === "DEGEN" && !degenStrategyUnlocked;
+                  if (degenLocked) {
+                    return (
+                      <span key={key} className="relative block w-full">
+                        <button
+                          type="button"
+                          title={DEGEN_LOCK_MESSAGE}
+                          aria-expanded={degenLockHintOpen}
+                          onClick={() => setDegenLockHintOpen((o) => !o)}
+                          className="w-full rounded-lg px-3 py-2 text-left text-sm border border-dashed border-zeedo-orange/40 text-zeedo-black/50 dark:text-zeedo-white/50 bg-zeedo-black/[0.02] dark:bg-white/[0.04] cursor-pointer hover:bg-zeedo-orange/5"
+                        >
+                          <span className="flex items-center justify-between gap-2">
+                            <span>{preset.label}</span>
+                            <svg
+                              className="h-4 w-4 shrink-0 text-zeedo-orange/70"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              aria-hidden
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                              />
+                            </svg>
+                          </span>
+                        </button>
+                        {degenLockHintOpen ? (
+                          <span className="absolute left-0 top-full z-30 mt-1 w-full rounded-lg border border-zeedo-orange/25 bg-zeedo-white p-2 text-xs text-zeedo-black shadow-md dark:bg-zeedo-black dark:text-zeedo-white">
+                            {DEGEN_LOCK_MESSAGE}
+                          </span>
+                        ) : null}
+                      </span>
+                    );
+                  }
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setDegenLockHintOpen(false);
+                        setSelectedStrategy(key);
+                        applyStrategyPreset(key);
+                      }}
+                      className={`w-full rounded-lg px-3 py-2 text-left text-sm border transition-colors ${
+                        selectedStrategy === key
+                          ? "bg-zeedo-orange text-white border-zeedo-orange"
+                          : "border-zeedo-orange/30 text-zeedo-black dark:text-zeedo-white hover:bg-zeedo-orange/10"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
                 <button
                   type="button"
                   onClick={() => setSelectedStrategy("CUSTOM")}

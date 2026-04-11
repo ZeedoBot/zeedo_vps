@@ -252,6 +252,16 @@ class SupabaseStorage(StorageBase):
         except Exception as e:
             logging.error(f"Supabase save_trades_db: {e}")
 
+    def _degen_strategy_unlocked(self, user_id: str) -> bool:
+        """Degen só após 7 dias desde users.created_at; sem data → não libera."""
+        from datetime import datetime, timedelta, timezone
+
+        ms = self.get_user_created_at_timestamp_ms(user_id)
+        if ms is None:
+            return False
+        created = datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+        return datetime.now(timezone.utc) >= created + timedelta(days=7)
+
     def get_config(self, user_id: str = None) -> dict:
         """Retorna config carregando de bot_config."""
         if not self._client:
@@ -270,7 +280,7 @@ class SupabaseStorage(StorageBase):
             if not r.data or len(r.data) == 0:
                 return {}
             row = r.data[0]
-            return {
+            out = {
                 "symbols": row.get("symbols") or [],
                 "timeframes": row.get("timeframes") or [],
                 "trade_mode": row.get("trade_mode") or "BOTH",
@@ -285,6 +295,19 @@ class SupabaseStorage(StorageBase):
                 "target3_level": row.get("target3_level"),
                 "target3_percent": row.get("target3_percent", 0),
             }
+            # Conta com menos de 7 dias: não opera como DEGEN (alinha ao preset Mediano).
+            preset = str(out.get("strategy_preset") or "").strip().upper()
+            if preset == "DEGEN" and user_id and not self._degen_strategy_unlocked(user_id):
+                out["strategy_preset"] = "MEDIANO"
+                out["stop_multiplier"] = 2.0
+                out["entry1_multiplier"] = 0.618
+                out["target1_level"] = 0.5
+                out["target1_percent"] = 3
+                out["target2_level"] = 1.6
+                out["target2_percent"] = 62
+                out["target3_level"] = 4.4
+                out["target3_percent"] = 35
+            return out
         except Exception as e:
             logging.error(f"Supabase get_config: {e}")
             return {}

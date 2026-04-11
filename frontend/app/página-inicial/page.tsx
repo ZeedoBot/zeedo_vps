@@ -27,9 +27,12 @@ export default function PaginaInicialPage() {
             Entrar
           </Link>
         </div>
-        <p className="mt-4">
+        <p className="mt-4 flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center">
           <Link href="/bot" className="text-sm text-zeedo-orange hover:underline">
             Conheça o Zeedo →
+          </Link>
+          <Link href="/resultados" className="text-sm text-zeedo-orange hover:underline">
+            Prova de resultados →
           </Link>
         </p>
         <p className="mt-8 text-xs text-zeedo-black/50 dark:text-zeedo-white/50 text-center">
