@@ -207,9 +207,9 @@ export default function BotPage() {
   const robotScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
 
   return (
-    <div className="min-h-screen bg-zeedo-white dark:bg-zeedo-black text-zeedo-black dark:text-zeedo-white">
+    <div className="dark min-h-screen bg-zeedo-black text-zeedo-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-zeedo-orange/20 bg-zeedo-white/80 dark:bg-zeedo-black/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-zeedo-orange/20 bg-zeedo-black/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="flex items-center gap-2">
             <Image src="/zeedo-logo.png?v=4" alt="Zeedo" width={40} height={40} className="mix-blend-multiply dark:mix-blend-screen" />

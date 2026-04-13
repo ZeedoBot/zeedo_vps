@@ -141,11 +141,15 @@ function linhaMediaEstrategias(estrategias: ResumoEstrategia[]) {
 
 export function ResultadosClient() {
   const [mes, setMes] = useState<MesSelecao>("MAR");
-  const [targetLossUsd, setTargetLossUsd] = useState(TARGET_LOSS_BASE_USD);
+  const [targetLossUsd, setTargetLossUsd] = useState<number | "">(TARGET_LOSS_BASE_USD);
   const [pagina, setPagina] = useState(0);
   const [modalDiario, setModalDiario] = useState(false);
 
-  const factor = targetLossUsd / TARGET_LOSS_BASE_USD;
+  const targetLossVal =
+    typeof targetLossUsd === "number" && !Number.isNaN(targetLossUsd) && targetLossUsd >= 1
+      ? targetLossUsd
+      : TARGET_LOSS_BASE_USD;
+  const factor = targetLossVal / TARGET_LOSS_BASE_USD;
 
   const resumoLinhas = useMemo(() => {
     if (mes === "AGG") return aggregateResumo();
@@ -177,7 +181,7 @@ export function ResultadosClient() {
     mes !== "AGG" ? RESUMO_POR_MES[mes as MesResultadoKey].diarioFooter : undefined;
 
   return (
-    <div className="min-h-screen bg-zeedo-white dark:bg-zeedo-black text-zeedo-black dark:text-zeedo-white">
+    <div className="dark min-h-screen bg-zeedo-black text-zeedo-white">
       <header className="border-b border-zeedo-orange/15 px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div>
@@ -190,7 +194,7 @@ export function ResultadosClient() {
             </Link>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-md border border-zeedo-orange/25 px-2 py-1 text-zeedo-orange hover:bg-zeedo-orange/10"
+              className="inline-flex items-center justify-center rounded-md px-2 py-1 text-zeedo-orange hover:bg-zeedo-orange/10"
               title="Dashboard"
               aria-label="Ir ao dashboard"
             >
@@ -208,7 +212,6 @@ export function ResultadosClient() {
                   d="M3 10.5L12 3l9 7.5V21a1.5 1.5 0 01-1.5 1.5h-4.5V15a1.5 1.5 0 00-1.5-1.5h-3A1.5 1.5 0 009 15v7.5H4.5A1.5 1.5 0 013 21v-10.5z"
                 />
               </svg>
-              <span className="text-sm font-medium">Dashboard</span>
             </Link>
           </div>
         </div>
@@ -242,15 +245,26 @@ export function ResultadosClient() {
             <label className="flex flex-wrap items-center gap-2 text-sm text-zeedo-black dark:text-zeedo-white">
               <span className="text-xs font-medium uppercase tracking-wide text-zeedo-orange">Target Loss (USD)</span>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 min={1}
                 step={1}
                 value={targetLossUsd}
                 onChange={(e) => {
-                  const v = parseFloat(e.target.value);
+                  const raw = e.target.value.trim();
+                  if (raw === "") {
+                    setTargetLossUsd("");
+                    return;
+                  }
+                  // aceita somente dígitos (sem ponto/vírgula)
+                  if (!/^\d+$/.test(raw)) return;
+                  const v = Number(raw);
                   if (!Number.isNaN(v) && v >= 1) setTargetLossUsd(v);
                 }}
-                className="w-24 rounded-lg border border-zeedo-orange/30 bg-zeedo-white px-2 py-1 text-sm tabular-nums dark:bg-zeedo-black dark:text-zeedo-white dark:border-zeedo-orange/40"
+                onBlur={() => {
+                  if (targetLossUsd === "") setTargetLossUsd(TARGET_LOSS_BASE_USD);
+                }}
+                className="w-24 rounded-lg border border-zeedo-orange/30 bg-zeedo-white px-2 py-1 text-base tabular-nums dark:bg-zeedo-black dark:text-zeedo-white dark:border-zeedo-orange/40"
               />
             </label>
           </div>
@@ -326,24 +340,38 @@ export function ResultadosClient() {
               <thead>
                 <tr className="bg-zeedo-black/[0.06] dark:bg-white/[0.08] text-left">
                   <th className="sticky left-0 z-10 bg-zeedo-black/[0.06] px-2 py-2 font-medium dark:bg-white/[0.08]">
-                    Data
+                    Símbolo
                   </th>
-                  <th className="px-2 py-2 font-medium">Símbolo</th>
+                  <th className="px-2 py-2 font-medium">Data</th>
                   <th className="px-2 py-2 font-medium">TF</th>
                   <th className="px-2 py-2 font-medium">Lado</th>
+                  {/* Resultados no mobile (entre Lado e Stop) */}
+                  <th className="px-2 py-2 font-medium bg-cyan-500/10 text-cyan-800 dark:text-cyan-200 min-w-[6.5rem] sm:hidden">
+                    Conservador
+                  </th>
+                  <th className="px-2 py-2 font-medium bg-amber-500/10 text-amber-900 dark:text-amber-200 min-w-[6.5rem] sm:hidden">
+                    Mediano
+                  </th>
+                  <th className="px-2 py-2 font-medium bg-zeedo-orange/15 text-zeedo-black dark:text-zeedo-white min-w-[6.5rem] sm:hidden">
+                    Agressivo
+                  </th>
+                  <th className="px-2 py-2 font-medium bg-red-500/10 text-red-800 dark:text-red-200 min-w-[6.5rem] sm:hidden">
+                    Degen
+                  </th>
                   <th className="px-2 py-2 font-medium">Stop</th>
                   <th className="px-2 py-2 font-medium">Alvo</th>
                   <th className="px-2 py-2 font-medium min-w-[5rem]">Detalhes</th>
-                  <th className="px-2 py-2 font-medium border-l border-zeedo-orange/20 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200 min-w-[4.5rem]">
-                    Cons.
+                  {/* Resultados no desktop (mantém no fim) */}
+                  <th className="hidden px-2 py-2 font-medium border-l border-zeedo-orange/20 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200 min-w-[6.5rem] sm:table-cell">
+                    Conservador
                   </th>
-                  <th className="px-2 py-2 font-medium bg-amber-500/10 text-amber-900 dark:text-amber-200 min-w-[4.5rem]">
-                    Med.
+                  <th className="hidden px-2 py-2 font-medium bg-amber-500/10 text-amber-900 dark:text-amber-200 min-w-[6.5rem] sm:table-cell">
+                    Mediano
                   </th>
-                  <th className="px-2 py-2 font-medium bg-zeedo-orange/15 text-zeedo-black dark:text-zeedo-white min-w-[4.5rem]">
-                    Agr.
+                  <th className="hidden px-2 py-2 font-medium bg-zeedo-orange/15 text-zeedo-black dark:text-zeedo-white min-w-[6.5rem] sm:table-cell">
+                    Agressivo
                   </th>
-                  <th className="px-2 py-2 font-medium bg-red-500/10 text-red-800 dark:text-red-200 min-w-[4.5rem]">
+                  <th className="hidden px-2 py-2 font-medium bg-red-500/10 text-red-800 dark:text-red-200 min-w-[6.5rem] sm:table-cell">
                     Degen
                   </th>
                 </tr>
@@ -351,23 +379,29 @@ export function ResultadosClient() {
               <tbody>
                 {tradesPagina.map((t) => (
                   <tr key={`${t.mes}-${t.id}`} className="border-t border-zeedo-orange/10">
-                    <td className="sticky left-0 z-10 bg-zeedo-white px-2 py-1.5 whitespace-nowrap dark:bg-zeedo-black">
-                      {t.dataLabel}
+                    <td className="sticky left-0 z-10 bg-zeedo-white px-2 py-1.5 font-medium whitespace-nowrap dark:bg-zeedo-black">
+                      {t.symbol || "—"}
                     </td>
-                    <td className="px-2 py-1.5 font-medium whitespace-nowrap">{t.symbol || "—"}</td>
+                    <td className="px-2 py-1.5 whitespace-nowrap">{t.dataLabel}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap">{t.tf || "—"}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap">{t.side}</td>
+                    {/* Resultados no mobile (entre Lado e Stop) */}
+                    <td className="px-2 py-1.5 bg-cyan-500/5 sm:hidden">{cellStrategy(t.conservador, factor)}</td>
+                    <td className="px-2 py-1.5 bg-amber-500/5 sm:hidden">{cellStrategy(t.mediano, factor)}</td>
+                    <td className="px-2 py-1.5 bg-zeedo-orange/5 sm:hidden">{cellStrategy(t.agressivo, factor)}</td>
+                    <td className="px-2 py-1.5 bg-red-500/5 sm:hidden">{cellStrategy(t.degen, factor)}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap tabular-nums">{fmtNum(t.stop)}</td>
                     <td className="px-2 py-1.5 whitespace-nowrap tabular-nums">{fmtNum(t.alvo)}</td>
                     <td className="px-2 py-1.5 text-zeedo-black/80 dark:text-zeedo-white/80">
                       {fmtDetalhes(t.motivos, t.side)}
                     </td>
-                    <td className="border-l border-zeedo-orange/15 px-2 py-1.5 bg-cyan-500/5">
+                    {/* Resultados no desktop (mantém no fim) */}
+                    <td className="hidden border-l border-zeedo-orange/15 px-2 py-1.5 bg-cyan-500/5 sm:table-cell">
                       {cellStrategy(t.conservador, factor)}
                     </td>
-                    <td className="px-2 py-1.5 bg-amber-500/5">{cellStrategy(t.mediano, factor)}</td>
-                    <td className="px-2 py-1.5 bg-zeedo-orange/5">{cellStrategy(t.agressivo, factor)}</td>
-                    <td className="px-2 py-1.5 bg-red-500/5">{cellStrategy(t.degen, factor)}</td>
+                    <td className="hidden px-2 py-1.5 bg-amber-500/5 sm:table-cell">{cellStrategy(t.mediano, factor)}</td>
+                    <td className="hidden px-2 py-1.5 bg-zeedo-orange/5 sm:table-cell">{cellStrategy(t.agressivo, factor)}</td>
+                    <td className="hidden px-2 py-1.5 bg-red-500/5 sm:table-cell">{cellStrategy(t.degen, factor)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -403,21 +437,23 @@ export function ResultadosClient() {
             ) : null}
           </div>
 
-          <div className="mt-6 rounded-xl border border-zeedo-orange/20 bg-zeedo-orange/5 p-5">
-            <p className="text-base font-semibold text-zeedo-black dark:text-zeedo-white">
-              Achou esses resultados satisfatórios?
-            </p>
-            <p className="mt-1 text-sm text-zeedo-black/70 dark:text-zeedo-white/70">Eles podem ser seus...</p>
-            <p className="mt-3 text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
-              Clique no botão abaixo e deixe o Zeedo operar por você!
-            </p>
-            <div className="mt-4">
-              <Link
-                href={`/signup?next=${encodeURIComponent("/choose-plan?plan=pro")}`}
-                className="inline-flex items-center justify-center rounded-lg bg-zeedo-orange px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
-              >
-                Eu Quero!
-              </Link>
+          <div className="mt-10 text-center">
+            <div className="mx-auto max-w-2xl px-2">
+              <p className="text-2xl font-semibold text-zeedo-white sm:text-3xl">
+                Achou esses resultados satisfatórios?
+              </p>
+              <p className="mt-2 text-lg text-zeedo-white/75">Eles podem ser seus...</p>
+              <p className="mt-4 text-base text-zeedo-white/75 sm:text-lg">
+                Clique no botão abaixo e deixe o Zeedo operar por você!
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Link
+                  href={`/signup?next=${encodeURIComponent("/choose-plan?plan=pro")}`}
+                  className="inline-flex items-center justify-center rounded-xl bg-zeedo-orange px-10 py-4 text-base font-semibold text-white shadow-lg shadow-black/30 hover:opacity-90 sm:text-lg"
+                >
+                  Eu Quero!
+                </Link>
+              </div>
             </div>
           </div>
         </section>
