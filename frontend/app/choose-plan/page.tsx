@@ -21,11 +21,21 @@ export default function ChoosePlanPage() {
   const [hasPlan, setHasPlan] = useState(false);
   const [canceled, setCanceled] = useState(false);
   const [planExpired, setPlanExpired] = useState(false);
+  const [autoPlan, setAutoPlan] = useState<"basic" | "pro" | "satoshi" | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.search.includes("canceled=1")) {
       setCanceled(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const plan = (params.get("plan") || "").toLowerCase();
+    if (plan === "basic" || plan === "pro" || plan === "satoshi") {
+      setAutoPlan(plan);
     }
   }, []);
 
@@ -50,9 +60,16 @@ export default function ChoosePlanPage() {
       } catch {
         // ignore
       }
+
+      // Se vier plan=pro (ou outro) na query, inicia checkout automaticamente.
+      if (autoPlan) {
+        // Evita loop infinito se der erro e voltar pra página.
+        setAutoPlan(null);
+        handleSelect(autoPlan);
+      }
     }
     check();
-  }, [router]);
+  }, [router, autoPlan]);
 
   async function handleSelect(planId: string) {
     const supabase = createClient();

@@ -49,6 +49,12 @@ function fmtPnlUsd(n: number | null, factor: number): string {
   return `$${abs}`;
 }
 
+function fmtHit(hit: StrategyCol["hit"] | null | undefined): string {
+  if (!hit) return "—";
+  if (hit === "STOP") return "STOP";
+  return `Alvo ${hit}`;
+}
+
 function fmtUsdPlain(n: number, factor: number): string {
   const v = n * factor;
   return `$${v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -63,7 +69,7 @@ function cellStrategy(col: StrategyCol | null, factor: number): ReactNode {
   if (!col || (col.hit === null && col.pnlUsd === null)) {
     return <span className="text-zeedo-black/35 dark:text-zeedo-white/35">—</span>;
   }
-  const hit = col.hit ?? "—";
+  const hit = fmtHit(col.hit);
   const pnl = col.pnlUsd;
   const pnlClass =
     pnl === null
@@ -179,14 +185,30 @@ export function ResultadosClient() {
             <h1 className="text-xl font-semibold sm:text-2xl">Prova de resultados</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm">
-            <Link href="/signup" className="text-zeedo-orange hover:underline font-medium">
-              Criar conta
+            <Link href="/" className="text-zeedo-orange hover:underline font-medium">
+              Voltar
             </Link>
-            <span className="text-zeedo-black/25 dark:text-zeedo-white/25" aria-hidden>
-              |
-            </span>
-            <Link href="/login" className="text-zeedo-orange hover:underline font-medium">
-              Login
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 rounded-md border border-zeedo-orange/25 px-2 py-1 text-zeedo-orange hover:bg-zeedo-orange/10"
+              title="Dashboard"
+              aria-label="Ir ao dashboard"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 10.5L12 3l9 7.5V21a1.5 1.5 0 01-1.5 1.5h-4.5V15a1.5 1.5 0 00-1.5-1.5h-3A1.5 1.5 0 009 15v7.5H4.5A1.5 1.5 0 013 21v-10.5z"
+                />
+              </svg>
+              <span className="text-sm font-medium">Dashboard</span>
             </Link>
           </div>
         </div>
@@ -194,7 +216,8 @@ export function ResultadosClient() {
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-10">
         <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed max-w-3xl">
-          Histórico de sinais e trades usados como referência de transparência.
+          Histórico completo de trades usados como referência de transparência. Todos os trades sinalizados pelo Zeedo são
+          mostrados aqui, o resultado financeiro da operação dependa do valor de Target Loss que você desejar simular.
         </p>
 
         <section>
@@ -251,10 +274,10 @@ export function ResultadosClient() {
               <thead>
                 <tr className="bg-zeedo-black/[0.04] dark:bg-white/[0.06] text-left">
                   <th className="p-2 font-medium">Estratégia</th>
-                  <th className="p-2 font-medium">Rank</th>
-                  <th className="p-2 font-medium">Win rate</th>
                   <th className="p-2 font-medium">Lucro ($)</th>
                   <th className="p-2 font-medium">Lucro (R$)</th>
+                  <th className="p-2 font-medium">WinRate</th>
+                  <th className="p-2 font-medium">Rank</th>
                 </tr>
               </thead>
               <tbody>
@@ -263,10 +286,10 @@ export function ResultadosClient() {
                     <td className="p-2">
                       <span className={corEstrategia(r.nome)}>{rotuloEstrategia(r.nome)}</span>
                     </td>
-                    <td className="p-2">{r.ranking}</td>
-                    <td className="p-2">{r.winRatePct.toFixed(2).replace(".", ",")}%</td>
                     <td className="p-2">{fmtUsdPlain(r.lucroUsd, factor)}</td>
                     <td className="p-2">{fmtBrlPlain(r.lucroBrl, factor)}</td>
+                    <td className="p-2">{r.winRatePct.toFixed(2).replace(".", ",")}%</td>
+                    <td className="p-2">{r.ranking}</td>
                   </tr>
                 ))}
                 {mediaResumo ? (
@@ -274,15 +297,20 @@ export function ResultadosClient() {
                     <td className="p-2">
                       <span className="font-medium text-purple-700 dark:text-purple-300">Média</span>
                     </td>
-                    <td className="p-2 text-zeedo-black/50 dark:text-zeedo-white/50">—</td>
-                    <td className="p-2">{mediaResumo.winRatePct.toFixed(2).replace(".", ",")}%</td>
                     <td className="p-2">{fmtUsdPlain(mediaResumo.lucroUsd, factor)}</td>
                     <td className="p-2">{fmtBrlPlain(mediaResumo.lucroBrl, factor)}</td>
+                    <td className="p-2">{mediaResumo.winRatePct.toFixed(2).replace(".", ",")}%</td>
+                    <td className="p-2 text-zeedo-black/50 dark:text-zeedo-white/50">—</td>
                   </tr>
                 ) : null}
               </tbody>
             </table>
           </div>
+          {mes === "FEV" ? (
+            <p className="mt-2 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
+              *Fevereiro contém apenas 19 trades, o Zeedo ainda não armazenava todo o histórico de trades, apenas os acionados.
+            </p>
+          ) : null}
         </section>
 
         <section>
@@ -290,8 +318,7 @@ export function ResultadosClient() {
             Histórico dos Trades: {ROTULO_SELECAO_MES[mes]}
           </h2>
           <p className="mb-3 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-            Cada estratégia mostra o alvo atingido (1, 2, 3 ou STOP) e o PnL em USD espelhado da planilha, proporcional ao
-            Target Loss.
+            Cada estratégia mostra o alvo atingido e o Lucro/Prejuízo em dólar (USD), proporcional ao Target Loss escolhido.
           </p>
 
           <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20 shadow-sm">
@@ -375,6 +402,24 @@ export function ResultadosClient() {
               </div>
             ) : null}
           </div>
+
+          <div className="mt-6 rounded-xl border border-zeedo-orange/20 bg-zeedo-orange/5 p-5">
+            <p className="text-base font-semibold text-zeedo-black dark:text-zeedo-white">
+              Achou esses resultados satisfatórios?
+            </p>
+            <p className="mt-1 text-sm text-zeedo-black/70 dark:text-zeedo-white/70">Eles podem ser seus...</p>
+            <p className="mt-3 text-sm text-zeedo-black/70 dark:text-zeedo-white/70">
+              Clique no botão abaixo e deixe o Zeedo operar por você!
+            </p>
+            <div className="mt-4">
+              <Link
+                href={`/signup?next=${encodeURIComponent("/choose-plan?plan=pro")}`}
+                className="inline-flex items-center justify-center rounded-lg bg-zeedo-orange px-6 py-3 text-sm font-semibold text-white hover:opacity-90"
+              >
+                Eu Quero!
+              </Link>
+            </div>
+          </div>
         </section>
 
         {modalDiario && configDiario && footerDiario ? (
@@ -406,31 +451,31 @@ export function ResultadosClient() {
                   <thead>
                     <tr className="bg-zeedo-black text-zeedo-white dark:bg-zeedo-white/10">
                       <th className="p-2 text-left font-medium">Estratégia</th>
+                      <th className="p-2 text-left font-medium bg-emerald-500/15">Média Diária ($)</th>
+                      <th className="p-2 text-left font-medium bg-emerald-500/15">Média Diária (R$)</th>
                       <th className="p-2 text-left font-medium">Dias Lucro</th>
                       <th className="p-2 text-left font-medium">Dias Prejuízo</th>
                       <th className="p-2 text-left font-medium">Dias Lucro (%)</th>
-                      <th className="p-2 text-left font-medium bg-emerald-500/15">Média Diária ($)</th>
-                      <th className="p-2 text-left font-medium bg-emerald-500/15">Média Diária (R$)</th>
                     </tr>
                   </thead>
                   <tbody>
                     {configDiario.map((r: ResumoDiario) => (
                       <tr key={r.nome} className="border-t border-zeedo-orange/10">
                         <td className="p-2 font-medium">{r.nome}</td>
+                        <td className="p-2 bg-emerald-500/5">{fmtUsdPlain(r.mediaDiariaUsd, factor)}</td>
+                        <td className="p-2 bg-emerald-500/5">{fmtBrlPlain(r.mediaDiariaBrl, factor)}</td>
                         <td className="p-2 text-emerald-600 dark:text-emerald-400">{r.diasLucro}</td>
                         <td className="p-2 text-red-600 dark:text-red-400">{r.diasPrejuizo}</td>
                         <td className="p-2">{r.diasLucroPct}%</td>
-                        <td className="p-2 bg-emerald-500/5">{fmtUsdPlain(r.mediaDiariaUsd, factor)}</td>
-                        <td className="p-2 bg-emerald-500/5">{fmtBrlPlain(r.mediaDiariaBrl, factor)}</td>
                       </tr>
                     ))}
                     <tr className="border-t-2 border-zeedo-orange/30 bg-emerald-500/10 font-semibold">
-                      <td colSpan={3} className="p-2">
-                        Média diária
-                      </td>
-                      <td className="p-2">{footerDiario.diasLucroPct}%</td>
+                      <td className="p-2">Média diária</td>
                       <td className="p-2">{fmtUsdPlain(footerDiario.mediaDiariaUsd, factor)}</td>
                       <td className="p-2">{fmtBrlPlain(footerDiario.mediaDiariaBrl, factor)}</td>
+                      <td className="p-2 text-zeedo-black/50 dark:text-zeedo-white/50">—</td>
+                      <td className="p-2 text-zeedo-black/50 dark:text-zeedo-white/50">—</td>
+                      <td className="p-2">{footerDiario.diasLucroPct}%</td>
                     </tr>
                   </tbody>
                 </table>
