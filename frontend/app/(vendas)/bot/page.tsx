@@ -28,7 +28,7 @@ const PLANS = [
       "Ativos: Todos disponíveis",
       "Timeframes: 15m, 30m, 1h e 4h",
       "Trades simultâneos: máx. 5",
-      "Estratégias pré-definidas e alvos personalizados",
+      "Estratégias pré-definidas",
       "Função Only",
       "Alvos e Stop Personalizados",
     ],
@@ -43,7 +43,7 @@ const PLANS = [
       "Ativos: Todos disponíveis",
       "Timeframes: 5m, 15m, 30m, 1h, 4h e 1d",
       "Trades simultâneos: Ilimitado",
-      "Estratégias pré-definidas e alvos personalizados",
+      "Estratégias pré-definidas",
       "Função Only",
       "Alvos e Stop Personalizados",
       "Mentoria Individual Mensal",
@@ -145,7 +145,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
 
 const STEPS = [
   {
-    title: "Crie sua conta",
+    title: "Crie sua Conta",
     desc: "Cadastre-se em segundos e escolha o plano que mais faz sentido para você.",
     icon: "1",
   },
@@ -155,9 +155,14 @@ const STEPS = [
     icon: "2",
   },
   {
-    title: "Configure e ative",
-    desc: "Defina ativos, timeframes e o gerenciamento de risco. Pronto: uma vez ligado, o Zeedo opera sozinho.",
+    title: "Configure",
+    desc: "Defina ativos, timeframes, target loss e a estratégia que mais se adequa ao seu perfil.",
     icon: "3",
+  },
+  {
+    title: "Ative",
+    desc: "Pronto! Você pode optar por deixar o Zeedo operando sozinho ou usar o Modo Sinal e usar o Zeedo como um assistente pessoal.",
+    icon: "4",
   },
 ];
 
@@ -381,6 +386,16 @@ export default function BotPage() {
                   Você ainda pode usar os trades que acontecerem para estudar, aprimorar e personalizar sua{" "}
                   <span className="font-semibold text-zeedo-black dark:text-zeedo-white">estratégia própria</span>.
                 </p>
+                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed">
+                  O Zeedo conta com{" "}
+                  <span className="font-semibold text-zeedo-black dark:text-zeedo-white">4 estratégias pré definidas</span>:{" "}
+                  <span className="font-semibold text-cyan-700 dark:text-cyan-300">Conservador</span>,{" "}
+                  <span className="font-semibold text-amber-700 dark:text-amber-300">Mediano</span>,{" "}
+                  <span className="font-semibold text-zeedo-orange">Agressivo</span> e{" "}
+                  <span className="font-semibold text-red-600 dark:text-red-400">Degen</span>, de acordo com seu perfil de risco!
+                  <br />
+                  Ou seja, você não necessita de experiência prévia, pois se trata de uma automação que entra e sai dos trades automaticamente e ainda notifica você em tempo real sobre cada etapa do trade.
+                </p>
               </div>
             </motion.div>
           </div>
@@ -473,16 +488,6 @@ export default function BotPage() {
               ))}
             </motion.div>
 
-            <div className="mx-auto mt-10 max-w-3xl text-center">
-              <p className="text-base text-zeedo-black/75 dark:text-zeedo-white/75 sm:text-lg leading-relaxed">
-                O Zeedo conta com 4 estratégias pré definidas: Conservador, Mediano, Agressivo e Degen, de acordo com seu perfil de risco!
-                <br />
-                Sendo a solução também para iniciantes ou até mesmo para quem nunca operou.
-                <br />
-                Ou seja, você não necessita de experiência prévia, pois se trata de uma automação que entra e sai dos trades automaticamente e ainda notifica você em tempo real sobre cada etapa do trade.
-              </p>
-            </div>
-
             <div className="mx-auto mt-10 max-w-4xl text-center">
               <p className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white sm:text-xl">
                 Você receberá notificações como essas
@@ -515,22 +520,45 @@ export default function BotPage() {
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
               Em apenas{" "}
-              <span className="font-semibold text-zeedo-black dark:text-zeedo-white">3 passos simples</span>{" "}
+              <span className="font-semibold text-zeedo-black dark:text-zeedo-white">4 passos simples</span>{" "}
               você está operando com o Zeedo.
             </p>
-            <div className="mt-12 grid gap-8 sm:grid-cols-3">
-              {STEPS.map((s) => (
-                <div key={s.icon} className="relative">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zeedo-orange text-lg font-bold text-white">
-                    {s.icon}
+            <div className="mt-12">
+              {/* Mobile: vertical + setas */}
+              <div className="flex flex-col items-center gap-6 sm:hidden">
+                {STEPS.map((s, idx) => (
+                  <div key={s.icon} className="flex flex-col items-center text-center max-w-sm">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zeedo-orange text-lg font-bold text-white">
+                      {s.icon}
+                    </div>
+                    <h3 className="mt-4 text-lg font-semibold">{s.title}</h3>
+                    <p className="mt-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60">{s.desc}</p>
+                    {idx < STEPS.length - 1 ? (
+                      <div className="mt-4 text-zeedo-orange/80" aria-hidden>
+                        <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    ) : null}
                   </div>
-                  <h3 className="mt-4 font-semibold">{s.title}</h3>
-                  <p className="mt-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60">{s.desc}</p>
-                  {s.icon !== "3" && (
-                    <div className="absolute top-6 -right-4 hidden h-0.5 w-8 bg-zeedo-orange/30 sm:block" />
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Desktop: grid + conector horizontal */}
+              <div className="hidden sm:grid sm:grid-cols-4 sm:gap-8">
+                {STEPS.map((s, idx) => (
+                  <div key={s.icon} className="relative text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-zeedo-orange text-lg font-bold text-white">
+                      {s.icon}
+                    </div>
+                    <h3 className="mt-4 font-semibold">{s.title}</h3>
+                    <p className="mt-2 text-sm text-zeedo-black/60 dark:text-zeedo-white/60">{s.desc}</p>
+                    {idx < STEPS.length - 1 ? (
+                      <div className="absolute top-6 -right-4 hidden h-0.5 w-8 bg-zeedo-orange/30 sm:block" />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="mt-12 text-center">
               <Link href="/signup" className="btn-primary inline-block">
@@ -575,10 +603,13 @@ export default function BotPage() {
             </div>
 
             <p className="mx-auto mt-10 max-w-3xl text-center text-base text-zeedo-black/75 dark:text-zeedo-white/75 sm:text-lg leading-relaxed">
-              O Zeedo preza pela transparência e por resultados reais, por isso disponibilizamos todos os trades que foram sinalizados até hoje,
-              e o resultado de cada trade, de cada mês, calculos de médias diárias e simulações.
+              O Zeedo preza pela{" "}
+              <span className="font-semibold text-zeedo-black dark:text-white">transparência</span> e por{" "}
+              <span className="font-semibold text-zeedo-black dark:text-white">resultados reais</span>, por isso disponibilizamos todos os trades
+              que foram sinalizados até hoje, e o resultado de cada trade, de cada mês, calculos de médias diárias e simulações.
               <br />
-              Clique no botão abaixo para conferir os resultados do Zeedo!
+              Clique no botão abaixo para conferir os{" "}
+              <span className="font-semibold text-zeedo-black dark:text-white">resultados do Zeedo</span>!
             </p>
 
             <div className="mt-8 flex justify-center">
@@ -715,7 +746,7 @@ export default function BotPage() {
                           <div className="text-sm pt-2">
                             <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
                             <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                              <li>Estratégias pré-definidas e alvos personalizados</li>
+                              <li>Estratégias pré-definidas</li>
                               <li>Only Long/Short</li>
                               <li>Alvos e Stop Personalizados</li>
                             </ul>
@@ -743,7 +774,7 @@ export default function BotPage() {
                           <div className="text-sm pt-2">
                             <div className="font-medium text-gray-700 dark:text-gray-300">Funções Adicionais:</div>
                             <ul className="mt-1 ml-2 text-gray-600 dark:text-gray-400 list-disc space-y-0.5">
-                              <li>Estratégias pré-definidas e alvos personalizados</li>
+                              <li>Estratégias pré-definidas</li>
                               <li>Only Long/Short</li>
                               <li>Alvos e Stop Personalizados</li>
                               <li>Mentoria Individual Mensal</li>
