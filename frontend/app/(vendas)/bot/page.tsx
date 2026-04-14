@@ -472,6 +472,31 @@ export default function BotPage() {
                 </motion.div>
               ))}
             </motion.div>
+
+            <div className="mx-auto mt-10 max-w-3xl text-center">
+              <p className="text-base text-zeedo-black/75 dark:text-zeedo-white/75 sm:text-lg leading-relaxed">
+                O Zeedo conta com 4 estratégias pré definidas: Conservador, Mediano, Agressivo e Degen, de acordo com seu perfil de risco!
+                <br />
+                Sendo a solução também para iniciantes ou até mesmo para quem nunca operou.
+                <br />
+                Ou seja, você não necessita de experiência prévia, pois se trata de uma automação que entra e sai dos trades automaticamente e ainda notifica você em tempo real sobre cada etapa do trade.
+              </p>
+            </div>
+
+            <div className="mx-auto mt-10 max-w-4xl text-center">
+              <p className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white sm:text-xl">
+                Você receberá notificações como essas
+              </p>
+              <div className="mt-6 overflow-hidden rounded-2xl border border-zeedo-orange/20 bg-black/20 p-2">
+                <Image
+                  src="/vendas/telegram_prints.png"
+                  alt="Exemplos de notificações do Zeedo no Telegram"
+                  width={1200}
+                  height={800}
+                  className="h-auto w-full rounded-xl object-cover"
+                />
+              </div>
+            </div>
           </div>
         </motion.section>
 
@@ -510,6 +535,55 @@ export default function BotPage() {
             <div className="mt-12 text-center">
               <Link href="/signup" className="btn-primary inline-block">
                 Criar conta grátis
+              </Link>
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={fadeUp}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-center text-2xl font-bold sm:text-3xl">
+              Exemplos de resultados reais
+            </h2>
+
+            <div className="mt-10 grid gap-6 lg:grid-cols-2">
+              <div className="overflow-hidden rounded-2xl border border-zeedo-orange/20 bg-black/20 p-2">
+                <Image
+                  src="/resultados/exemplo_1.png"
+                  alt="Exemplo de resultados do Zeedo"
+                  width={900}
+                  height={1600}
+                  className="h-auto w-full rounded-xl object-cover"
+                />
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-zeedo-orange/20 bg-black/20 p-2">
+                <Image
+                  src="/resultados/exemplo_2.png"
+                  alt="Exemplo de métricas diárias do Zeedo"
+                  width={900}
+                  height={1600}
+                  className="h-auto w-full rounded-xl object-cover"
+                />
+              </div>
+            </div>
+
+            <p className="mx-auto mt-10 max-w-3xl text-center text-base text-zeedo-black/75 dark:text-zeedo-white/75 sm:text-lg leading-relaxed">
+              O Zeedo preza pela transparência e por resultados reais, por isso disponibilizamos todos os trades que foram sinalizados até hoje,
+              e o resultado de cada trade, de cada mês, calculos de médias diárias e simulações.
+              <br />
+              Clique no botão abaixo para conferir os resultados do Zeedo!
+            </p>
+
+            <div className="mt-8 flex justify-center">
+              <Link href="/resultados" className="btn-primary inline-block px-10 py-3 text-base">
+                Ver Resultados
               </Link>
             </div>
           </div>
