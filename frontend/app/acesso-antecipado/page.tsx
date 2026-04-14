@@ -268,9 +268,9 @@ export default function AcessoAntecipadoPage() {
   const robotScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
 
   return (
-    <div className="dark min-h-screen bg-black text-zeedo-white">
+    <div className="dark min-h-screen bg-zeedo-black text-zeedo-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-zeedo-orange/20 bg-black/80 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-zeedo-orange/20 bg-zeedo-black/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <Link href="/" className="flex items-center gap-2">
             <Image src="/zeedo-logo.png?v=4" alt="Zeedo" width={40} height={40} className="mix-blend-multiply dark:mix-blend-screen" />
@@ -281,7 +281,7 @@ export default function AcessoAntecipadoPage() {
 
       <main>
         {/* Hero */}
-        <section className="relative overflow-hidden bg-vendas-glow px-4 py-16 sm:py-24">
+        <section className="relative overflow-hidden px-4 py-16 sm:py-24 bg-[#000000]">
           <div className="relative mx-auto max-w-6xl">
             <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
               <motion.div
@@ -335,7 +335,7 @@ export default function AcessoAntecipadoPage() {
 
         {/* Problema */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -408,7 +408,7 @@ export default function AcessoAntecipadoPage() {
               whileInView="visible"
               viewport={{ once: true, margin: "-40px" }}
               whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
-              className="relative overflow-hidden rounded-xl border border-zeedo-orange/30 bg-black/45 px-6 py-8 shadow-lg transition-shadow hover:border-zeedo-orange/50 hover:shadow-xl"
+              className="relative overflow-hidden rounded-xl border border-zeedo-orange/30 bg-zeedo-black/5 px-6 py-8 shadow-lg transition-shadow hover:border-zeedo-orange/50 hover:shadow-xl dark:bg-white/5"
             >
               <div className="relative text-center">
                 <p className="text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed">
@@ -435,7 +435,7 @@ export default function AcessoAntecipadoPage() {
 
         {/* Solução */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-zeedo-black/5 dark:bg-white/5 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -544,7 +544,7 @@ export default function AcessoAntecipadoPage() {
 
         {/* Como funciona */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24 bg-[#111111]"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -606,7 +606,7 @@ export default function AcessoAntecipadoPage() {
         </motion.section>
 
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -659,7 +659,7 @@ export default function AcessoAntecipadoPage() {
 
         {/* Bônus */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-gradient-to-br from-zeedo-orange/10 via-transparent to-zeedo-orange/10 dark:from-zeedo-orange/5 dark:via-transparent dark:to-zeedo-orange/5 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -706,7 +706,7 @@ export default function AcessoAntecipadoPage() {
         {/* Formulário de acesso antecipado */}
         <motion.section
           id="acesso-antecipado"
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -728,7 +728,7 @@ export default function AcessoAntecipadoPage() {
 
         {/* Prova social */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24 bg-[#111111]"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -781,7 +781,7 @@ export default function AcessoAntecipadoPage() {
 
         {/* FAQ */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-16 sm:py-24"
+          className="border-t border-zeedo-orange/20 px-4 py-16 sm:py-24"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
@@ -834,7 +834,7 @@ export default function AcessoAntecipadoPage() {
 
         {/* CTA final com formulário */}
         <motion.section
-          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-vendas-glow px-4 py-20 sm:py-28"
+          className="relative overflow-hidden border-t border-zeedo-orange/20 bg-gradient-to-br from-zeedo-orange/10 via-transparent to-zeedo-orange/10 dark:from-zeedo-orange/5 dark:via-transparent dark:to-zeedo-orange/5 px-4 py-20 sm:py-28"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
