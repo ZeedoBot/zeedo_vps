@@ -388,13 +388,20 @@ export default function BotPage() {
                 </p>
                 <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed">
                   O Zeedo conta com{" "}
-                  <span className="font-semibold text-zeedo-black dark:text-zeedo-white">4 estratégias pré definidas</span>:{" "}
+                  <span className="font-semibold text-zeedo-black dark:text-zeedo-white">4 estratégias pré definidas</span>:
+                  <br />
                   <span className="font-semibold text-cyan-700 dark:text-cyan-300">Conservador</span>,{" "}
                   <span className="font-semibold text-amber-700 dark:text-amber-300">Mediano</span>,{" "}
                   <span className="font-semibold text-zeedo-orange">Agressivo</span> e{" "}
-                  <span className="font-semibold text-red-600 dark:text-red-400">Degen</span>, de acordo com seu perfil de risco!
+                  <span className="font-semibold text-red-600 dark:text-red-400">Degen</span>
                   <br />
-                  Ou seja, você não necessita de experiência prévia, pois se trata de uma automação que entra e sai dos trades automaticamente e ainda notifica você em tempo real sobre cada etapa do trade.
+                  de acordo com seu perfil de risco!
+                </p>
+                <p className="mt-4 text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed">
+                  Ou seja, você não necessita de experiência prévia, pois se trata de uma automação que{" "}
+                  <span className="font-semibold text-zeedo-black dark:text-white">ativa e finaliza</span> os trades{" "}
+                  <span className="font-semibold text-zeedo-black dark:text-white">automaticamente</span> e ainda{" "}
+                  <span className="font-semibold text-zeedo-black dark:text-white">notifica</span> você em tempo real sobre cada etapa.
                 </p>
               </div>
             </motion.div>
@@ -451,16 +458,21 @@ export default function BotPage() {
                 <span className="text-base sm:text-lg font-bold text-zeedo-black dark:text-zeedo-white">Relaxe</span>
               </div>
             </div>
-            <p className="mx-auto mt-6 max-w-2xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
-              O Zeedo trabalha com uma combinação de indicadores:{" "}
-              <span className="font-semibold text-zeedo-black dark:text-zeedo-white">
-                Divergência, Padrões gráficos, Volume, Fibonacci
-              </span>{" "}
-              e outros auxiliares.
-              <br />
-              Mas você não precisa saber isso agora, deixe essa parte com o Zeedo. Ele faz uma varredura no mercado, identifica os padrões e executa a operação em fração de segundos, sempre com{" "}
-              <span className="font-semibold text-zeedo-black dark:text-zeedo-white">gerenciamento de risco</span> definido por você.
-            </p>
+            <div className="mx-auto mt-6 max-w-2xl text-center text-zeedo-black/70 dark:text-zeedo-white/70">
+              <p>
+                O Zeedo trabalha com uma combinação de indicadores:{" "}
+                <span className="font-semibold text-zeedo-black dark:text-zeedo-white">
+                  Divergência, Padrões gráficos, Volume, Fibonacci
+                </span>{" "}
+                e outros auxiliares.
+              </p>
+              <p className="mt-3">
+                Mas você não precisa saber isso agora, deixe essa parte com o Zeedo. Ele faz uma varredura no mercado,
+                identifica os padrões e executa a operação em fração de segundos, sempre com{" "}
+                <span className="font-semibold text-zeedo-black dark:text-zeedo-white">gerenciamento de risco</span>{" "}
+                definido por você.
+              </p>
+            </div>
             <motion.div
               className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
               variants={staggerContainer}
