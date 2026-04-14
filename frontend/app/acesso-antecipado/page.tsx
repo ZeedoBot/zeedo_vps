@@ -401,7 +401,7 @@ export default function AcessoAntecipadoPage() {
               </div>
             </motion.div>
 
-            {/* Bloco 2: Estratégias e automação */}
+            {/* Bloco 2: Traders + estratégias e automação */}
             <motion.div
               variants={staggerItem}
               initial="hidden"
@@ -411,7 +411,11 @@ export default function AcessoAntecipadoPage() {
               className="relative overflow-hidden rounded-xl border border-zeedo-orange/30 bg-zeedo-black/5 px-6 py-8 shadow-lg transition-shadow hover:border-zeedo-orange/50 hover:shadow-xl dark:bg-white/5"
             >
               <div className="relative text-center">
-                <p className="text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed">
+                <h3 className="text-2xl font-bold sm:text-3xl text-zeedo-black dark:text-zeedo-white">
+                  Mas o Zeedo não é só para{" "}
+                  <span className="text-zeedo-orange">Traders Profissionais</span>!
+                </h3>
+                <p className="mt-6 text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed">
                   O Zeedo conta com{" "}
                   <span className="font-semibold text-zeedo-black dark:text-zeedo-white">4 estratégias pré definidas</span>:
                   <br />

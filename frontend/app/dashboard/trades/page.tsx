@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { apiGet, apiPost } from "@/lib/api";
+import { FaTrash } from "react-icons/fa";
 
 type Position = {
   symbol: string;
@@ -125,6 +126,7 @@ export default function TradesPage() {
   const [closing, setClosing] = useState<string | null>(null);
   const [cancelingPending, setCancelingPending] = useState<string | null>(null);
   const [executingId, setExecutingId] = useState<string | null>(null);
+  const [removingBlockedId, setRemovingBlockedId] = useState<string | null>(null);
   const [modal, setModal] = useState<TradeModalState | null>(null);
   const [modalClosePct, setModalClosePct] = useState(100);
 
@@ -173,6 +175,22 @@ export default function TradesPage() {
     } finally {
       setExecutingId(null);
       setModal(null);
+    }
+  }
+
+  async function handleRemoveBlocked(id: string) {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setRemovingBlockedId(id);
+    setError("");
+    try {
+      await apiPost("/dashboard/remove-blocked-trade", { id }, session.access_token);
+      await load(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao remover trade bloqueado.");
+    } finally {
+      setRemovingBlockedId(null);
     }
   }
 
@@ -413,6 +431,20 @@ export default function TradesPage() {
                             className="rounded-lg bg-zeedo-orange/20 px-2 py-1 text-xs font-medium text-zeedo-orange hover:bg-zeedo-orange/30 disabled:opacity-50 dark:text-orange-400"
                           >
                             {executingId === b.id ? "…" : "Acionar"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveBlocked(b.id)}
+                            disabled={removingBlockedId === b.id}
+                            title="Remover trade bloqueado"
+                            aria-label="Remover trade bloqueado"
+                            className="rounded-lg bg-red-500/20 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-500/30 disabled:opacity-50 dark:text-red-400"
+                          >
+                            {removingBlockedId === b.id ? (
+                              "…"
+                            ) : (
+                              <FaTrash className="h-3.5 w-3.5" aria-hidden />
+                            )}
                           </button>
                         </div>
                       </td>

@@ -31,6 +31,10 @@ class ExecuteBlockedTradeBody(BaseModel):
     id: str = Field(..., description="UUID do trade bloqueado")
 
 
+class RemoveBlockedTradeBody(BaseModel):
+    id: str = Field(..., description="UUID do trade bloqueado")
+
+
 class CancelPendingPositionBody(BaseModel):
     symbol: str = Field(..., min_length=2, max_length=10)
 
@@ -547,6 +551,20 @@ def get_blocked_trades(user_id: str = Depends(get_current_user_id)) -> dict[str,
             "created_at": row.get("created_at"),
         })
     return {"blocked_trades": out}
+
+
+@router.post("/remove-blocked-trade")
+def remove_blocked_trade(
+    body: RemoveBlockedTradeBody,
+    user_id: str = Depends(get_current_user_id),
+) -> dict[str, Any]:
+    """Remove um trade bloqueado (apenas da lista de bloqueados)."""
+    supabase = get_supabase()
+    r = supabase.table("blocked_trades").select("id").eq("id", body.id).eq("user_id", user_id).limit(1).execute()
+    if not r.data:
+        raise HTTPException(status_code=404, detail="Trade bloqueado não encontrado.")
+    supabase.table("blocked_trades").delete().eq("id", body.id).eq("user_id", user_id).execute()
+    return {"success": True, "message": "Trade bloqueado removido."}
 
 
 @router.post("/execute-blocked-trade")
