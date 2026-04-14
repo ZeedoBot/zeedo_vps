@@ -29,3 +29,16 @@ body {
     display: none;
   }
 }
+
+@layer utilities {
+  /* Fundo vendas: glow laranja no topo (estilo referência) + preto */
+  .bg-vendas-glow {
+    background-color: #000000;
+    background-image: radial-gradient(
+      ellipse 125% 75% at 50% 0%,
+      rgba(249, 115, 22, 0.48) 0%,
+      rgba(249, 115, 22, 0.14) 40%,
+      transparent 72%
+    );
+  }
+}

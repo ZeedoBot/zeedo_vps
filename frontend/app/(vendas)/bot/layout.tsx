@@ -26,5 +26,5 @@ export default function BotLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="dark min-h-screen bg-zeedo-black">{children}</div>;
+  return <div className="dark min-h-screen bg-black">{children}</div>;
 }
