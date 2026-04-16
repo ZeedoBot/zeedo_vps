@@ -58,3 +58,9 @@ export async function apiPut<T = unknown>(
   if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
+
+export async function apiDelete<T = unknown>(path: string, token: string): Promise<T> {
+  const res = await apiFetch(path, { method: "DELETE", token });
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
+  return res.json();
+}

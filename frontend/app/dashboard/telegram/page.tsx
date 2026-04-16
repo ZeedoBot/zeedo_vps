@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet } from "@/lib/api";
+import { apiGet, apiDelete } from "@/lib/api";
 
 type TelegramStatus = { connected: boolean; chat_id_masked?: string | null };
 type ConnectLink = { url: string; bot_username: string };
@@ -13,6 +13,7 @@ export default function TelegramPage() {
   const [showQrCode, setShowQrCode] = useState(false);
   const [showChangeForm, setShowChangeForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const qrCodeUrl = connectLink?.url
     ? `https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(connectLink.url)}`
@@ -44,6 +45,34 @@ export default function TelegramPage() {
     }
   }
 
+  async function handleDisconnect() {
+    if (
+      !confirm(
+        "Desconectar o Telegram? Você deixará de receber notificações até conectar novamente."
+      )
+    ) {
+      return;
+    }
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setDisconnecting(true);
+    setMessage(null);
+    try {
+      await apiDelete("/telegram/disconnect", session.access_token);
+      setStatus({ connected: false, chat_id_masked: null });
+      setShowChangeForm(false);
+      setMessage({ type: "ok", text: "Telegram desconectado." });
+    } catch (e) {
+      setMessage({
+        type: "err",
+        text: e instanceof Error ? e.message : "Não foi possível desconectar.",
+      });
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
   if (loading) return <p className="text-gray-500 dark:text-gray-400">Carregando…</p>;
 
   return (
@@ -56,13 +85,23 @@ export default function TelegramPage() {
             {status.chat_id_masked && (
               <p className="text-xs text-zeedo-black/60 dark:text-zeedo-white/60">ID: {status.chat_id_masked}</p>
             )}
-            <button
-              type="button"
-              onClick={() => setShowChangeForm(true)}
-              className="inline-block text-sm font-medium text-zeedo-orange px-3 py-2 border border-zeedo-orange/40 rounded-lg hover:bg-zeedo-orange/10"
-            >
-              Alterar
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowChangeForm(true)}
+                className="inline-block text-sm font-medium text-zeedo-orange px-3 py-2 border border-zeedo-orange/40 rounded-lg hover:bg-zeedo-orange/10"
+              >
+                Alterar
+              </button>
+              <button
+                type="button"
+                onClick={handleDisconnect}
+                disabled={disconnecting}
+                className="inline-block text-sm font-medium text-red-600 dark:text-red-400 px-3 py-2 border border-red-500/40 rounded-lg hover:bg-red-500/10 disabled:opacity-50"
+              >
+                {disconnecting ? "Desconectando…" : "Desconectar"}
+              </button>
+            </div>
           </div>
         ) : (
           <div>

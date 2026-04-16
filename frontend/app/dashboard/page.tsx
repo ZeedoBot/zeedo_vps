@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPut, apiDelete } from "@/lib/api";
 import {
   XAxis,
   YAxis,
@@ -180,6 +180,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [botToggling, setBotToggling] = useState(false);
+  const [telegramDisconnecting, setTelegramDisconnecting] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
@@ -202,6 +203,29 @@ export default function DashboardPage() {
       }
     } finally {
       setBotToggling(false);
+    }
+  }
+
+  async function disconnectTelegram() {
+    if (
+      !confirm(
+        "Desconectar o Telegram? Você deixará de receber notificações até conectar novamente."
+      )
+    ) {
+      return;
+    }
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    setTelegramDisconnecting(true);
+    try {
+      await apiDelete("/telegram/disconnect", session.access_token);
+      setTelegramStatus({ connected: false });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao desconectar o Telegram.";
+      window.alert(msg);
+    } finally {
+      setTelegramDisconnecting(false);
     }
   }
 
@@ -271,6 +295,15 @@ export default function DashboardPage() {
         Acompanhe o status do seu bot, carteira e performance em um só lugar.
       </p>
 
+      {telegramStatus && !telegramStatus.connected && (
+        <div
+          role="status"
+          className="rounded-lg border border-zeedo-orange/35 bg-zeedo-orange/10 px-4 py-3 text-sm text-zeedo-black dark:text-zeedo-white"
+        >
+          Telegram não conectado, seus trades não serão notificados.
+        </div>
+      )}
+
       {emptySymbolsOrTimeframes && (
         <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-amber-700 dark:text-amber-400">
           <p className="font-medium">
@@ -301,17 +334,43 @@ export default function DashboardPage() {
             </span>
           </a>
 
-          <a href="/dashboard/telegram" className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 block">
-            <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
-              Telegram
-            </h2>
-            <p className="text-sm sm:text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate">
-              {telegramStatus?.connected ? "Conectado" : "Não conectado"}
-            </p>
-            <span className="hidden sm:inline-block text-sm text-zeedo-orange hover:underline mt-2">
-              {telegramStatus?.connected ? "Alterar" : "Conectar"}
-            </span>
-          </a>
+          <div className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 min-w-0">
+            <a href="/dashboard/telegram" className="block min-w-0">
+              <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
+                Telegram
+              </h2>
+              <p className="text-sm sm:text-lg font-medium text-zeedo-black dark:text-zeedo-white truncate">
+                {telegramStatus?.connected ? "Conectado" : "Não conectado"}
+              </p>
+            </a>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-sm">
+              {telegramStatus?.connected ? (
+                <>
+                  <a
+                    href="/dashboard/telegram"
+                    className="font-medium text-zeedo-orange hover:underline"
+                  >
+                    Alterar
+                  </a>
+                  <button
+                    type="button"
+                    onClick={disconnectTelegram}
+                    disabled={telegramDisconnecting}
+                    className="font-medium text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+                  >
+                    {telegramDisconnecting ? "Desconectando…" : "Desconectar"}
+                  </button>
+                </>
+              ) : (
+                <a
+                  href="/dashboard/telegram"
+                  className="font-medium text-zeedo-orange hover:underline"
+                >
+                  Conectar
+                </a>
+              )}
+            </div>
+          </div>
 
           <div className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 min-w-0">
             <h2 className="text-[10px] sm:text-sm font-medium text-zeedo-orange mb-1 truncate">
@@ -335,7 +394,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={toggleBot}
-                  disabled={botToggling || !walletStatus?.connected || !telegramStatus?.connected}
+                  disabled={botToggling || !walletStatus?.connected}
                   aria-label="Ligar bot"
                   className="shrink-0 inline-flex items-center justify-center p-1.5 rounded-lg border border-green-500/60 text-green-600 hover:bg-green-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -343,9 +402,9 @@ export default function DashboardPage() {
                 </button>
               )}
             </div>
-            {botStatus?.status !== "running" && (!walletStatus?.connected || !telegramStatus?.connected) && (
+            {botStatus?.status !== "running" && !walletStatus?.connected && (
               <p className="hidden sm:block text-xs text-zeedo-black/60 dark:text-zeedo-white/60 mt-1">
-                Conecte a carteira e o Telegram para ligar o bot.
+                Conecte a carteira Hyperliquid para ligar o bot.
               </p>
             )}
             <a href="/dashboard/bot" className="hidden sm:block text-sm text-zeedo-orange hover:underline mt-2">

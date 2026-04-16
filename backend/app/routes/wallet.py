@@ -185,6 +185,10 @@ def connect_agent(
             )
         err = _extract_hl_error(data)
         if data.get("status") != "ok" or err:
+            # Mensagem amigável quando a conta não tem saldo na Hyperliquid
+            raw_err = (err or str(data) or "").lower()
+            if "must deposit before performing actions" in raw_err:
+                raise HTTPException(status_code=400, detail="Adicione fundos a sua conta para proceder.")
             raise HTTPException(status_code=400, detail=f"Hyperliquid: {err or str(data)}")
     except HTTPException:
         raise

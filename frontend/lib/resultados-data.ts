@@ -518,8 +518,8 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "LE/HE",
     conservador: S("2", 12.72),
     mediano: S("2", 25.23),
-    agressivo: S("2", 36.17),
-    degen: S("2", 68.16),
+    agressivo: S("STOP", -25),
+    degen: S("STOP", -25),
   },
   {
     id: 29,
@@ -700,7 +700,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
-    degen: S("STOP", -25),
+    degen: S("3", 204.15),
   },
   {
     id: 41,
@@ -821,7 +821,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("1", 0.71),
-    degen: S("1", 0.68),
+    degen: S("STOP", -25),
   },
   {
     id: 49,
@@ -864,8 +864,8 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     alvo: 2.4,
     motivos: "-",
     conservador: S("2", 21.11),
-    mediano: S("STOP", -25),
-    agressivo: S("2", 36.17),
+    mediano: S("2", 38.06),
+    agressivo: S("STOP", -25),
     degen: S("STOP", -25),
   },
   {
@@ -895,8 +895,8 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "FR/FO",
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
-    agressivo: S("1", 0.71),
-    degen: S("1", 0.68),
+    agressivo: S("STOP", -25),
+    degen: S("STOP", -25),
   },
   {
     id: 54,
@@ -1134,8 +1134,8 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     alvo: 1.9,
     motivos: "LSR",
     conservador: S("2", 21.11),
-    mediano: S("STOP", -25),
-    agressivo: S("2", 36.17),
+    mediano: S("2", 38.06),
+    agressivo: S("STOP", -25),
     degen: S("STOP", -25),
   },
   {
@@ -1225,9 +1225,9 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     alvo: 0.6,
     motivos: "FR/FO",
     conservador: S("1", 0.63),
-    mediano: S("1", 1.14),
-    agressivo: S("1", 0.71),
-    degen: S("1", 0.68),
+    mediano: S("STOP", -25),
+    agressivo: S("STOP", -25),
+    degen: S("STOP", -25),
   },
   {
     id: 76,
@@ -1301,7 +1301,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "LSR",
     conservador: S("2", 21.11),
     mediano: S("STOP", -25),
-    agressivo: S("2", 36.17),
+    agressivo: S("STOP", -25),
     degen: S("STOP", -25),
   },
   {
@@ -1317,7 +1317,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("1", 0.71),
-    degen: S("1", 0.68),
+    degen: S("STOP", -25),
   },
   {
     id: 82,
@@ -1332,7 +1332,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
-    degen: S("3", 204.15),
+    degen: S("STOP", -25),
   },
   {
     id: 83,
@@ -1391,8 +1391,8 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "LE/HE",
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
-    agressivo: S("3", 113.17),
-    degen: S("3", 204.15),
+    agressivo: S("STOP", -25),
+    degen: S("STOP", -25),
   },
   {
     id: 87,
@@ -1407,7 +1407,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
-    degen: S("3", 204.15),
+    degen: S("STOP", -25),
   },
   {
     id: 88,
@@ -1452,7 +1452,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("2", 12.72),
     mediano: S("2", 25.23),
     agressivo: S("2", 36.17),
-    degen: S("2", 68.16),
+    degen: S("STOP", -25),
   },
   {
     id: 91,
@@ -1466,7 +1466,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "LSR",
     conservador: S("2", 21.11),
     mediano: S("STOP", -25),
-    agressivo: S("2", 36.17),
+    agressivo: S("STOP", -25),
     degen: S("STOP", -25),
   },
 
@@ -1512,7 +1512,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "LSR",
     conservador: S("2", 21.11),
     mediano: S("STOP", -25),
-    agressivo: S("2", 36.17),
+    agressivo: S("STOP", -25),
     degen: S("STOP", -25),
   },
   {
@@ -1528,7 +1528,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("3", 31.14),
     mediano: S("3", 56.08),
     agressivo: S("3", 113.17),
-    degen: S("3", 204.15),
+    degen: S("STOP", -25),
   },
   {
     id: 96,
@@ -1557,8 +1557,8 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "FR/FO",
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
-    agressivo: S("1", 0.71),
-    degen: S("1", 0.68),
+    agressivo: S("STOP", -25),
+    degen: S("STOP", -25),
   },
   {
     id: 98,
@@ -1603,7 +1603,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     conservador: S("1", 0.56),
     mediano: S("1", 0.6),
     agressivo: S("1", 0.71),
-    degen: S("1", 0.68),
+    degen: S("STOP", -25),
   },
   {
     id: 101,
@@ -1617,7 +1617,7 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     motivos: "FR/FO",
     conservador: S("2", 21.11),
     mediano: S("STOP", -25),
-    agressivo: S("2", 36.17),
+    agressivo: S("STOP", -25),
     degen: S("STOP", -25),
   },
 
@@ -1632,9 +1632,9 @@ export const RESULTADOS_TRADES: ResultadoTrade[] = [
     alvo: -0.8,
     motivos: "LE/HE",
     conservador: S("STOP", -25),
-    mediano: S("1", 7.14),
+    mediano: S("STOP", -25),
     agressivo: S("STOP", -25),
-    degen: S("1", -1.95),
+    degen: S("STOP", -25),
   },
   {
     id: 103,

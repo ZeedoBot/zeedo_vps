@@ -230,7 +230,7 @@ export default function WalletPage() {
               {submitting ? "Conectando…" : "Conectar com Rabby / MetaMask"}
             </button>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-              Você assinará uma mensagem para autorizar o Zeedo. Não é necessário gas. O sistema não pode realizar saques.
+              Você assinará uma mensagem para autorizar o Zeedo. Não é necessário pagar taxas para se conectar.
             </p>
             <a
               href={RABBY_DOWNLOAD_URL}

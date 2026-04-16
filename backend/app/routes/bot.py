@@ -235,7 +235,7 @@ def update_config(
         if total != 100:
             raise HTTPException(400, f"A soma dos percentuais dos alvos deve ser 100% (atual: {total}%)")
 
-    # Só permite ligar o bot se carteira E telegram estiverem conectados
+    # Só permite ligar o bot se a carteira Hyperliquid estiver conectada (Telegram é opcional)
     if body.bot_enabled is True:
         ur = supabase.table("users").select("subscription_status, subscription_tier").eq("id", user_id).limit(1).execute()
         sub_status = (ur.data[0].get("subscription_status") or "").lower() if ur.data else ""
@@ -245,13 +245,9 @@ def update_config(
                 "Seu período de teste terminou ou você ainda não tem um plano ativo. Acesse a página de planos para continuar.",
             )
         acc = supabase.table("trading_accounts").select("id").eq("user_id", user_id).eq("is_active", True).limit(1).execute()
-        tg = supabase.table("telegram_configs").select("id, chat_id").eq("user_id", user_id).limit(1).execute()
         has_wallet = bool(acc.data and len(acc.data) > 0)
-        has_telegram = bool(tg.data and len(tg.data) > 0 and (tg.data[0].get("chat_id") or "").strip())
         if not has_wallet:
             raise HTTPException(400, "Conecte a carteira Hyperliquid antes de ligar o bot.")
-        if not has_telegram:
-            raise HTTPException(400, "Conecte o Telegram antes de ligar o bot.")
 
     existing = supabase.table("bot_config").select("id, user_id, trading_account_id").eq("user_id", user_id).limit(1).execute()
     if existing.data and len(existing.data) > 0:
