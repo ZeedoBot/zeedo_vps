@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
 from backend.app.config import get_settings
+from utils.hyperliquid_balance import fetch_display_account_value_usd
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 logger = logging.getLogger(__name__)
@@ -48,13 +49,11 @@ def _get_wallet_address(user_id: str) -> str | None:
 
 
 def _fetch_hyperliquid_balance(wallet: str) -> float:
+    """Inclui unified account / portfolio margin (spot clearinghouse)."""
+    if not wallet:
+        return 0.0
     try:
-        resp = requests.post(HYPERLIQUID_API, json={"type": "clearinghouseState", "user": wallet}, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        margin = data.get("marginSummary", {}) or {}
-        val = margin.get("accountValue")
-        return float(val) if val is not None else 0.0
+        return fetch_display_account_value_usd(wallet)
     except Exception as e:
         logger.warning(f"Erro ao buscar saldo Hyperliquid: {e}")
         return 0.0

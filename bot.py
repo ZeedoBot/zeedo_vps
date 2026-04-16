@@ -16,6 +16,7 @@ from hyperliquid.utils import constants
 import requests
 
 from storage import get_storage
+from utils.hyperliquid_balance import fetch_display_account_value_usd
 
 load_dotenv()
 
@@ -684,13 +685,10 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
 
         _merge_tracker_db_into_memory(entry_tracker, storage)
 
-        # Busca saldo atual da conta para calcular PNL % correto
+        # Saldo para PnL %: alinhado à HL (unified / portfolio margin → spot clearinghouse)
         account_value = 0.0
         try:
-            clearing_state = info.user_state(wallet)
-            if clearing_state:
-                margin = clearing_state.get("marginSummary", {}) or {}
-                account_value = float(margin.get("accountValue", 0) or 0)
+            account_value = fetch_display_account_value_usd(wallet)
         except Exception as e:
             logging.warning(f"Erro ao buscar accountValue: {e}")
 
