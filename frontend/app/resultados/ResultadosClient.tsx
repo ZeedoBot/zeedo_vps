@@ -2,14 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import {
-  MESES_RESULTADO_ORDEM,
-  RESULTADOS_TRADES,
-  RESUMO_POR_MES,
-  ROTULO_SELECAO_MES,
-  SELECAO_MESES_ORDEM,
-  TARGET_LOSS_BASE_USD,
-} from "@/lib/resultados-data";
+import { createClient } from "@/lib/supabase";
 import type {
   MesResultadoKey,
   MesSelecao,
@@ -21,6 +14,39 @@ import type {
 
 const PAGE_SIZE = 50;
 const ANO_REF = 2025;
+const DEFAULT_TARGET_LOSS_BASE_USD = 25;
+
+type ResultadosMetaRow = {
+  id: string;
+  target_loss_base_usd: number;
+  meses_resultado_ordem: string[];
+  selecao_meses_ordem: string[];
+  rotulo_selecao_mes: Record<string, string>;
+  resultados_meta: unknown;
+};
+
+type ResultadosResumoMesRow = {
+  mes: string;
+  estrategias: ResumoEstrategia[];
+  diario: ResumoDiario[] | null;
+  diario_footer: { diasLucroPct: number; mediaDiariaUsd: number; mediaDiariaBrl: number } | null;
+};
+
+type ResultadosTradeRow = {
+  id: number;
+  mes: string;
+  symbol: string;
+  tf: string;
+  side: string;
+  data_label: string;
+  stop: number | null;
+  alvo: number | null;
+  motivos: string;
+  conservador: StrategyCol | null;
+  mediano: StrategyCol | null;
+  agressivo: StrategyCol | null;
+  degen: StrategyCol | null;
+};
 
 function fmtNum(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(n)) return "—";
@@ -106,15 +132,18 @@ function tradeSortKey(t: ResultadoTrade): number {
   return new Date(ANO_REF, mesNum - 1, dia).getTime();
 }
 
-function aggregateResumo(): ResumoEstrategia[] {
+function aggregateResumo(
+  meses: MesResultadoKey[],
+  resumoPorMes: Record<MesResultadoKey, { estrategias: ResumoEstrategia[] }>,
+): ResumoEstrategia[] {
   const nomes: ResumoEstrategia["nome"][] = ["CONSERVADOR", "MEDIANO", "AGRESSIVO", "DEGEN"];
   const rows = nomes.map((nome) => {
     let lucroUsd = 0;
     let lucroBrl = 0;
     let wrSum = 0;
     let n = 0;
-    for (const m of MESES_RESULTADO_ORDEM) {
-      const r = RESUMO_POR_MES[m].estrategias.find((x) => x.nome === nome);
+    for (const m of meses) {
+      const r = resumoPorMes[m]?.estrategias?.find((x) => x.nome === nome);
       if (r) {
         lucroUsd += r.lucroUsd;
         lucroBrl += r.lucroBrl;
@@ -140,28 +169,123 @@ function linhaMediaEstrategias(estrategias: ResumoEstrategia[]) {
 }
 
 export function ResultadosClient() {
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string>("");
+  const [MESES_RESULTADO_ORDEM, setMesesResultadoOrdem] = useState<MesResultadoKey[]>(["MAR", "FEV"]);
+  const [SELECAO_MESES_ORDEM, setSelecaoMesesOrdem] = useState<MesSelecao[]>(["AGG", "MAR", "FEV"]);
+  const [ROTULO_SELECAO_MES, setRotuloSelecaoMes] = useState<Record<MesSelecao, string>>({
+    AGG: "Agregado",
+    FEV: "Fevereiro",
+    MAR: "Março",
+  } as Record<MesSelecao, string>);
+  const [RESUMO_POR_MES, setResumoPorMes] = useState<Record<MesResultadoKey, { estrategias: ResumoEstrategia[]; diario?: ResumoDiario[]; diarioFooter?: { diasLucroPct: number; mediaDiariaUsd: number; mediaDiariaBrl: number } }>>({
+    FEV: { estrategias: [], diario: [], diarioFooter: { diasLucroPct: 0, mediaDiariaUsd: 0, mediaDiariaBrl: 0 } },
+    MAR: { estrategias: [], diario: [], diarioFooter: { diasLucroPct: 0, mediaDiariaUsd: 0, mediaDiariaBrl: 0 } },
+  });
+  const [RESULTADOS_TRADES, setResultadosTrades] = useState<ResultadoTrade[]>([]);
+
   const [mes, setMes] = useState<MesSelecao>("MAR");
-  const [targetLossUsd, setTargetLossUsd] = useState<number | "">(TARGET_LOSS_BASE_USD);
+  const [targetLossUsd, setTargetLossUsd] = useState<number | "">(DEFAULT_TARGET_LOSS_BASE_USD);
   const [pagina, setPagina] = useState(0);
   const [modalDiario, setModalDiario] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const supabase = createClient();
+
+        const { data: meta, error: metaErr } = await supabase
+          .from("resultados_meta")
+          .select("id,target_loss_base_usd,meses_resultado_ordem,selecao_meses_ordem,rotulo_selecao_mes,resultados_meta")
+          .eq("id", "default")
+          .single<ResultadosMetaRow>();
+        if (metaErr || !meta) throw new Error(metaErr?.message || "Meta não encontrada.");
+
+        const { data: resumoRows, error: resumoErr } = await supabase
+          .from("resultados_resumo_mes")
+          .select("mes,estrategias,diario,diario_footer")
+          .in("mes", meta.meses_resultado_ordem)
+          .order("mes", { ascending: true })
+          .returns<ResultadosResumoMesRow[]>();
+        if (resumoErr) throw new Error(resumoErr.message);
+
+        const { data: tradeRows, error: tradesErr } = await supabase
+          .from("resultados_trades")
+          .select("id,mes,symbol,tf,side,data_label,stop,alvo,motivos,conservador,mediano,agressivo,degen")
+          .order("id", { ascending: true })
+          .returns<ResultadosTradeRow[]>();
+        if (tradesErr) throw new Error(tradesErr.message);
+
+        const meses = (meta.meses_resultado_ordem || []).filter(Boolean) as MesResultadoKey[];
+        const selecao = (meta.selecao_meses_ordem || []).filter(Boolean) as MesSelecao[];
+        const rotulos = meta.rotulo_selecao_mes as Record<MesSelecao, string>;
+
+        const resumoMap: Record<string, any> = {};
+        for (const row of resumoRows || []) {
+          resumoMap[row.mes] = {
+            estrategias: row.estrategias || [],
+            diario: row.diario || undefined,
+            diarioFooter: row.diario_footer || undefined,
+          };
+        }
+
+        const trades = (tradeRows || []).map<ResultadoTrade>((r) => ({
+          id: r.id,
+          mes: r.mes as ResultadoTrade["mes"],
+          symbol: r.symbol,
+          tf: r.tf,
+          side: r.side as ResultadoTrade["side"],
+          dataLabel: r.data_label,
+          stop: r.stop,
+          alvo: r.alvo,
+          motivos: r.motivos,
+          conservador: r.conservador,
+          mediano: r.mediano,
+          agressivo: r.agressivo,
+          degen: r.degen,
+        }));
+
+        const fallbackMeses: MesResultadoKey[] = meses.length ? meses : ["MAR", "FEV"];
+        const fallbackSelecao: MesSelecao[] = ["AGG", ...fallbackMeses];
+
+        setMesesResultadoOrdem(meses.length ? meses : ["MAR", "FEV"]);
+        setSelecaoMesesOrdem(selecao.length ? selecao : fallbackSelecao);
+        setRotuloSelecaoMes((rotulos as any) || (ROTULO_SELECAO_MES as any));
+        setResumoPorMes((resumoMap as any) || RESUMO_POR_MES);
+        setResultadosTrades(trades);
+
+        const base = Number(meta.target_loss_base_usd);
+        setTargetLossUsd(Number.isFinite(base) && base > 0 ? base : DEFAULT_TARGET_LOSS_BASE_USD);
+        setMes((meses[0] as MesSelecao) || "MAR");
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : "Não foi possível carregar os resultados.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const targetLossVal =
     typeof targetLossUsd === "number" && !Number.isNaN(targetLossUsd) && targetLossUsd >= 1
       ? targetLossUsd
-      : TARGET_LOSS_BASE_USD;
-  const factor = targetLossVal / TARGET_LOSS_BASE_USD;
+      : DEFAULT_TARGET_LOSS_BASE_USD;
+  const factor = targetLossVal / DEFAULT_TARGET_LOSS_BASE_USD;
 
   const resumoLinhas = useMemo(() => {
-    if (mes === "AGG") return aggregateResumo();
-    return RESUMO_POR_MES[mes as MesResultadoKey].estrategias;
-  }, [mes]);
+    if (mes === "AGG") return aggregateResumo(MESES_RESULTADO_ORDEM, RESUMO_POR_MES as any);
+    return (RESUMO_POR_MES as any)[mes as MesResultadoKey].estrategias as ResumoEstrategia[];
+  }, [mes, MESES_RESULTADO_ORDEM, RESUMO_POR_MES]);
 
   const mediaResumo = useMemo(() => linhaMediaEstrategias(resumoLinhas), [resumoLinhas]);
 
   const tradesOrdenados = useMemo(() => {
     const list = mes === "AGG" ? [...RESULTADOS_TRADES] : RESULTADOS_TRADES.filter((t) => t.mes === mes);
     return list.sort((a, b) => tradeSortKey(a) - tradeSortKey(b));
-  }, [mes]);
+  }, [mes, RESULTADOS_TRADES]);
 
   const totalPaginas = Math.max(1, Math.ceil(tradesOrdenados.length / PAGE_SIZE));
   const paginaSegura = Math.min(pagina, totalPaginas - 1);
@@ -218,6 +342,16 @@ export function ResultadosClient() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 space-y-10">
+        {loading && (
+          <div className="rounded-lg border border-zeedo-orange/15 bg-zeedo-black/40 p-4 text-sm text-zeedo-white/70">
+            Carregando resultados…
+          </div>
+        )}
+        {!loading && loadError && (
+          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-200">
+            {loadError}
+          </div>
+        )}
         <p className="text-sm text-zeedo-black/70 dark:text-zeedo-white/70 leading-relaxed max-w-3xl">
           Histórico completo de trades usados como referência de transparência. Todos os trades sinalizados pelo Zeedo são
           mostrados aqui, o resultado financeiro da operação dependa do valor de Target Loss que você desejar simular.
@@ -262,7 +396,7 @@ export function ResultadosClient() {
                   if (!Number.isNaN(v) && v >= 1) setTargetLossUsd(v);
                 }}
                 onBlur={() => {
-                  if (targetLossUsd === "") setTargetLossUsd(TARGET_LOSS_BASE_USD);
+                  if (targetLossUsd === "") setTargetLossUsd(DEFAULT_TARGET_LOSS_BASE_USD);
                 }}
                 className="w-24 rounded-lg border border-zeedo-orange/30 bg-zeedo-white px-2 py-1 text-base tabular-nums dark:bg-zeedo-black dark:text-zeedo-white dark:border-zeedo-orange/40"
               />

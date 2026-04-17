@@ -477,7 +477,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
             
             if curr_high >= recent_high_10:
                 setup_high_hl = curr_hl["high"]
-                setup_low_hl = prev_hl["low"]
+                setup_low_hl = min(prev_hl["low"], curr_hl["low"])
                 tech_base = setup_high_hl - setup_low_hl
                 trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER)
                 stop_inicial = round_px(setup_high_hl - FIB_STOP_LEVEL * tech_base)
@@ -491,7 +491,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
 
             if prev_body_low <= local_min_window * 1.0003:
                 setup_high_hl = curr_hl["high"]
-                setup_low_hl = prev_hl["low"]
+                setup_low_hl = min(prev_hl["low"], curr_hl["low"])
                 tech_base = setup_high_hl - setup_low_hl
 
                 # Primeira entrada: LIMIT no nível da fib (customizável)
@@ -539,7 +539,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
             recent_low_10 = engulf_window["low"].min()
             
             if curr_low <= recent_low_10:
-                setup_high_hl = prev_hl["high"]
+                setup_high_hl = max(prev_hl["high"], curr_hl["high"])
                 setup_low_hl = curr_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
                 trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
@@ -553,7 +553,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
                 }
 
             if prev_body_high >= local_max_window * 0.9997:
-                setup_high_hl = prev_hl["high"]
+                setup_high_hl = max(prev_hl["high"], curr_hl["high"])
                 setup_low_hl = curr_hl["low"]
                 tech_base = setup_high_hl - setup_low_hl
                 

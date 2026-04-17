@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet, apiPut, apiDelete } from "@/lib/api";
+import { apiGet, apiPut } from "@/lib/api";
 import {
   XAxis,
   YAxis,
@@ -180,7 +180,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [botToggling, setBotToggling] = useState(false);
-  const [telegramDisconnecting, setTelegramDisconnecting] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
@@ -203,29 +202,6 @@ export default function DashboardPage() {
       }
     } finally {
       setBotToggling(false);
-    }
-  }
-
-  async function disconnectTelegram() {
-    if (
-      !confirm(
-        "Desconectar o Telegram? Você deixará de receber notificações até conectar novamente."
-      )
-    ) {
-      return;
-    }
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    setTelegramDisconnecting(true);
-    try {
-      await apiDelete("/telegram/disconnect", session.access_token);
-      setTelegramStatus({ connected: false });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao desconectar o Telegram.";
-      window.alert(msg);
-    } finally {
-      setTelegramDisconnecting(false);
     }
   }
 
@@ -343,33 +319,16 @@ export default function DashboardPage() {
                 {telegramStatus?.connected ? "Conectado" : "Não conectado"}
               </p>
             </a>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-sm">
-              {telegramStatus?.connected ? (
-                <>
-                  <a
-                    href="/dashboard/telegram"
-                    className="font-medium text-zeedo-orange hover:underline"
-                  >
-                    Alterar
-                  </a>
-                  <button
-                    type="button"
-                    onClick={disconnectTelegram}
-                    disabled={telegramDisconnecting}
-                    className="font-medium text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
-                  >
-                    {telegramDisconnecting ? "Desconectando…" : "Desconectar"}
-                  </button>
-                </>
-              ) : (
+            {!telegramStatus?.connected && (
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] sm:text-sm">
                 <a
                   href="/dashboard/telegram"
                   className="font-medium text-zeedo-orange hover:underline"
                 >
                   Conectar
                 </a>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg border border-zeedo-orange/20 p-2 sm:p-4 min-w-0">
@@ -404,7 +363,7 @@ export default function DashboardPage() {
             </div>
             {botStatus?.status !== "running" && !walletStatus?.connected && (
               <p className="hidden sm:block text-xs text-zeedo-black/60 dark:text-zeedo-white/60 mt-1">
-                Conecte a carteira Hyperliquid para ligar o bot.
+                Conecte a carteira para ligar o Zeedo.
               </p>
             )}
             <a href="/dashboard/bot" className="hidden sm:block text-sm text-zeedo-orange hover:underline mt-2">
