@@ -203,7 +203,7 @@ def update_config(
     if body.strategy_preset is not None and body.strategy_preset.upper() == "DEGEN":
         if not _degen_strategy_unlocked(supabase, user_id):
             raise HTTPException(400, DEGEN_LOCKED_MESSAGE)
-    
+
     # Validação de alvos e stop customizados (apenas Pro e Satoshi)
     can_customize_targets = limits.get("can_customize_targets", False)
     can_customize_stop = limits.get("can_customize_stop", False)

@@ -37,7 +37,7 @@ WHERE plan = 'basic';
 
 -- Pro: target loss 3-150
 UPDATE plan_limits SET
-  max_single_position_usd = 10000,
+  max_single_position_usd = 20000,
   max_global_exposure_usd = 50000,
   target_loss_min = 3,
   target_loss_max = 150,

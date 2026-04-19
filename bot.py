@@ -1246,7 +1246,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
             for sym in list(entry_tracker.keys()):
                 mem = entry_tracker.get(sym, {})
                 if mem.get("alvo1_cancel_done"):
-                    continue  # Já cancelou e notificou; evita spam a cada ciclo
+                    continue  # Já cancelou; evita repetir a cada ciclo
                 tech_base = mem.get("tech_base")
                 setup_high = mem.get("setup_high")
                 setup_low = mem.get("setup_low")
@@ -1281,10 +1281,6 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     storage.save_entry_tracker(entry_tracker)
                 else:
                     storage.save_entry_tracker(entry_tracker)
-                    tg_send(
-                        f"⏹️ Ordens canceladas (preço tocou alvo 1)\n"
-                        f"{side.upper()} {sym} {mem.get('tf', '')}"
-                    )
 
         for sym in list(entry_tracker.keys()):
             if sym not in active_symbols and sym not in order_symbols:

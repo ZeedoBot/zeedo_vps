@@ -194,7 +194,6 @@ export default function BotPage() {
   const [timeframesInput, setTimeframesInput] = useState<string[]>([]);
   const [targetLoss, setTargetLoss] = useState<number | "">(5);
   const [maxPositions, setMaxPositions] = useState<number | "">(2);
-  const [maxSinglePosition, setMaxSinglePosition] = useState<number | "">(1250);
   const [signalMode, setSignalMode] = useState(false);
   const [lockHintOpen, setLockHintOpen] = useState<"risk" | "strategy" | null>(null);
   const [degenStrategyUnlocked, setDegenStrategyUnlocked] = useState(true);
@@ -223,11 +222,8 @@ export default function BotPage() {
         setConfig(data);
         setSymbolsInput(data.symbols ?? []);
         setTimeframesInput(data.timeframes ?? []);
-        const pl = data.plan_limits;
         setTargetLoss(data.target_loss_usd ?? 5);
         setMaxPositions(data.max_positions ?? 2);
-        const maxSingle = data.max_single_pos_exposure ?? 1250;
-        setMaxSinglePosition(pl ? Math.min(maxSingle, pl.max_single_position_usd) : maxSingle);
         setSignalMode(
           data.plan_limits?.plan === "basic" ? true : (data.signal_mode ?? false),
         );
@@ -390,7 +386,7 @@ export default function BotPage() {
     setMessage(null);
     const tl = clampValue(typeof targetLoss === "number" ? targetLoss : limits.target_loss_min, limits.target_loss_min, limits.target_loss_max);
     const mp = clampValue(typeof maxPositions === "number" ? maxPositions : 1, 1, limits.max_positions);
-    const msp = Math.min(typeof maxSinglePosition === "number" ? maxSinglePosition : 0, limits.max_single_position_usd);
+    const msp = limits.max_single_position_usd;
     const presetForSave: StrategyPreset | null =
       selectedStrategy !== "CUSTOM"
         ? STRATEGY_PRESETS[selectedStrategy as Exclude<StrategyKey, "CUSTOM">]
@@ -494,7 +490,6 @@ export default function BotPage() {
       if (!isBasicSave) {
         setTargetLoss(tl);
         setMaxPositions(mp);
-        setMaxSinglePosition(msp);
       }
       if (isBasicSave) {
         setSignalMode(true);
@@ -741,37 +736,6 @@ export default function BotPage() {
               />
               <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
                 {limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.max_positions}`}
-              </p>
-            </div>
-            <div title={limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.max_single_position_usd} USD`}>
-              <label htmlFor="max_single" className="block text-sm font-medium text-zeedo-orange mb-1">
-                Patrimônio por trade (Trava de Segurança)
-              </label>
-              <input
-                id="max_single"
-                type="text"
-                inputMode="numeric"
-                value={maxSinglePosition}
-                onChange={(e) => {
-                  const val = e.target.value.trim();
-                  if (val === "") {
-                    setMaxSinglePosition("");
-                    return;
-                  }
-                  const num = Number(val);
-                  if (!isNaN(num)) {
-                    setMaxSinglePosition(Math.min(num, limits.max_single_position_usd));
-                  }
-                }}
-                onBlur={() => {
-                  if (maxSinglePosition === "") {
-                    setMaxSinglePosition(0);
-                  }
-                }}
-                className="input-field max-w-xs"
-              />
-              <p className="mt-1 text-xs text-zeedo-black/60 dark:text-zeedo-white/60">
-                {limits.plan === "satoshi" ? "Ilimitado" : `Máx. ${limits.max_single_position_usd.toLocaleString()} USD`}
               </p>
             </div>
           </div>
