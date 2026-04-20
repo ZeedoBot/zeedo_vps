@@ -38,6 +38,12 @@ export function PostHogPageView() {
       $utm_campaign: utm_campaign,
       $utm_content: utm_content,
       $utm_term: utm_term,
+      // Web analytics às vezes lê UTMs sem o prefixo `$`
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      utm_content,
+      utm_term,
     });
   }, [pathname, searchParams]);
 
