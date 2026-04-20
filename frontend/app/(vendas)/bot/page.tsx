@@ -5,6 +5,18 @@ import Image from "next/image";
 import { SiInstagram, SiTiktok, SiX } from "react-icons/si";
 import { useState, type ReactNode } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import posthog from "posthog-js";
+
+function trackCtaClick(props: { label: string; href?: string; location: string; plan?: string }) {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_TOKEN) return;
+  posthog.capture("cta_click", {
+    label: props.label,
+    href: props.href,
+    location: props.location,
+    plan: props.plan,
+    page: "/bot",
+  });
+}
 
 const PLANS = [
   {
@@ -224,7 +236,11 @@ export default function BotPage() {
             <Link href="/login" className="text-sm font-medium text-zeedo-black/70 hover:text-zeedo-orange dark:text-zeedo-white/70 dark:hover:text-zeedo-orange transition-colors">
               Entrar
             </Link>
-            <Link href="/signup" className="btn-primary">
+            <Link
+              href="/signup"
+              className="btn-primary"
+              onClick={() => trackCtaClick({ label: "header_signup", href: "/signup", location: "header" })}
+            >
               Criar conta
             </Link>
           </div>
@@ -256,10 +272,18 @@ export default function BotPage() {
                   Deixe a matemática trabalhar por você!
                 </p>
                 <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center lg:items-start">
-                  <Link href="/signup" className="btn-primary w-full max-w-xs py-3 text-base sm:w-auto text-center">
+                  <Link
+                    href="/signup"
+                    className="btn-primary w-full max-w-xs py-3 text-base sm:w-auto text-center"
+                    onClick={() => trackCtaClick({ label: "hero_primary", href: "/signup", location: "hero" })}
+                  >
                     Começar agora
                   </Link>
-                  <Link href="#planos" className="btn-secondary w-full max-w-xs py-3 text-center text-base sm:w-auto">
+                  <Link
+                    href="#planos"
+                    className="btn-secondary w-full max-w-xs py-3 text-center text-base sm:w-auto"
+                    onClick={() => trackCtaClick({ label: "hero_plans", href: "#planos", location: "hero" })}
+                  >
                     Ver planos
                   </Link>
                 </div>
@@ -555,8 +579,12 @@ export default function BotPage() {
               </div>
             </div>
             <div className="mt-12 text-center">
-              <Link href="/signup" className="btn-primary inline-block">
-                Criar conta grátis
+              <Link
+                href="/signup"
+                className="btn-primary inline-block"
+                onClick={() => trackCtaClick({ label: "how_it_works", href: "/signup", location: "how_it_works" })}
+              >
+                Crie sua Conta
               </Link>
             </div>
           </div>
@@ -607,7 +635,11 @@ export default function BotPage() {
             </p>
 
             <div className="mt-8 flex justify-center">
-              <Link href="/resultados" className="btn-primary inline-block px-10 py-3 text-base">
+              <Link
+                href="/resultados"
+                className="btn-primary inline-block px-10 py-3 text-base"
+                onClick={() => trackCtaClick({ label: "results", href: "/resultados", location: "results" })}
+              >
                 Ver Resultados
               </Link>
             </div>
@@ -931,7 +963,11 @@ export default function BotPage() {
                 animate={{ scale: [1, 1.03, 1] }}
                 transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Link href="/signup" className="btn-primary inline-block py-3 px-8 text-base">
+                <Link
+                  href="/signup"
+                  className="btn-primary inline-block py-3 px-8 text-base"
+                  onClick={() => trackCtaClick({ label: "final_cta", href: "/signup", location: "final" })}
+                >
                   Criar conta
                 </Link>
               </motion.div>

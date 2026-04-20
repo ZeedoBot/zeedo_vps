@@ -6,6 +6,17 @@ import { SiInstagram, SiTiktok, SiX } from "react-icons/si";
 import { useState, type ReactNode } from "react";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase";
+import posthog from "posthog-js";
+
+function trackCtaClick(props: { label: string; href?: string; location: string }) {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_TOKEN) return;
+  posthog.capture("cta_click", {
+    label: props.label,
+    href: props.href,
+    location: props.location,
+    page: "/",
+  });
+}
 
 const RABBY_URL = "https://rabby.io";
 
@@ -254,6 +265,7 @@ function EarlyAccessForm({ onSuccess }: { onSuccess?: () => void }) {
         type="submit"
         disabled={loading}
         className="btn-primary w-full py-3 disabled:opacity-70"
+        onClick={() => trackCtaClick({ label: "form_submit", location: "form" })}
       >
         {loading ? "Enviando…" : "Garantir acesso antecipado"}
       </button>
@@ -306,6 +318,7 @@ export default function AcessoAntecipadoPage() {
                   <a
                     href="#acesso-antecipado"
                     className="btn-primary w-full max-w-xs py-3 text-base sm:w-auto text-center"
+                    onClick={() => trackCtaClick({ label: "hero_early_access", href: "#acesso-antecipado", location: "hero" })}
                   >
                     Garantir acesso antecipado
                   </a>
@@ -602,7 +615,11 @@ export default function AcessoAntecipadoPage() {
               </div>
             </div>
             <div className="mt-12 text-center">
-              <a href="#acesso-antecipado" className="btn-primary inline-block">
+              <a
+                href="#acesso-antecipado"
+                className="btn-primary inline-block"
+                onClick={() => trackCtaClick({ label: "how_it_works", href: "#acesso-antecipado", location: "how_it_works" })}
+              >
                 Garantir acesso antecipado
               </a>
             </div>
@@ -654,7 +671,11 @@ export default function AcessoAntecipadoPage() {
             </p>
 
             <div className="mt-8 flex justify-center">
-              <Link href="/resultados" className="btn-primary inline-block px-10 py-3 text-base">
+              <Link
+                href="/resultados"
+                className="btn-primary inline-block px-10 py-3 text-base"
+                onClick={() => trackCtaClick({ label: "results", href: "/resultados", location: "results" })}
+              >
                 Ver Resultados
               </Link>
             </div>
