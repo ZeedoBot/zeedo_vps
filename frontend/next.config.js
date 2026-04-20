@@ -9,6 +9,22 @@ const nextConfig = {
         destination: "/",
         permanent: true,
       },
+      // Atalhos de campanha (UTMs)
+      {
+        source: "/tiktok",
+        destination: "/links?utm_source=tiktok&utm_medium=bio&utm_campaign=azevedocrypto",
+        permanent: false,
+      },
+      {
+        source: "/azevedocrypto",
+        destination: "/?utm_source=instagram&utm_medium=bio&utm_campaign=azevedocrypto",
+        permanent: false,
+      },
+      {
+        source: "/zeedo",
+        destination: "/?utm_source=instagram&utm_medium=bio&utm_campaign=zeedo",
+        permanent: false,
+      },
       // Rotas antigas da landing → raiz
       {
         source: "/pagina-inicial",
