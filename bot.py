@@ -1417,6 +1417,8 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 new_sl = None
                 breakeven_moved = mem_data.get('breakeven_moved', False)
                 pnl_realized = mem_data.get("pnl_realized", 0)
+                # Só move para BE se o trade estiver em lucro agora (evita BE enquanto negativo por estado "sujo")
+                is_in_profit_now = pnl_pct > 0.0002
                 
                 # Primeiro alvo ativo (após rebalance -1.8 usa o 1º alvo do perfil profundo)
                 target1_fib = (
@@ -1435,7 +1437,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     
                     # Trailing: Quando TP1 executa (pnl_realized > 0) OU preço >= alvo 1 -> Breakeven
                     # Garante que ajusta mesmo se o preço já passou do nível
-                    if not breakeven_moved and (pnl_realized > 0 or curr_price >= trigger_target1):
+                    if is_in_profit_now and not breakeven_moved and (pnl_realized > 0 or curr_price >= trigger_target1):
                         if current_sl_px < entry: 
                             new_sl = stop_entry
                             logging.info(f"🛡️ Trailing Alvo 1 ({target1_fib}): Stop movido para Break-Even")
@@ -1453,7 +1455,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     stop_entry = entry * 0.9998 
                     
                     # Trailing: Quando TP1 executa (pnl_realized > 0) OU preço <= alvo 1 -> Breakeven
-                    if not breakeven_moved and (pnl_realized > 0 or curr_price <= trigger_target1):
+                    if is_in_profit_now and not breakeven_moved and (pnl_realized > 0 or curr_price <= trigger_target1):
                         if current_sl_px > entry:
                             new_sl = stop_entry
                             logging.info(f"🛡️ Trailing Alvo 1 ({target1_fib}): Stop movido para Break-Even")
