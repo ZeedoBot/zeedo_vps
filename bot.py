@@ -54,7 +54,7 @@ LSR_LIMIT = 4                 # pega t-3, t-2, t-1, t
 LSR_THRESHOLD_PCT = 0.5       # 0,5%
 LSR_UPDATE_INTERVAL = 1800    # 30 minutos
 
-#LSR EXTREMO
+# LSR (Long/Short Ratio) — único bloqueador "heurístico" mantido
 LSR_BLOCK_SHORT_BELOW = 1.1
 LSR_BLOCK_LONG_DEFAULT = 3.0
 LSR_BLOCK_LONG_SPECIAL_1 = 3.8
@@ -63,8 +63,6 @@ LSR_SPECIAL_1_SYMBOLS = {"XRP", "BNB"}
 LSR_SPECIAL_2_SYMBOLS = {"SOL"}
 lsr_cache = {}
 last_lsr_update = {}
-strength_block_cache = {"blocked_longs": set(), "blocked_shorts": set(), "last_update": 0}
-STRENGTH_UPDATE_INTERVAL = 900  # 15 minutos
 
 # GESTÃO DE RISCO
 TARGET_LOSS_USD = 5.0       
@@ -475,20 +473,6 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
             curr_high = curr["high"]
             recent_high_10 = engulf_window["high"].max()
             
-            if curr_high >= recent_high_10:
-                setup_high_hl = curr_hl["high"]
-                setup_low_hl = min(prev_hl["low"], curr_hl["low"])
-                tech_base = setup_high_hl - setup_low_hl
-                trigger_hl = setup_high_hl - (tech_base * ENTRY1_MULTIPLIER)
-                stop_inicial = round_px(setup_high_hl - FIB_STOP_LEVEL * tech_base)
-                logging.info(f"{prefix} 🚫 Engolfo Bull ignorado (high extremo)")
-                return {
-                    "take": False, "blocked": True, "reason": "high_extremo", "side": "long",
-                    "trigger": trigger_hl, "stop_real": stop_inicial,
-                    "tech_base": tech_base, "setup_high": setup_high_hl, "setup_low": setup_low_hl,
-                    "signal_ts": signal_ts
-                }
-
             if prev_body_low <= local_min_window * 1.0003:
                 setup_high_hl = curr_hl["high"]
                 setup_low_hl = min(prev_hl["low"], curr_hl["low"])
@@ -538,20 +522,6 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
             curr_low = curr["low"]
             recent_low_10 = engulf_window["low"].min()
             
-            if curr_low <= recent_low_10:
-                setup_high_hl = max(prev_hl["high"], curr_hl["high"])
-                setup_low_hl = curr_hl["low"]
-                tech_base = setup_high_hl - setup_low_hl
-                trigger_hl = setup_low_hl + (tech_base * ENTRY1_MULTIPLIER)
-                stop_inicial = round_px(setup_low_hl + FIB_STOP_LEVEL * tech_base)
-                logging.info(f"{prefix} 🚫 Engolfo Bear ignorado (low extremo)")
-                return {
-                    "take": False, "blocked": True, "reason": "low_extremo", "side": "short",
-                    "trigger": trigger_hl, "stop_real": stop_inicial,
-                    "tech_base": tech_base, "setup_high": setup_high_hl, "setup_low": setup_low_hl,
-                    "signal_ts": signal_ts
-                }
-
             if prev_body_high >= local_max_window * 0.9997:
                 setup_high_hl = max(prev_hl["high"], curr_hl["high"])
                 setup_low_hl = curr_hl["low"]
@@ -894,32 +864,9 @@ def fetch_candles_hyperliquid(info, symbol, timeframe, retries=3):
             else: return None
     return None
 
-def get_24h_change_pct(info, symbol):
-    try:
-        now_ms = int(time.time() * 1000)
-        start_ms = now_ms - (26 * 3600 * 1000)  # 26H
-        candles = info.candles_snapshot(symbol, "1h", start_ms, now_ms)
-        if not candles or len(candles) < 25:
-            return None
-
-        candles = sorted(candles, key=lambda x: x["t"])
-        close_24h_ago = float(candles[-25]["c"])  # candle diário fechado
-        last_close = float(candles[-1]["c"])
-
-        if close_24h_ago == 0:
-            return None
-        return ((last_close - close_24h_ago) / close_24h_ago) * 100
-    except Exception as e:
-        logging.error(f"Erro variação 24h {symbol}: {e}")
-        return None
-
 _BLOCK_REASON_LABELS = {
     "modo_sinal": "Modo Sinal",
     "LSR": "LSR",
-    "high_extremo": "High extremo",
-    "low_extremo": "Low extremo",
-    "ativo_fraco_24h": "Ativo fraco 24h",
-    "ativo_forte_24h": "Ativo forte 24h",
     "symbol_ja_ativo": "Símbolo já ativo em outro TF",
     "limite_trades": "Limite de trades simultâneos",
 }
@@ -956,20 +903,6 @@ def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
         }
     except Exception:
         return None
-
-def get_strength_blocks(info, symbols):
-    changes = {}
-    for sym in symbols:
-        pct = get_24h_change_pct(info, sym)
-        if pct is not None:
-            changes[sym] = pct
-
-    if len(changes) < 4:
-        return set(), set()
-    ranked = sorted(changes.items(), key=lambda x: x[1])
-    weakest = {ranked[0][0], ranked[1][0]}
-    strongest = {ranked[-1][0], ranked[-2][0]}
-    return weakest, strongest
 
 def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_orders, history_tracker, analyzed_candles, user_state_cache, all_mids_cache, storage):
     # Expira blocked_trades cujo preço atingiu TP1 ou Stop
@@ -1046,14 +979,8 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
             block_reasons: list[str] = []
             if SIGNAL_MODE:
                 block_reasons.append("modo_sinal")
-            if sig.get("blocked") and sig.get("reason") in ("high_extremo", "low_extremo"):
-                block_reasons.append(sig["reason"])
             if not lsr_allows_trade(sym, sig["side"]):
                 block_reasons.append("LSR")
-            if sig["side"] == "long" and sym in strength_block_cache["blocked_longs"]:
-                block_reasons.append("ativo_fraco_24h")
-            if sig["side"] == "short" and sym in strength_block_cache["blocked_shorts"]:
-                block_reasons.append("ativo_forte_24h")
 
             if block_reasons:
                 reason_combined = " | ".join(block_reasons)
@@ -1062,16 +989,8 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 else:
                     logging.info(f"[{sym} {tf}] 🚫 Trade bloqueado ({reason_combined})")
                 extra = ""
-                if "high_extremo" in block_reasons:
-                    extra += "\n\nEngolfo Bull ignorado por high extremo. O trade pode já ter subido muito."
-                if "low_extremo" in block_reasons:
-                    extra += "\n\nEngolfo Bear ignorado por low extremo. O trade pode já ter caído muito."
                 if "LSR" in block_reasons:
                     extra += "\n\nO trade pode estar a favor do LSR (junto com as sardinhas)."
-                if "ativo_fraco_24h" in block_reasons:
-                    extra += "\n\nO ativo está entre os mais fracos nas últimas 24h."
-                if "ativo_forte_24h" in block_reasons:
-                    extra += "\n\nO ativo está entre os mais fortes nas últimas 24h."
                 if "modo_sinal" in block_reasons:
                     extra += "\n\nModo Sinal ativo: nenhuma ordem será colocada automaticamente."
                 tg_send(
@@ -1704,12 +1623,6 @@ def run_main_loop(info, exchange, wallet, storage, config_overrides=None):
                     log_parts.append(f"DOWN: {', '.join(down)}")
                 if flat:
                     log_parts.append(f"FLAT: {', '.join(flat)}")
-
-            if time.time() - strength_block_cache["last_update"] > STRENGTH_UPDATE_INTERVAL:
-                blocked_longs, blocked_shorts = get_strength_blocks(info, SYMBOLS)
-                strength_block_cache["blocked_longs"] = blocked_longs
-                strength_block_cache["blocked_shorts"] = blocked_shorts
-                strength_block_cache["last_update"] = time.time()
 
             auto_manage(info, exchange, wallet, exchange_meta, entry_tracker, all_open_orders, user_state_cache, all_mids_cache, storage)
             manage_risk_and_scan(info, exchange, wallet, exchange_meta, entry_tracker, all_open_orders, history_tracker, analyzed_candles, user_state_cache, all_mids_cache, storage)

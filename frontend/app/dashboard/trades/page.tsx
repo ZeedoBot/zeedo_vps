@@ -50,14 +50,36 @@ function formatSignalDay(iso?: string) {
   });
 }
 
+function formatPx(v?: number | null): string {
+  if (v == null || Number.isNaN(v)) return "-";
+  const abs = Math.abs(v);
+
+  // Muito grande: não polui com casas (ex.: 91000)
+  if (abs >= 1000) {
+    if (Number.isInteger(v)) return String(v);
+    const s = v.toFixed(2);
+    return s.replace(/\.0+$/, "").replace(/(\.\d*[1-9])0+$/, "$1");
+  }
+
+  // >= 1: pelo menos 1 casa (ex.: 120.0)
+  if (abs >= 1) {
+    const s = v.toFixed(4);
+    const trimmed = s.replace(/(\.\d*[1-9])0+$/, "$1").replace(/\.0+$/, ".0");
+    return trimmed.includes(".") ? trimmed : `${trimmed}.0`;
+  }
+
+  // < 1: manter precisão (mín 4 casas, máx 5)
+  let s = v.toFixed(5);
+  const [i, fRaw = ""] = s.split(".");
+  let f = fRaw.replace(/0+$/, "");
+  if (f.length < 4) f = f.padEnd(4, "0");
+  return `${i}.${f}`;
+}
+
 /** Alinhado a `_BLOCK_REASON_LABELS` em bot.py; `reason` pode ser "a | b | c". */
 const BLOCKED_REASON_LABELS: Record<string, string> = {
   modo_sinal: "Modo Sinal",
   LSR: "LSR",
-  high_extremo: "High extremo",
-  low_extremo: "Low extremo",
-  ativo_fraco_24h: "Ativo fraco 24h",
-  ativo_forte_24h: "Ativo forte 24h",
   symbol_ja_ativo: "Símbolo já ativo em outro TF",
   limite_trades: "Limite de trades",
 };
@@ -285,9 +307,11 @@ export default function TradesPage() {
                       <td className={`px-4 py-2 text-sm text-right font-medium ${(p.unrealized_pnl ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                         {p.unrealized_pnl != null ? `${p.unrealized_pnl >= 0 ? "+" : ""}$${p.unrealized_pnl.toFixed(2)}` : "-"}
                       </td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${formatPx(p.entry_px)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">
+                        {p.planned_stop != null ? `$${formatPx(p.planned_stop)}` : "-"}
+                      </td>
                       <td className={`px-4 py-2 text-sm text-right ${STICKY_ACTION_TD_SM}`}>
                         <button
                           type="button"
@@ -335,9 +359,11 @@ export default function TradesPage() {
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.symbol}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.tf}</td>
                       <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">{p.side.toUpperCase()}</td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.entry_px?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${formatPx(p.entry_px)}</td>
                       <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${p.usd_val}</td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">{p.planned_stop ? `$${p.planned_stop.toFixed(2)}` : "-"}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">
+                        {p.planned_stop != null ? `$${formatPx(p.planned_stop)}` : "-"}
+                      </td>
                       <td className={`px-4 py-2 text-sm text-right ${STICKY_ACTION_TD_SM}`}>
                         <button
                           type="button"
@@ -407,8 +433,8 @@ export default function TradesPage() {
                           <div className="text-sm">{formatSignalTime(b.created_at)}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.entry_px?.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${b.stop_real?.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${formatPx(b.entry_px)}</td>
+                      <td className="px-4 py-2 text-sm text-right text-zeedo-black dark:text-zeedo-white">${formatPx(b.stop_real)}</td>
                       <td className={`px-4 py-2 text-sm text-right ${STICKY_ACTION_TD_LG}`}>
                         <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
                           <a
