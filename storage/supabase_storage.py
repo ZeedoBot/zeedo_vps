@@ -134,7 +134,7 @@ class SupabaseStorage(StorageBase):
             return {}
 
     def save_history_tracker(self, data: dict, user_id: str = None) -> None:
-        """Salva history_tracker em bot_history (upsert por symbol+timeframe)."""
+        """Salva history_tracker em bot_history (upsert por user_id+symbol+timeframe quando multiusuário)."""
         if not self._client or not isinstance(data, dict):
             return
         try:
