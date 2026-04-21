@@ -386,8 +386,19 @@ class SupabaseStorage(StorageBase):
                 "setup_low": float(data.get("setup_low", 0) or 0),
                 "target1_level": float(data.get("target1_level", 0.618) or 0.618),
             }
-            self._client.table(TABLE_BLOCKED).insert(record).execute()
-            logging.info(f"blocked_trade salvo: {data.get('symbol')} {data.get('tf')} ({data.get('reason')})")
+            # Mantém o registro mais antigo: se já existir (unique key), ignoramos a duplicata.
+            try:
+                self._client.table(TABLE_BLOCKED).insert(record).execute()
+                logging.info(f"blocked_trade salvo: {data.get('symbol')} {data.get('tf')} ({data.get('reason')})")
+            except Exception as ie:
+                msg = str(ie)
+                # PostgREST/Supabase pode retornar 409/23505 para duplicata
+                if "23505" in msg or "duplicate" in msg.lower() or "409" in msg:
+                    logging.info(
+                        f"blocked_trade duplicado ignorado: {data.get('symbol')} {data.get('tf')} ({data.get('reason')})"
+                    )
+                else:
+                    raise
         except Exception as e:
             logging.error(f"Supabase save_blocked_trade: {e}", exc_info=True)
 
