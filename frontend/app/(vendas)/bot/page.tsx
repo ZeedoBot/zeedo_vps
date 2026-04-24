@@ -600,13 +600,13 @@ export default function BotPage() {
         >
           <div className="mx-auto max-w-5xl">
             <h2 className="text-center text-2xl font-bold sm:text-3xl">
-              Exemplos de resultados reais
+              Prova de Resultados Reais
             </h2>
 
             <div className="mt-10 grid gap-6 lg:grid-cols-2">
               <div className="overflow-hidden rounded-2xl border border-zeedo-orange/20 bg-black/20 p-2">
                 <Image
-                  src="/resultados/exemplo_1.png"
+                  src="/resultados/exemplo_1.png?v=2"
                   alt="Exemplo de resultados do Zeedo"
                   width={900}
                   height={1600}
@@ -615,7 +615,7 @@ export default function BotPage() {
               </div>
               <div className="overflow-hidden rounded-2xl border border-zeedo-orange/20 bg-black/20 p-2">
                 <Image
-                  src="/resultados/exemplo_2.png"
+                  src="/resultados/exemplo_2.png?v=2"
                   alt="Exemplo de métricas diárias do Zeedo"
                   width={900}
                   height={1600}

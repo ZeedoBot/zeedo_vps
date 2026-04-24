@@ -25,6 +25,12 @@ const LINKS = [
     icon: "zeedo",
     external: false,
   },
+  {
+    label: "Resultados",
+    href: "/resultados",
+    icon: "zeedo",
+    external: false,
+  },
 ];
 
 export function LinksClient() {
