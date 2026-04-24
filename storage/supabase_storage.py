@@ -34,6 +34,9 @@ class SupabaseStorage(StorageBase):
         # Checkpoint em memória para reduzir egress:
         # por usuário, guarda o maior closed_at já visto no get_trades_db().
         self._trades_last_closed_at: dict[str, str] = {}
+        # Cache em memória (por usuário) para manter semântica do get_trades_db():
+        # sync_trade_history espera uma "base" para montar processed_oids.
+        self._trades_cache: dict[str, list[dict]] = {}
     
     def set_user_id(self, user_id: str):
         """Define user_id para operações multiusuário."""
@@ -171,12 +174,15 @@ class SupabaseStorage(StorageBase):
                 "trade_id, symbol, side, tf, oid, pnl_usd, num_fills, closed_at, "
                 "account_value_at_trade, time_ms, px, sz, fee, closed_pnl, dir, size_usd"
             )
+
+            # Se já temos cache, só busca incrementais e retorna a lista completa em memória.
+            has_cache = bool(user_id and self._trades_cache.get(user_id))
             if not user_id:
                 # Modo legado (sem user_id): mantém comportamento atual.
                 r = self._client.table(TABLE_TRADES).select(select_cols).order("closed_at", desc=False).execute()
             else:
                 last_seen = self._trades_last_closed_at.get(user_id)
-                if last_seen:
+                if last_seen and has_cache:
                     # Incremental: só busca trades mais novos que o último closed_at visto.
                     r = (
                         self._client.table(TABLE_TRADES)
@@ -197,7 +203,7 @@ class SupabaseStorage(StorageBase):
                         .execute()
                     )
             if not r.data:
-                return []
+                return self._trades_cache.get(user_id, []) if user_id else []
 
             # Atualiza checkpoint (maior closed_at visto) se possível
             if user_id:
@@ -225,7 +231,7 @@ class SupabaseStorage(StorageBase):
                         rows = list(reversed(rows))
 
             # Converte registros da tabela para formato esperado pelo código
-            result = []
+            fetched: list[dict] = []
             for row in rows:
                 # Timestamp preferencial: time_ms (ms). Fallback: closed_at ISO.
                 ts = row.get("time_ms")
@@ -266,8 +272,22 @@ class SupabaseStorage(StorageBase):
                     "size_usd": row.get("size_usd"),
                     "account_value_at_trade": row.get("account_value_at_trade"),
                 }
-                result.append(trade)
-            return result
+                fetched.append(trade)
+
+            if user_id:
+                if not has_cache:
+                    self._trades_cache[user_id] = fetched
+                else:
+                    # Anexa apenas o que ainda não existe (por oid) para não duplicar
+                    existing_oids = {str(t.get("oid")) for t in self._trades_cache[user_id] if t.get("oid")}
+                    for t in fetched:
+                        oid = str(t.get("oid") or "")
+                        if oid and oid not in existing_oids:
+                            self._trades_cache[user_id].append(t)
+                            existing_oids.add(oid)
+                return self._trades_cache[user_id]
+
+            return fetched
         except Exception as e:
             logging.error(f"Supabase get_trades_db: {e}")
             return []
