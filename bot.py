@@ -672,14 +672,15 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         processed_oids = {str(t.get('oid')) for t in trades_db if t.get('oid')}
         all_known_trades = list(trades_db)
 
-        # ✅ Checkpoint: se já vimos trades até um certo timestamp, não reprocessar fills antigos.
-        # Isso evita que o incremental (últimos 25) faça o bot “redescobrir” histórico inteiro.
+        # ✅ Checkpoint simples: maior timestamp entre os trades já carregados.
+        # Com bootstrap (últimos 25), isso já impede reprocessar histórico inteiro.
         last_seen_ms = None
-        if hasattr(storage, "get_trades_last_time_ms"):
-            try:
-                last_seen_ms = storage.get_trades_last_time_ms()
-            except Exception:
+        try:
+            last_seen_ms = max(int(t.get("time") or 0) for t in trades_db) if trades_db else None
+            if not last_seen_ms:
                 last_seen_ms = None
+        except Exception:
+            last_seen_ms = None
         
         # AGRUPA micro-fills com mesmo OID
         new_fills_by_oid = defaultdict(list)

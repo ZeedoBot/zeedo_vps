@@ -34,8 +34,6 @@ class SupabaseStorage(StorageBase):
         # Checkpoint em memória para reduzir egress:
         # por usuário, guarda o maior closed_at já visto no get_trades_db().
         self._trades_last_closed_at: dict[str, str] = {}
-        # Checkpoint (ms) para filtrar fills antigos no loop do bot
-        self._trades_last_time_ms: dict[str, int] = {}
     
     def set_user_id(self, user_id: str):
         """Define user_id para operações multiusuário."""
@@ -228,7 +226,6 @@ class SupabaseStorage(StorageBase):
 
             # Converte registros da tabela para formato esperado pelo código
             result = []
-            max_time_ms: int | None = None
             for row in rows:
                 # Timestamp preferencial: time_ms (ms). Fallback: closed_at ISO.
                 ts = row.get("time_ms")
@@ -239,13 +236,6 @@ class SupabaseStorage(StorageBase):
                         ts = int(dt.timestamp() * 1000)
                     except Exception:
                         ts = None
-                try:
-                    if ts is not None:
-                        ts_i = int(ts)
-                        if max_time_ms is None or ts_i > max_time_ms:
-                            max_time_ms = ts_i
-                except Exception:
-                    pass
                 # Monta objeto no formato esperado (compatível com sync_trade_history)
                 trade = {
                     "coin": row.get("symbol"),
@@ -266,22 +256,10 @@ class SupabaseStorage(StorageBase):
                     "account_value_at_trade": row.get("account_value_at_trade"),
                 }
                 result.append(trade)
-
-            if user_id and max_time_ms is not None:
-                prev_ms = self._trades_last_time_ms.get(user_id)
-                if prev_ms is None or max_time_ms > prev_ms:
-                    self._trades_last_time_ms[user_id] = max_time_ms
             return result
         except Exception as e:
             logging.error(f"Supabase get_trades_db: {e}")
             return []
-
-    def get_trades_last_time_ms(self, user_id: str = None) -> int | None:
-        """Retorna o maior time_ms já visto (checkpoint) para filtrar fills antigos."""
-        uid = user_id or self._user_id
-        if not uid:
-            return None
-        return self._trades_last_time_ms.get(uid)
 
     def save_trades_db(self, data: list, user_id: str = None) -> None:
         """Salva novos trades em trades_database (apenas novos, não sobrescreve)."""
