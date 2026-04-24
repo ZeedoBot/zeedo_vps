@@ -176,10 +176,31 @@ def _fetch_tracker(user_id: str) -> list[dict]:
 
 def _fetch_logs(limit: int = 80) -> list[dict]:
     supabase = get_supabase()
-    r = supabase.table("bot_logs").select("level, symbol, timeframe, event, details, created_at").order("created_at", desc=True).limit(limit).execute()
-    if not r.data:
+    try:
+        r = (
+            supabase.table("bot_logs")
+            .select("level, symbol, timeframe, event, details, created_at")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        if not r.data:
+            return []
+        return [
+            {
+                "level": x.get("level"),
+                "event": x.get("event"),
+                "details": x.get("details"),
+                "created_at": x.get("created_at"),
+            }
+            for x in r.data
+        ]
+    except Exception as e:
+        # Se a tabela bot_logs foi removida (ex.: limpeza), não derrubar o dashboard.
+        if "PGRST205" in str(e) or "bot_logs" in str(e):
+            return []
+        logger.warning("Falha ao buscar bot_logs: %s", e)
         return []
-    return [{"level": x.get("level"), "event": x.get("event"), "details": x.get("details"), "created_at": x.get("created_at")} for x in r.data]
 
 
 @router.get("/overview")
