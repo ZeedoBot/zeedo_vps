@@ -229,13 +229,24 @@ class SupabaseStorage(StorageBase):
             for row in rows:
                 # Timestamp preferencial: time_ms (ms). Fallback: closed_at ISO.
                 ts = row.get("time_ms")
-                if (ts is None or ts == 0) and isinstance(row.get("closed_at"), str):
-                    try:
-                        from datetime import datetime
-                        dt = datetime.fromisoformat(row["closed_at"].replace("Z", "+00:00"))
-                        ts = int(dt.timestamp() * 1000)
-                    except Exception:
-                        ts = None
+                if ts is None or ts == 0:
+                    ca = row.get("closed_at")
+                    # Supabase pode devolver closed_at como ISO string ou datetime
+                    if isinstance(ca, str):
+                        try:
+                            from datetime import datetime
+                            dt = datetime.fromisoformat(ca.replace("Z", "+00:00"))
+                            ts = int(dt.timestamp() * 1000)
+                        except Exception:
+                            ts = None
+                    elif isinstance(ca, datetime.datetime):
+                        try:
+                            dt = ca
+                            if dt.tzinfo is None:
+                                dt = dt.replace(tzinfo=datetime.timezone.utc)
+                            ts = int(dt.timestamp() * 1000)
+                        except Exception:
+                            ts = None
                 # Monta objeto no formato esperado (compatível com sync_trade_history)
                 trade = {
                     "coin": row.get("symbol"),
