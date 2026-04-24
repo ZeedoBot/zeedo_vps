@@ -96,11 +96,11 @@ class BotConfigUpdate(BaseModel):
     max_positions: Optional[int] = None
     stop_multiplier: Optional[float] = Field(None, ge=1.0, le=10.0)
     entry1_multiplier: Optional[float] = Field(None, ge=0.0, le=3.0)
-    target1_level: Optional[float] = Field(None, ge=0.0, le=5.0)
+    target1_level: Optional[float] = Field(None, ge=-5.0, le=5.0)
     target1_percent: Optional[int] = Field(None, ge=1, le=100)
-    target2_level: Optional[float] = Field(None, ge=0.0, le=5.0)
+    target2_level: Optional[float] = Field(None, ge=-5.0, le=5.0)
     target2_percent: Optional[int] = Field(None, ge=0, le=100)
-    target3_level: Optional[float] = Field(None, ge=0.0, le=5.0)
+    target3_level: Optional[float] = Field(None, ge=-5.0, le=5.0)
     target3_percent: Optional[int] = Field(None, ge=0, le=100)
     strategy_preset: Optional[str] = Field(
         None,

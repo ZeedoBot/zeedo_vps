@@ -78,14 +78,15 @@ def _get_user_created_at_ms(user_id: str) -> int | None:
 
 def _fetch_trades(user_id: str) -> list[dict]:
     supabase = get_supabase()
-    r = supabase.table("trades_database").select("trade_id, symbol, side, tf, oid, raw, pnl_usd, closed_at, account_value_at_trade").eq("user_id", user_id).order("closed_at", desc=False).execute()
+    r = supabase.table("trades_database").select(
+        "trade_id, symbol, side, tf, oid, pnl_usd, closed_at, account_value_at_trade, time_ms, size_usd"
+    ).eq("user_id", user_id).order("closed_at", desc=False).execute()
     if not r.data:
         return []
     min_ts_ms = _get_user_created_at_ms(user_id)
     out = []
     for row in r.data:
-        raw = row.get("raw") or {}
-        ts = raw.get("time") or 0
+        ts = row.get("time_ms") or 0
         if isinstance(row.get("closed_at"), str) and "T" in row["closed_at"]:
             try:
                 from datetime import datetime
@@ -108,12 +109,12 @@ def _fetch_trades(user_id: str) -> list[dict]:
         out.append({
             "trade_id": row.get("trade_id", "-"),
             "oid": row.get("oid", ""),
-            "token": row.get("symbol", raw.get("coin", "?")),
+            "token": row.get("symbol", "?"),
             "side": row.get("side", "?"),
             "tf": row.get("tf", "-"),
             "pnl_usd": pnl_usd,
             "pnl_pct": pnl_pct,
-            "size_usd": float(raw.get("size_usd", 0) or 0),
+            "size_usd": float(row.get("size_usd", 0) or 0),
             "time": ts,
         })
     return out

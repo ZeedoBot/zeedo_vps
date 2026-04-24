@@ -50,7 +50,7 @@ class BotConfig:
     entry1_multiplier: float = 0.618
     fib_stop_level: float = 1.8
     strategy_preset: str = ""
-    fib_deep_trigger_level: float = 1.8
+    fib_deep_trigger_level: float = 1.62
     deep_fib_levels_after: List[Tuple[float, float]] = field(
         default_factory=lambda: [(0.618, 0.05), (1.5, 0.95)]
     )

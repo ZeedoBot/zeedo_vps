@@ -82,8 +82,8 @@ FIB_LEVELS = [
     (1.0, 0.50),    # Alvo 2 (1.0) - 50%
 ]
 FIB_STOP_LEVEL = 1.8  # Padrão: -1.8 fib (extensão stop)
-# Conservador/Mediano: ao preço tocar extensão -1.8, TPs passam a estes níveis (fixos no código)
-FIB_DEEP_TRIGGER_LEVEL = 1.8
+# Conservador: ao preço tocar extensão -1.62, TPs passam a estes níveis (fixos no código)
+FIB_DEEP_TRIGGER_LEVEL = 1.62
 DEEP_FIB_LEVELS_AFTER = [(0.618, 0.05), (1.5, 0.95)]
 STRATEGY_PRESET = ""  # ex.: CONSERVADOR — preenchido em load_config
 
@@ -171,9 +171,9 @@ def load_config(storage):
 
 
 def _tracker_allows_deep_fib(mem_data: dict) -> bool:
-    """Conservador/Mediano: permitem rebalance de TPs ao tocar extensão -1.8."""
+    """Conservador: permite rebalance de TPs ao tocar extensão -1.62."""
     p = (mem_data.get("strategy_preset") or STRATEGY_PRESET or "").strip().upper()
-    return p in ("CONSERVADOR", "MEDIANO")
+    return p == "CONSERVADOR"
 
 
 def _price_hit_deep_fib_extension(side: str, curr_price: float, setup_high, setup_low, tech_base: float) -> bool:
@@ -561,7 +561,7 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         return None, None
 
 def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, deep_fib_reached=False):
-    """Coloca TPs customizados. Se deep_fib_reached (Conservador/Mediano após tocar -1.8), usa DEEP_FIB_LEVELS_AFTER."""
+    """Coloca TPs customizados. Se deep_fib_reached (Conservador após tocar -1.62), usa DEEP_FIB_LEVELS_AFTER."""
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
@@ -1298,7 +1298,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 )
 
                 if apply_deep:
-                    logging.info(f"📐 Fib -{FIB_DEEP_TRIGGER_LEVEL} tocado em {sym}: recolocando TPs (Conservador/Mediano)")
+                    logging.info(f"📐 Fib -{FIB_DEEP_TRIGGER_LEVEL} tocado em {sym}: recolocando TPs (Conservador)")
                     for o in all_open_orders:
                         if o["coin"] == sym and o.get("reduceOnly", False) and not is_stop_order(o):
                             try:

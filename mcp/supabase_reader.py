@@ -136,7 +136,10 @@ def get_trades_db(limit: int = 1000, symbol: Optional[str] = None) -> Dict[str, 
     """Consulta trades_db de trades_database com validação de campos."""
     try:
         client = get_client()
-        query = client.table(TABLE_TRADES).select("*").order("closed_at", desc=False)
+        query = client.table(TABLE_TRADES).select(
+            "trade_id, symbol, side, tf, oid, pnl_usd, num_fills, closed_at, "
+            "account_value_at_trade, time_ms, px, sz, fee, closed_pnl, dir, size_usd"
+        ).order("closed_at", desc=False)
         if symbol is not None:
             query = query.eq("symbol", symbol)
         if limit > 0:
@@ -148,24 +151,33 @@ def get_trades_db(limit: int = 1000, symbol: Optional[str] = None) -> Dict[str, 
         
         trades_db = []
         for row in result.data:
+            ts = row.get("time_ms")
+            if (ts is None or ts == 0) and isinstance(row.get("closed_at"), str) and "T" in row["closed_at"]:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(row["closed_at"].replace("Z", "+00:00"))
+                    ts = int(dt.timestamp() * 1000)
+                except Exception:
+                    ts = None
             # Monta objeto no formato esperado (compatível com código)
             trade = {
                 "coin": row.get("symbol"),
                 "oid": row.get("oid"),
-                "time": row.get("raw", {}).get("time") if isinstance(row.get("raw"), dict) else None,
-                "closedPnl": row.get("raw", {}).get("closedPnl") if isinstance(row.get("raw"), dict) else None,
-                "pnl": row.get("raw", {}).get("pnl") if isinstance(row.get("raw"), dict) else None,
-                "fee": row.get("raw", {}).get("fee") if isinstance(row.get("raw"), dict) else None,
+                "time": ts,
+                "closedPnl": row.get("closed_pnl"),
+                "pnl": row.get("closed_pnl"),
+                "fee": row.get("fee"),
                 "pnl_usd": float(row.get("pnl_usd", 0)) if row.get("pnl_usd") is not None else 0.0,
                 "side": row.get("side"),
                 "tf": row.get("tf"),
                 "trade_id": row.get("trade_id"),
                 "num_fills": row.get("num_fills", 1),
-                "dir": row.get("raw", {}).get("dir") if isinstance(row.get("raw"), dict) else None,
+                "dir": row.get("dir"),
+                "px": row.get("px"),
+                "sz": row.get("sz"),
+                "size_usd": row.get("size_usd"),
+                "account_value_at_trade": row.get("account_value_at_trade"),
             }
-            # Inclui todos os campos do raw JSONB
-            if isinstance(row.get("raw"), dict):
-                trade.update(row["raw"])
             trades_db.append(trade)
         
         expected_fields = [
@@ -297,8 +309,13 @@ def get_schema_info() -> Dict[str, Any]:
             TABLE_TRADES: {
                 "structure": {
                     "id": "uuid (primary key)", "trade_id": "text", "symbol": "text",
-                    "side": "text", "tf": "text", "oid": "text", "raw": "jsonb",
+                    "side": "text", "tf": "text", "oid": "text",
                     "pnl_usd": "numeric", "num_fills": "integer", "closed_at": "timestamptz",
+                    "account_value_at_trade": "float",
+                    "time_ms": "bigint",
+                    "px": "float", "sz": "float",
+                    "fee": "float", "closed_pnl": "float",
+                    "dir": "text", "size_usd": "float",
                 },
                 "purpose": "Histórico de fills/trades executados",
             },
