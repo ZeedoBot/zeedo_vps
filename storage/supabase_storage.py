@@ -333,6 +333,10 @@ class SupabaseStorage(StorageBase):
             # Prepara registros para inserção/upsert (o banco garante idempotência via UNIQUE(user_id, oid)).
             new_trades: list[dict] = []
             import datetime
+            # Janela usada no fallback de dedupe (quando o índice único ainda não existe no banco).
+            LOOKBACK_HOURS = 48
+            cutoff_dt = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=LOOKBACK_HOURS)
+            cutoff_iso = cutoff_dt.isoformat()
             for trade in data:
                 oid = str(trade.get("oid") or "")
                 if not oid:
@@ -398,8 +402,27 @@ class SupabaseStorage(StorageBase):
             if new_trades:
                 # UPSERT por UNIQUE(user_id, oid) torna a operação idempotente sem precisar ler OIDs.
                 # Se o registro já existir, ele será mantido/atualizado sem criar duplicata.
-                self._client.table(TABLE_TRADES).upsert(new_trades, on_conflict="user_id,oid").execute()
-                logging.info(f"💾 {len(new_trades)} trade(s) enviados para o Supabase (idempotente)")
+                try:
+                    self._client.table(TABLE_TRADES).upsert(new_trades, on_conflict="user_id,oid").execute()
+                    logging.info(f"💾 {len(new_trades)} trade(s) enviados para o Supabase (idempotente)")
+                except Exception as e:
+                    msg = str(e)
+                    # Erro Postgres: 42P10 - não há UNIQUE/EXCLUDE compatível com ON CONFLICT.
+                    # Isso costuma acontecer quando a migration do índice ainda não foi aplicada no projeto Supabase.
+                    if "42P10" not in msg and "no unique or exclusion constraint" not in msg.lower():
+                        raise
+
+                    q = self._client.table(TABLE_TRADES).select("oid")
+                    if user_id:
+                        q = q.eq("user_id", user_id)
+                    q = q.gte("closed_at", cutoff_iso)
+                    existing_r = q.execute()
+                    existing_oids = {str(row.get("oid")) for row in (existing_r.data or []) if row.get("oid")}
+
+                    to_insert = [r for r in new_trades if str(r.get("oid") or "") not in existing_oids]
+                    if to_insert:
+                        self._client.table(TABLE_TRADES).insert(to_insert).execute()
+                        logging.info(f"💾 {len(to_insert)} trade(s) inseridos no Supabase (fallback 48h)")
         except Exception as e:
             logging.error(f"Supabase save_trades_db: {e}")
 
