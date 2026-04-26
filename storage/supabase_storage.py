@@ -332,6 +332,7 @@ class SupabaseStorage(StorageBase):
             user_id = user_id or self._user_id
             # Prepara registros para inserção/upsert (o banco garante idempotência via UNIQUE(user_id, oid)).
             new_trades: list[dict] = []
+            import datetime
             for trade in data:
                 oid = str(trade.get("oid") or "")
                 if not oid:
