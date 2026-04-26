@@ -669,7 +669,8 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         trades_db = storage.get_trades_db()
         if not isinstance(trades_db, list):
             trades_db = []
-        processed_oids = {str(t.get('oid')) for t in trades_db if t.get('oid')}
+        # Cache por OID do que já existe no DB (janela recente via storage).
+        existing_by_oid = {str(t.get("oid")): t for t in trades_db if t.get("oid")}
         all_known_trades = list(trades_db)
 
         # ✅ Janela de lookback para performance (sem perder fills simultâneos).
@@ -693,12 +694,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             oid = str(fill.get('oid') or fill.get('id') or "")
             if not oid:
                 continue
-            if oid in processed_oids:
-                continue
             # Ignora trades anteriores à criação da conta no Zeedo
             fill_ts = int(fill.get('time') or fill.get('t') or fill.get('timestamp') or 0)
             if min_ts_ms is not None and fill_ts > 0 and fill_ts < min_ts_ms:
-                processed_oids.add(oid)  # evita reprocessar
                 continue
             # Performance: ignora fills muito antigos (fora da janela), mas SEM marcar como processado.
             # Não use `<=` aqui: a HL pode retornar múltiplos fills diferentes com o mesmo timestamp.
@@ -708,6 +706,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             new_fills_by_oid[oid].append(fill)
         
         new_trades = []
+        updated_trades = []
         user_state = info.user_state(wallet) or {}
         positions_by_coin = {p["position"]["coin"]: float(p["position"]["szi"]) for p in user_state.get("assetPositions", [])}
         
@@ -779,10 +778,16 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                 total_fee += fee
             
             pnl_net = total_pnl - total_fee
+            existing = existing_by_oid.get(str(oid))
+            existing_num_fills = int(existing.get("num_fills", 1) or 1) if existing else 0
+            existing_pnl = float(existing.get("pnl_usd", 0) or 0) if existing else 0.0
+            is_update = bool(existing and (len(fills) > existing_num_fills or abs(existing_pnl - round(pnl_net, 6)) > 1e-9))
+
             trade = entry_tracker.get(coin)
             tr_side = _normalize_trade_side(trade.get("side")) if trade else None
             tracker_side_mismatch = bool(trade and fill_side_inf and tr_side and fill_side_inf != tr_side)
-            if trade and not tracker_side_mismatch:
+            # Atualiza pnl_realized no tracker apenas quando o OID é novo (evita somar duas vezes em updates).
+            if trade and not tracker_side_mismatch and not is_update:
                 for fill in fills:
                     pnl_fill = float(fill.get("closedPnl", 0) or 0) - float(fill.get("fee", 0) or 0)
                     trade["pnl_realized"] += pnl_fill
@@ -812,12 +817,20 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             fill_safe['num_fills'] = len(fills)
             fill_safe['account_value_at_trade'] = account_value if account_value > 0 else None
             
-            trades_db.append(fill_safe)
-            new_trades.append(fill_safe)
-            processed_oids.add(oid)
+            if existing:
+                # Update: mantém consistência local para não reprocessar em loops seguintes.
+                if is_update:
+                    updated_trades.append(fill_safe)
+                # Atualiza/normaliza o cache local
+                existing_by_oid[str(oid)] = fill_safe
+            else:
+                trades_db.append(fill_safe)
+                new_trades.append(fill_safe)
+                existing_by_oid[str(oid)] = fill_safe
 
             fill_timestamp = base_fill.get('time') or base_fill.get('t') or base_fill.get('timestamp') or 0
-            if total_pnl != 0 and tg_time(fill_timestamp):
+            # Telegram: só notifica em fills novos (evita spam ao atualizar OID)
+            if not existing and total_pnl != 0 and tg_time(fill_timestamp):
                 emoji = "🤑 PARCIAL REALIZADA" if pnl_net >= 0 else "❌ STOP"
                 sign = "+" if pnl_net >= 0 else ""                
                 if trade and trade.get("tf") and not tracker_side_mismatch:
@@ -852,9 +865,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                     f"PnL TOTAL: {sign}${total_closed_pnl:.2f}"
                 )
 
-        if new_trades:
-            # Persiste apenas os trades novos desta rodada (evita reprocessar/reenviar janela inteira).
-            storage.save_trades_db(new_trades)
+        if new_trades or updated_trades:
+            # Persiste apenas o delta desta rodada (novos + updates por OID).
+            storage.save_trades_db(new_trades + updated_trades)
             total_fills = sum(t.get('num_fills', 1) for t in new_trades)
             logging.info(f"📚 Histórico: {len(new_trades)} trades ({total_fills} fills) adicionados.")
             
