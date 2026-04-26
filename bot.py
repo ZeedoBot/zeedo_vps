@@ -662,7 +662,19 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         except Exception as e:
             logging.warning(f"Erro ao buscar accountValue: {e}")
 
-        user_fills = info.user_fills(wallet)
+        # Prefere buscar fills por janela de tempo para evitar limites/paginação do endpoint padrão.
+        # Isso garante que micro-fills antigos (dentro do lookback) não sejam "perdidos" quando há muitos fills recentes.
+        now_ms = int(time.time() * 1000)
+        window_start_ms = now_ms - LOOKBACK_MS
+        if min_ts_ms is not None:
+            window_start_ms = max(int(min_ts_ms), int(window_start_ms))
+        try:
+            if hasattr(info, "user_fills_by_time"):
+                user_fills = info.user_fills_by_time(wallet, start_time=int(window_start_ms))
+            else:
+                user_fills = info.user_fills(wallet)
+        except Exception:
+            user_fills = info.user_fills(wallet)
         if not user_fills:
             return
 
