@@ -662,6 +662,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         except Exception as e:
             logging.warning(f"Erro ao buscar accountValue: {e}")
 
+        # Janela de lookback para performance/backfill recente.
+        LOOKBACK_MS = 48 * 3600 * 1000  # 48h
+
         # Prefere buscar fills por janela de tempo para evitar limites/paginação do endpoint padrão.
         # Isso garante que micro-fills antigos (dentro do lookback) não sejam "perdidos" quando há muitos fills recentes.
         now_ms = int(time.time() * 1000)
@@ -689,7 +692,6 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         # - Timestamp NÃO é dedupe (dedupe real é por OID), mas uma janela evita revarrer histórico inteiro
         #   quando `trades_db` estiver inicializado só com os últimos N (ex.: 25) OIDs.
         # - Essa janela também permite "backfill" de buracos recentes (ex.: erro de rede/API).
-        LOOKBACK_MS = 48 * 3600 * 1000  # 48h
         last_seen_ms = None
         try:
             last_seen_ms = max(int(t.get("time") or 0) for t in trades_db) if trades_db else None
