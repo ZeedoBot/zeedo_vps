@@ -697,7 +697,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                 processed_oids.add(oid)  # evita reprocessar
                 continue
             # Ignora fills antigos: já foram processados em execuções anteriores.
-            if last_seen_ms is not None and fill_ts and fill_ts <= int(last_seen_ms):
+            # IMPORTANTE: não usar `<=` aqui, porque a Hyperliquid pode retornar múltiplos fills
+            # diferentes com o MESMO timestamp (execuções simultâneas). O dedupe correto é por OID.
+            if last_seen_ms is not None and fill_ts and fill_ts < int(last_seen_ms):
                 processed_oids.add(oid)
                 continue
 

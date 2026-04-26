@@ -183,12 +183,13 @@ class SupabaseStorage(StorageBase):
             else:
                 last_seen = self._trades_last_closed_at.get(user_id)
                 if last_seen and has_cache:
-                    # Incremental: só busca trades mais novos que o último closed_at visto.
+                    # Incremental: traz a borda também (closed_at pode repetir em execuções simultâneas).
+                    # Duplicatas são filtradas por `oid` ao anexar no cache.
                     r = (
                         self._client.table(TABLE_TRADES)
                         .select(select_cols)
                         .eq("user_id", user_id)
-                        .gt("closed_at", last_seen)
+                        .gte("closed_at", last_seen)
                         .order("closed_at", desc=False)
                         .execute()
                     )
