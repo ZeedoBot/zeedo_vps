@@ -847,7 +847,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                     )
             
             position_still_open = positions_by_coin.get(coin, 0) != 0
-            if not position_still_open and tg_time(fill_timestamp):
+            # Telegram (encerramento): só notifica na 1ª vez que o OID aparece.
+            # Atualizações do mesmo OID (micro-fills chegando depois) não devem reenviar "TRADE ENCERRADO".
+            if not existing and (not position_still_open) and tg_time(fill_timestamp):
                 trade_closed = entry_tracker.get(coin)
                 tr_closed_side = _normalize_trade_side(trade_closed.get("side")) if trade_closed else None
                 closed_tracker_mismatch = bool(
