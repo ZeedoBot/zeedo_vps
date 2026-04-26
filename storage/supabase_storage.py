@@ -165,7 +165,13 @@ class SupabaseStorage(StorageBase):
             logging.error(f"Supabase save_history_tracker: {e}")
 
     def get_trades_db(self, user_id: str = None) -> list:
-        """Retorna trades_db carregando de trades_database (incremental por closed_at)."""
+        """Retorna trades_db carregando de trades_database (cache incremental + janela recente).
+
+        No modo SaaS (com user_id), mantém em memória apenas trades dentro de uma janela recente
+        para:
+        - reduzir egress/custo no bootstrap (não baixar histórico inteiro),
+        - manter `processed_oids` pequeno e evitar reprocessamentos.
+        """
         if not self._client:
             return []
         try:
@@ -174,6 +180,28 @@ class SupabaseStorage(StorageBase):
                 "trade_id, symbol, side, tf, oid, pnl_usd, num_fills, closed_at, "
                 "account_value_at_trade, time_ms, px, sz, fee, closed_pnl, dir, size_usd"
             )
+
+            # Janela de retenção (alinhada ao lookback do bot).
+            import datetime
+            LOOKBACK_HOURS = 48
+            now = datetime.datetime.now(datetime.timezone.utc)
+            cutoff_dt = now - datetime.timedelta(hours=LOOKBACK_HOURS)
+            cutoff_iso = cutoff_dt.isoformat()
+            cutoff_ms = int(cutoff_dt.timestamp() * 1000)
+
+            def _prune_cache(trades: list[dict]) -> list[dict]:
+                """Remove itens fora da janela recente (por time_ms ou closed_at)."""
+                kept: list[dict] = []
+                for t in trades or []:
+                    ts = t.get("time") or t.get("time_ms")
+                    try:
+                        ts_i = int(ts) if ts is not None else 0
+                    except Exception:
+                        ts_i = 0
+                    if ts_i and ts_i < cutoff_ms:
+                        continue
+                    kept.append(t)
+                return kept
 
             # Se já temos cache, só busca incrementais e retorna a lista completa em memória.
             has_cache = bool(user_id and self._trades_cache.get(user_id))
@@ -190,20 +218,24 @@ class SupabaseStorage(StorageBase):
                         .select(select_cols)
                         .eq("user_id", user_id)
                         .gte("closed_at", last_seen)
+                        .gte("closed_at", cutoff_iso)
                         .order("closed_at", desc=False)
                         .execute()
                     )
                 else:
-                    # Bootstrap: pega só os últimos 25 trades para inicializar o checkpoint.
+                    # Bootstrap: carrega todos os trades recentes (janela) para iniciar com OIDs completos.
                     r = (
                         self._client.table(TABLE_TRADES)
                         .select(select_cols)
                         .eq("user_id", user_id)
-                        .order("closed_at", desc=True)
-                        .limit(25)
+                        .gte("closed_at", cutoff_iso)
+                        .order("closed_at", desc=False)
                         .execute()
                     )
             if not r.data:
+                if user_id and has_cache:
+                    self._trades_cache[user_id] = _prune_cache(self._trades_cache[user_id])
+                    return self._trades_cache[user_id]
                 return self._trades_cache.get(user_id, []) if user_id else []
 
             # Atualiza checkpoint (maior closed_at visto) se possível
@@ -223,13 +255,11 @@ class SupabaseStorage(StorageBase):
                     pass
 
             rows = r.data
-            # Se veio do bootstrap (desc=True), reordena para asc para manter semântica anterior
-            if user_id and not self._trades_last_closed_at.get(user_id) is None and len(rows) > 1:
-                # Se a query foi desc (bootstrap), o primeiro closed_at é o maior.
-                # Reordenar evita mudanças inesperadas no consumidor.
-                if isinstance(rows[0].get("closed_at"), str) and isinstance(rows[-1].get("closed_at"), str):
-                    if rows[0]["closed_at"] > rows[-1]["closed_at"]:
-                        rows = list(reversed(rows))
+            # Mantém somente janela recente no retorno (segurança extra).
+            try:
+                rows = [x for x in rows if not isinstance(x.get("closed_at"), str) or x["closed_at"] >= cutoff_iso]
+            except Exception:
+                pass
 
             # Converte registros da tabela para formato esperado pelo código
             fetched: list[dict] = []
@@ -277,7 +307,7 @@ class SupabaseStorage(StorageBase):
 
             if user_id:
                 if not has_cache:
-                    self._trades_cache[user_id] = fetched
+                    self._trades_cache[user_id] = _prune_cache(fetched)
                 else:
                     # Anexa apenas o que ainda não existe (por oid) para não duplicar
                     existing_oids = {str(t.get("oid")) for t in self._trades_cache[user_id] if t.get("oid")}
@@ -286,6 +316,7 @@ class SupabaseStorage(StorageBase):
                         if oid and oid not in existing_oids:
                             self._trades_cache[user_id].append(t)
                             existing_oids.add(oid)
+                    self._trades_cache[user_id] = _prune_cache(self._trades_cache[user_id])
                 return self._trades_cache[user_id]
 
             return fetched
@@ -294,86 +325,80 @@ class SupabaseStorage(StorageBase):
             return []
 
     def save_trades_db(self, data: list, user_id: str = None) -> None:
-        """Salva novos trades em trades_database (apenas novos, não sobrescreve)."""
+        """Salva trades em trades_database (idempotente por UNIQUE(user_id, oid))."""
         if not self._client or not isinstance(data, list):
             return
         try:
             user_id = user_id or self._user_id
-            # Busca OIDs já processados (filtrado por user_id se disponível)
-            query = self._client.table(TABLE_TRADES).select("oid")
-            if user_id:
-                query = query.eq("user_id", user_id)
-            existing_r = query.execute()
-            existing_oids = {str(row.get("oid")) for row in (existing_r.data or []) if row.get("oid")}
-            
-            # Insere apenas trades novos
-            new_trades = []
+            # Prepara registros para inserção/upsert (o banco garante idempotência via UNIQUE(user_id, oid)).
+            new_trades: list[dict] = []
             for trade in data:
                 oid = str(trade.get("oid") or "")
-                if oid and oid not in existing_oids:
-                    # Calcula closed_at a partir do timestamp do trade
-                    trade_time = trade.get("time") or trade.get("t") or trade.get("timestamp")
-                    time_ms = None
-                    if trade_time:
-                        # Converte timestamp (ms) para datetime
-                        try:
-                            time_ms = int(trade_time)
-                            closed_at = datetime.datetime.fromtimestamp(int(trade_time) / 1000, tz=datetime.timezone.utc)
-                        except (ValueError, TypeError, OSError):
-                            closed_at = datetime.datetime.now(datetime.timezone.utc)
-                    else:
+                if not oid:
+                    continue
+                # Calcula closed_at a partir do timestamp do trade
+                trade_time = trade.get("time") or trade.get("t") or trade.get("timestamp")
+                time_ms = None
+                if trade_time:
+                    # Converte timestamp (ms) para datetime
+                    try:
+                        time_ms = int(trade_time)
+                        closed_at = datetime.datetime.fromtimestamp(int(trade_time) / 1000, tz=datetime.timezone.utc)
+                    except (ValueError, TypeError, OSError):
                         closed_at = datetime.datetime.now(datetime.timezone.utc)
-                    
-                    def _to_float(x):
-                        try:
-                            if x is None:
-                                return None
-                            if isinstance(x, (int, float)):
-                                return float(x)
-                            s = str(x).strip()
-                            if s == "" or s.lower() == "none":
-                                return None
-                            return float(s)
-                        except Exception:
+                else:
+                    closed_at = datetime.datetime.now(datetime.timezone.utc)
+                
+                def _to_float(x):
+                    try:
+                        if x is None:
                             return None
+                        if isinstance(x, (int, float)):
+                            return float(x)
+                        s = str(x).strip()
+                        if s == "" or s.lower() == "none":
+                            return None
+                        return float(s)
+                    except Exception:
+                        return None
 
-                    px = _to_float(trade.get("px"))
-                    sz = _to_float(trade.get("sz"))
-                    fee = _to_float(trade.get("fee"))
-                    closed_pnl = _to_float(trade.get("closedPnl"))
-                    if closed_pnl is None:
-                        closed_pnl = _to_float(trade.get("pnl"))
-                    size_usd = _to_float(trade.get("size_usd"))
-                    if size_usd is None and px is not None and sz is not None:
-                        size_usd = px * sz
+                px = _to_float(trade.get("px"))
+                sz = _to_float(trade.get("sz"))
+                fee = _to_float(trade.get("fee"))
+                closed_pnl = _to_float(trade.get("closedPnl"))
+                if closed_pnl is None:
+                    closed_pnl = _to_float(trade.get("pnl"))
+                size_usd = _to_float(trade.get("size_usd"))
+                if size_usd is None and px is not None and sz is not None:
+                    size_usd = px * sz
 
-                    # Prepara registro para inserção
-                    record = {
-                        "trade_id": trade.get("trade_id", "-"),
-                        "symbol": trade.get("coin") or trade.get("symbol"),
-                        "side": trade.get("side"),
-                        "tf": trade.get("tf", "-"),
-                        "oid": oid,
-                        "pnl_usd": trade.get("pnl_usd", 0.0),
-                        "num_fills": trade.get("num_fills", 1),
-                        "closed_at": closed_at.isoformat(),  # Supabase aceita ISO string
-                        "time_ms": time_ms,
-                        "px": px,
-                        "sz": sz,
-                        "fee": fee,
-                        "closed_pnl": closed_pnl,
-                        "dir": trade.get("dir"),
-                        "size_usd": size_usd,
-                        "account_value_at_trade": trade.get("account_value_at_trade"),
-                    }
-                    if user_id:
-                        record["user_id"] = user_id
-                    new_trades.append(record)
-                    existing_oids.add(oid)  # Evita duplicatas na mesma execução
+                record = {
+                    "trade_id": trade.get("trade_id", "-"),
+                    "symbol": trade.get("coin") or trade.get("symbol"),
+                    "side": trade.get("side"),
+                    "tf": trade.get("tf", "-"),
+                    "oid": oid,
+                    "pnl_usd": trade.get("pnl_usd", 0.0),
+                    "num_fills": trade.get("num_fills", 1),
+                    "closed_at": closed_at.isoformat(),  # Supabase aceita ISO string
+                    "time_ms": time_ms,
+                    "px": px,
+                    "sz": sz,
+                    "fee": fee,
+                    "closed_pnl": closed_pnl,
+                    "dir": trade.get("dir"),
+                    "size_usd": size_usd,
+                    "account_value_at_trade": trade.get("account_value_at_trade"),
+                }
+                if user_id:
+                    record["user_id"] = user_id
+                new_trades.append(record)
             
             if new_trades:
-                self._client.table(TABLE_TRADES).insert(new_trades).execute()
-                logging.info(f"💾 {len(new_trades)} novos trades salvos no Supabase")
+                # UPSERT por UNIQUE(user_id, oid) torna a operação idempotente sem precisar ler OIDs.
+                # Se o registro já existir, ele será mantido/atualizado sem criar duplicata.
+                self._client.table(TABLE_TRADES).upsert(new_trades, on_conflict="user_id,oid").execute()
+                logging.info(f"💾 {len(new_trades)} trade(s) enviados para o Supabase (idempotente)")
         except Exception as e:
             logging.error(f"Supabase save_trades_db: {e}")
 

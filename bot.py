@@ -672,8 +672,11 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         processed_oids = {str(t.get('oid')) for t in trades_db if t.get('oid')}
         all_known_trades = list(trades_db)
 
-        # ✅ Checkpoint simples: maior timestamp entre os trades já carregados.
-        # Com bootstrap (últimos 25), isso já impede reprocessar histórico inteiro.
+        # ✅ Janela de lookback para performance (sem perder fills simultâneos).
+        # - Timestamp NÃO é dedupe (dedupe real é por OID), mas uma janela evita revarrer histórico inteiro
+        #   quando `trades_db` estiver inicializado só com os últimos N (ex.: 25) OIDs.
+        # - Essa janela também permite "backfill" de buracos recentes (ex.: erro de rede/API).
+        LOOKBACK_MS = 48 * 3600 * 1000  # 48h
         last_seen_ms = None
         try:
             last_seen_ms = max(int(t.get("time") or 0) for t in trades_db) if trades_db else None
@@ -681,6 +684,7 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                 last_seen_ms = None
         except Exception:
             last_seen_ms = None
+        cutoff_ms = (int(last_seen_ms) - LOOKBACK_MS) if last_seen_ms else None
         
         # AGRUPA micro-fills com mesmo OID
         new_fills_by_oid = defaultdict(list)
@@ -696,11 +700,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             if min_ts_ms is not None and fill_ts > 0 and fill_ts < min_ts_ms:
                 processed_oids.add(oid)  # evita reprocessar
                 continue
-            # Ignora fills antigos: já foram processados em execuções anteriores.
-            # IMPORTANTE: não usar `<=` aqui, porque a Hyperliquid pode retornar múltiplos fills
-            # diferentes com o MESMO timestamp (execuções simultâneas). O dedupe correto é por OID.
-            if last_seen_ms is not None and fill_ts and fill_ts < int(last_seen_ms):
-                processed_oids.add(oid)
+            # Performance: ignora fills muito antigos (fora da janela), mas SEM marcar como processado.
+            # Não use `<=` aqui: a HL pode retornar múltiplos fills diferentes com o mesmo timestamp.
+            if cutoff_ms is not None and fill_ts and fill_ts < cutoff_ms:
                 continue
 
             new_fills_by_oid[oid].append(fill)
@@ -851,7 +853,8 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                 )
 
         if new_trades:
-            storage.save_trades_db(trades_db)
+            # Persiste apenas os trades novos desta rodada (evita reprocessar/reenviar janela inteira).
+            storage.save_trades_db(new_trades)
             total_fills = sum(t.get('num_fills', 1) for t in new_trades)
             logging.info(f"📚 Histórico: {len(new_trades)} trades ({total_fills} fills) adicionados.")
             
