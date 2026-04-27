@@ -864,15 +864,32 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             # Telegram (encerramento): só notifica na 1ª vez que o OID aparece.
             # Atualizações do mesmo OID (micro-fills chegando depois) não devem reenviar "TRADE ENCERRADO".
             if not existing and (not position_still_open) and tg_time(fill_timestamp):
-                trade_closed = entry_tracker.get(coin)
-                tr_closed_side = _normalize_trade_side(trade_closed.get("side")) if trade_closed else None
-                closed_tracker_mismatch = bool(
-                    trade_closed and fill_side_inf and tr_closed_side and fill_side_inf != tr_closed_side
-                )
-                if trade_closed and not closed_tracker_mismatch:
-                    total_closed_pnl = trade_closed.get("pnl_realized", 0.0)
-                else:
-                    total_closed_pnl = pnl_net  # fallback de segurança
+                # Preferir somar pelo trade_id a partir do histórico (mais confiável que pnl_realized do tracker).
+                total_closed_pnl = None
+                try:
+                    if trade_id and trade_id != "-" and coin:
+                        total_closed_pnl = 0.0
+                        for t in existing_by_oid.values():
+                            if (t.get("trade_id") or "-") != trade_id:
+                                continue
+                            tcoin = t.get("coin") or t.get("symbol")
+                            if tcoin != coin:
+                                continue
+                            total_closed_pnl += float(t.get("pnl_usd", 0) or 0)
+                except Exception:
+                    total_closed_pnl = None
+
+                # Fallbacks: tracker (quando existe e está consistente) → pnl_net do fill atual
+                if total_closed_pnl is None:
+                    trade_closed = entry_tracker.get(coin)
+                    tr_closed_side = _normalize_trade_side(trade_closed.get("side")) if trade_closed else None
+                    closed_tracker_mismatch = bool(
+                        trade_closed and fill_side_inf and tr_closed_side and fill_side_inf != tr_closed_side
+                    )
+                    if trade_closed and not closed_tracker_mismatch:
+                        total_closed_pnl = float(trade_closed.get("pnl_realized", 0.0) or 0.0)
+                    else:
+                        total_closed_pnl = float(pnl_net or 0.0)  # fallback de segurança
 
                 sign = "+" if total_closed_pnl >= 0 else ""
                 tg_send(
