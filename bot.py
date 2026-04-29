@@ -1039,6 +1039,14 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 analyzed_candles[candle_id] = True
                 continue
 
+            # Dedup global por (symbol, tf): evita repetir alerta/trade no mesmo sinal
+            # após restart (analyzed_candles zera) e também evita spam em sinais bloqueados.
+            sig_ts = sig["signal_ts"]
+            last_ts = history_tracker.get(sym, {}).get(tf, 0)
+            if sig_ts <= last_ts:
+                analyzed_candles[candle_id] = True
+                continue
+
             update_lsr_cache(sym, force=True)
 
             block_reasons: list[str] = []
@@ -1088,11 +1096,6 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 analyzed_candles[candle_id] = True
                 continue
 
-            sig_ts = sig["signal_ts"]
-            last_ts = history_tracker.get(sym, {}).get(tf, 0)
-            if sig_ts <= last_ts:
-                analyzed_candles[candle_id] = True
-                continue
             try:
                 entry_px = round_px(sig["trigger"])
                 stop_real = round_px(sig["stop_real"])
