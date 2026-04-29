@@ -1228,12 +1228,21 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
         # Se o preço tocar no alvo 1, cancela ordens ativas não-reduce (ex.: adds manuais).
         # Com fib do 1º alvo = 0, o nível coincide com setup_high/setup_low e disparava
         # cancelamento indevido — nesse caso não usamos esta heurística.
-        target1_fib_cancel = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
-        if target1_fib_cancel > 0:
+        def _cancel_level_for_preset(mem: dict) -> float:
+            """
+            Nível (fib) usado somente para a heurística de cancelar ordens pendentes ao tocar o 1º alvo.
+            Mantém comportamento uniforme: sempre 0.5, independente do preset e de ajustes em FIB_LEVELS.
+            """
+            return 0.5
+
+        if True:
             for sym in list(entry_tracker.keys()):
                 mem = entry_tracker.get(sym, {})
                 if mem.get("alvo1_cancel_done"):
                     continue  # Já cancelou; evita repetir a cada ciclo
+                target1_fib_cancel = _cancel_level_for_preset(mem)
+                if not target1_fib_cancel or target1_fib_cancel <= 0:
+                    continue
                 tech_base = mem.get("tech_base")
                 setup_high = mem.get("setup_high")
                 setup_low = mem.get("setup_low")
