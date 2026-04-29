@@ -218,5 +218,6 @@ class BotInstance:
         self.exchange = Exchange(account, base_url, account_address=self.wallet_address)
         
         self.logger.info(f"Bot Conectado: {self.wallet_address} (Rede: {'MAINNET' if self.config.is_mainnet else 'TESTNET'})")
-        self.telegram.send("🟢 Zeedo Conectado")
+        # Não envia mensagem de conexão aqui para evitar spam em updates/restarts.
+        # A notificação deve acontecer apenas quando o usuário liga o bot via dashboard (bot_enabled: false -> true).
     

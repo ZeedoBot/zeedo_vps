@@ -249,7 +249,8 @@ def update_config(
         if not has_wallet:
             raise HTTPException(400, "Conecte a carteira Hyperliquid antes de ligar o bot.")
 
-    existing = supabase.table("bot_config").select("id, user_id, trading_account_id").eq("user_id", user_id).limit(1).execute()
+    existing = supabase.table("bot_config").select("id, user_id, trading_account_id, bot_enabled").eq("user_id", user_id).limit(1).execute()
+    prev_enabled = bool(existing.data and len(existing.data) > 0 and existing.data[0].get("bot_enabled"))
     if existing.data and len(existing.data) > 0:
         supabase.table("bot_config").update(payload).eq("user_id", user_id).execute()
     else:
@@ -260,6 +261,13 @@ def update_config(
         if trading_account_id:
             payload["trading_account_id"] = trading_account_id
         supabase.table("bot_config").insert(payload).execute()
+
+    # Notifica no Telegram apenas quando o usuário liga pelo dashboard (transição false -> true).
+    if body.bot_enabled is True and not prev_enabled:
+        try:
+            send_telegram_to_user(supabase, user_id, "🟢 Zeedo Conectado")
+        except Exception:
+            pass
 
     # Notifica no Telegram quando bot desliga (o "Conectado" vem do instance ao iniciar)
     if body.bot_enabled is not None and not body.bot_enabled:
