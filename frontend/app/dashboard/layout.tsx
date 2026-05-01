@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FeedbackModal } from "@/components/FeedbackModal";
 import { IoHome } from "react-icons/io5";
 import { MdCandlestickChart } from "react-icons/md";
 import { FaWrench } from "react-icons/fa";
@@ -38,6 +39,7 @@ export default function DashboardLayout({
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -154,6 +156,16 @@ export default function DashboardLayout({
               </span>
             )}
             <ThemeToggle />
+            <button
+              type="button"
+              onClick={() => setFeedbackOpen(true)}
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-zeedo-orange/35 px-3 py-2 text-sm font-medium text-zeedo-orange hover:bg-zeedo-orange/10 dark:border-zeedo-orange/45 dark:hover:bg-zeedo-orange/15"
+            >
+              <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Feedback
+            </button>
             <span className="hidden lg:inline text-sm text-zeedo-black/60 dark:text-zeedo-white/60 truncate max-w-[140px]">{user?.username || user?.email}</span>
             <div className="relative">
               <button
@@ -212,6 +224,19 @@ export default function DashboardLayout({
                       <div className="border-t border-zeedo-orange/20 my-1" />
                       <button
                         type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setFeedbackOpen(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-zeedo-black/70 hover:bg-zeedo-orange/10 dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
+                      >
+                        <svg className="h-4 w-4 shrink-0 text-zeedo-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Enviar feedback
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => { setMenuOpen(false); handleLogout(); }}
                         className="block w-full text-left px-4 py-2.5 text-sm font-medium text-zeedo-black/70 hover:bg-zeedo-orange/10 hover:text-zeedo-orange dark:text-zeedo-white/70 dark:hover:text-zeedo-orange"
                       >
@@ -256,6 +281,8 @@ export default function DashboardLayout({
           );
         })}
       </nav>
+
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }

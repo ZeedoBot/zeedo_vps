@@ -12,7 +12,50 @@ type Profile = {
   birth_date: string | null;
   country: string | null;
   phone: string | null;
+  subscription_status?: string | null;
+  subscription_tier?: string | null;
+  subscription_period_end?: string | null;
 };
+
+const CHOOSE_PLAN_URL = "https://zeedo.ia.br/choose-plan";
+
+function planDisplayName(tierLower: string): string {
+  if (tierLower === "basic") return "Zeedo Basic";
+  if (tierLower === "pro") return "Zeedo Pro";
+  if (tierLower === "satoshi") return "Zeedo Satoshi";
+  return "Zeedo";
+}
+
+function formatDatePtLong(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat("pt-BR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "America/Sao_Paulo",
+    }).format(d);
+  } catch {
+    return iso;
+  }
+}
+
+/** Apenas assinatura paga (Stripe active). Trial não conta como plano aqui — sem cobrança. */
+function hasActivePlan(p: Profile | null): boolean {
+  if (!p) return false;
+  const tier = (p.subscription_tier || "").toLowerCase();
+  const st = (p.subscription_status || "").toLowerCase();
+  return ["basic", "pro", "satoshi"].includes(tier) && st === "active";
+}
+
+function subscriptionSubline(p: Profile): string | null {
+  const st = (p.subscription_status || "").toLowerCase();
+  if (st === "active" && p.subscription_period_end) {
+    return `Próxima cobrança em ${formatDatePtLong(p.subscription_period_end)}`;
+  }
+  return null;
+}
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -228,6 +271,34 @@ export default function ProfilePage() {
             {saving ? "Salvando…" : "Salvar"}
           </button>
         </form>
+      </div>
+
+      <div className="card max-w-xl">
+        {profile && hasActivePlan(profile) ? (
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-zeedo-black dark:text-zeedo-white">
+                {planDisplayName((profile.subscription_tier || "").toLowerCase())}
+              </span>
+              <span className="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/45 dark:text-green-300">
+                Ativo
+              </span>
+            </div>
+            {subscriptionSubline(profile) ? (
+              <p className="text-sm text-zeedo-black/55 dark:text-zeedo-white/55">{subscriptionSubline(profile)}</p>
+            ) : null}
+            {["basic", "pro"].includes((profile.subscription_tier || "").toLowerCase()) ? (
+              <a
+                href={CHOOSE_PLAN_URL}
+                className="mt-1 inline-flex text-sm font-medium text-zeedo-orange hover:underline"
+              >
+                Upgrade
+              </a>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-zeedo-black/65 dark:text-zeedo-white/65">Sem plano ativo</p>
+        )}
       </div>
 
       <div className="card max-w-xl">

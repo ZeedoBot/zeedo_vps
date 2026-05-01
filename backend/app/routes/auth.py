@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from backend.app.config import get_settings
 from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
+from backend.app.services.users_row import get_users_row_with_trial_sync
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -65,28 +66,12 @@ def get_me(user_id: str = Depends(get_current_user_id)):
     import logging
     logger = logging.getLogger(__name__)
     supabase = get_supabase()
-    r = supabase.table("users").select("id, email, username, subscription_status, subscription_tier, created_at").eq("id", user_id).limit(1).execute()
-    if not r.data or len(r.data) == 0:
+    columns = "id, email, username, subscription_status, subscription_tier, subscription_period_end, created_at"
+    row = get_users_row_with_trial_sync(user_id, columns, logger)
+    if not row:
         return {"id": user_id, "email": None, "username": None}
-    row = r.data[0]
     status = (row.get("subscription_status") or "").lower()
     tier = (row.get("subscription_tier") or "").lower()
-
-    # Se está em trial Pro, verifica se deve encerrar (7 dias ou $25 lucro)
-    if status == "trial" and tier == "pro":
-        try:
-            from backend.app.services.trial_service import check_and_end_trial_if_needed
-            tc = supabase.table("trial_claims").select("*").eq("user_id", user_id).limit(1).execute()
-            if tc.data and len(tc.data) > 0:
-                trial = tc.data[0]
-                if check_and_end_trial_if_needed(supabase, trial):
-                    r = supabase.table("users").select("id, email, username, subscription_status, subscription_tier, created_at").eq("id", user_id).limit(1).execute()
-                    if r.data and len(r.data) > 0:
-                        row = r.data[0]
-                        status = (row.get("subscription_status") or "").lower()
-                        tier = (row.get("subscription_tier") or "").lower()
-        except Exception as e:
-            logger.warning("Erro ao verificar trial em /auth/me: %s", e)
 
     out = {
         "id": row["id"],
@@ -94,6 +79,7 @@ def get_me(user_id: str = Depends(get_current_user_id)):
         "username": row.get("username"),
         "subscription_status": row.get("subscription_status"),
         "subscription_tier": row.get("subscription_tier"),
+        "subscription_period_end": row.get("subscription_period_end"),
         "created_at": row.get("created_at"),
     }
     if status == "trial" and tier == "pro":

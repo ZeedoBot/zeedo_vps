@@ -9,6 +9,7 @@ from typing import Optional
 
 from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
+from backend.app.services.users_row import get_users_row_with_trial_sync
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 logger = logging.getLogger(__name__)
@@ -24,24 +25,32 @@ class ProfileUpdate(BaseModel):
 
 @router.get("")
 def get_profile(user_id: str = Depends(get_current_user_id)):
-    """Retorna perfil do usuário (colunas na tabela users)."""
-    supabase = get_supabase()
-    r = supabase.table("users").select("full_name, username, birth_date, country, phone").eq("id", user_id).limit(1).execute()
-    if not r.data or len(r.data) == 0:
+    """Retorna perfil do usuário + campos de assinatura (uma leitura; mesmo saneamento de trial que /auth/me)."""
+    columns = (
+        "full_name, username, birth_date, country, phone, "
+        "subscription_status, subscription_tier, subscription_period_end"
+    )
+    row = get_users_row_with_trial_sync(user_id, columns, logger)
+    if not row:
         return {
             "full_name": None,
             "username": None,
             "birth_date": None,
             "country": None,
             "phone": None,
+            "subscription_status": None,
+            "subscription_tier": None,
+            "subscription_period_end": None,
         }
-    row = r.data[0]
     return {
         "full_name": row.get("full_name"),
         "username": row.get("username"),
         "birth_date": row.get("birth_date"),
         "country": row.get("country"),
         "phone": row.get("phone"),
+        "subscription_status": row.get("subscription_status"),
+        "subscription_tier": row.get("subscription_tier"),
+        "subscription_period_end": row.get("subscription_period_end"),
     }
 
 

@@ -13,6 +13,21 @@ router = APIRouter(prefix="/stripe", tags=["stripe"])
 logger = logging.getLogger(__name__)
 
 
+def _subscription_period_end_iso(sub_obj) -> str | None:
+    """current_period_end do Stripe (unix) → ISO UTC para o Postgres."""
+    from datetime import datetime, timezone
+
+    if sub_obj is None:
+        return None
+    ts = sub_obj.get("current_period_end") if isinstance(sub_obj, dict) else getattr(sub_obj, "current_period_end", None)
+    if ts is None:
+        return None
+    try:
+        return datetime.fromtimestamp(int(ts), tz=timezone.utc).isoformat()
+    except (TypeError, ValueError, OSError):
+        return None
+
+
 def _get_stripe():
     import stripe
     key = get_settings().stripe_secret_key
@@ -113,11 +128,20 @@ async def stripe_webhook(request: Request, response: Response):
         sub_id = session.get("subscription")
         if user_id and plan:
             try:
-                supabase.table("users").update({
+                payload = {
                     "subscription_tier": plan,
                     "subscription_status": "active",
                     "stripe_subscription_id": sub_id or None,
-                }).eq("id", user_id).execute()
+                }
+                if sub_id:
+                    try:
+                        full_sub = stripe.Subscription.retrieve(sub_id)
+                        pe = _subscription_period_end_iso(full_sub)
+                        if pe:
+                            payload["subscription_period_end"] = pe
+                    except Exception as e:
+                        logger.warning(f"Stripe: não foi possível ler current_period_end após checkout: {e}")
+                supabase.table("users").update(payload).eq("id", user_id).execute()
                 logger.info(f"Stripe: usuário {user_id} ativou plano {plan}")
             except Exception as e:
                 logger.error(f"Erro ao atualizar user pós-checkout: {e}")
@@ -131,11 +155,13 @@ async def stripe_webhook(request: Request, response: Response):
         if user_id and plan:
             new_status = "active" if status in ("active", "trialing") else "cancelled" if status in ("canceled", "unpaid", "past_due") else "expired"
             try:
-                supabase.table("users").update({
+                payload = {
                     "subscription_tier": plan,
                     "subscription_status": new_status,
                     "stripe_subscription_id": sub_id,
-                }).eq("id", user_id).execute()
+                    "subscription_period_end": _subscription_period_end_iso(sub),
+                }
+                supabase.table("users").update(payload).eq("id", user_id).execute()
                 logger.info(f"Stripe: subscription {sub_id} -> {new_status}")
             except Exception as e:
                 logger.error(f"Erro ao atualizar subscription: {e}")
@@ -148,6 +174,7 @@ async def stripe_webhook(request: Request, response: Response):
                 supabase.table("users").update({
                     "subscription_status": "expired",
                     "stripe_subscription_id": None,
+                    "subscription_period_end": None,
                 }).eq("id", user_id).execute()
                 logger.info(f"Stripe: assinatura cancelada para user {user_id}")
             except Exception as e:

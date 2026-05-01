@@ -419,7 +419,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     if vol_sma == 0:
         is_vol_ok = True 
     else:
-        is_vol_ok = curr["volume"] > vol_sma * 1.2 
+        is_vol_ok = curr["volume"] > vol_sma * 1.01
     if not is_vol_ok: return None
 
     patterns = check_patterns(df, idx_curr)
