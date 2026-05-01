@@ -450,7 +450,7 @@ export default function DashboardPage() {
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.3)" />
                 <YAxis tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.3)" tickFormatter={(v) => `$${v.toFixed(0)}`} />
                 <Tooltip
-                  formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL Acum."]}
+                  formatter={(v) => [`$${(Number(v) || 0).toFixed(2)}`, "PnL Acum."]}
                   contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
                   labelStyle={{ color: "#f97316" }}
                 />
@@ -488,7 +488,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" vertical={false} />
                       <XAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
                       <YAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
-                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
+                      <Tooltip formatter={(v) => [`$${(Number(v) || 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
                       <Bar dataKey="pnl" radius={[4, 4, 0, 0]} maxBarSize={60}>
                         {bySide.map((entry, i) => (
                           <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosSide)" : "url(#barGradNegSide)"} />
@@ -538,7 +538,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" vertical={false} />
                       <XAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
                       <YAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
-                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
+                      <Tooltip formatter={(v) => [`$${(Number(v) || 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
                       <Bar dataKey="pnl" radius={[4, 4, 0, 0]} maxBarSize={60}>
                         {byTf.map((entry, i) => (
                           <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosTf)" : "url(#barGradNegTf)"} />
@@ -588,7 +588,7 @@ export default function DashboardPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(249,115,22,0.12)" vertical={false} />
                       <XAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "rgba(249,115,22,0.8)" }} stroke="rgba(249,115,22,0.2)" />
                       <YAxis type="number" tickFormatter={(v) => `$${v}`} tick={{ fontSize: 10, fill: "rgba(249,115,22,0.7)" }} stroke="rgba(249,115,22,0.2)" />
-                      <Tooltip formatter={(v: number | undefined) => [`$${(v ?? 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
+                      <Tooltip formatter={(v) => [`$${(Number(v) || 0).toFixed(2)}`, "PnL"]} contentStyle={{ backgroundColor: "rgba(10,10,10,0.95)", border: "1px solid rgba(249,115,22,0.4)", borderRadius: 8 }} />
                       <Bar dataKey="pnl" radius={[4, 4, 0, 0]} maxBarSize={60}>
                         {byToken.map((entry, i) => (
                           <Cell key={i} fill={entry.pnl >= 0 ? "url(#barGradPosToken)" : "url(#barGradNegToken)"} />
