@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 
 const FEEDBACK_TYPES = [
@@ -24,6 +24,8 @@ export function FeedbackModal({ open, onClose }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [typeMenuOpen, setTypeMenuOpen] = useState(false);
+  const typeMenuRef = useRef<HTMLDivElement>(null);
 
   const reset = useCallback(() => {
     setFeedbackType(FEEDBACK_TYPES[0].value);
@@ -32,6 +34,7 @@ export function FeedbackModal({ open, onClose }: Props) {
     setError(null);
     setSuccess(false);
     setSubmitting(false);
+    setTypeMenuOpen(false);
   }, []);
 
   useEffect(() => {
@@ -42,11 +45,28 @@ export function FeedbackModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        if (typeMenuOpen) {
+          setTypeMenuOpen(false);
+        } else {
+          onClose();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, typeMenuOpen]);
+
+  useEffect(() => {
+    if (!typeMenuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (typeMenuRef.current && !typeMenuRef.current.contains(e.target as Node)) {
+        setTypeMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [typeMenuOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -134,26 +154,66 @@ export function FeedbackModal({ open, onClose }: Props) {
             </p>
 
             <div className="mt-5 space-y-4">
-              <div>
-                <label htmlFor="feedback-type" className="mb-1.5 flex items-center gap-2 text-sm font-medium text-zeedo-black dark:text-zeedo-white">
+              <div className="relative" ref={typeMenuRef}>
+                <label id="feedback-type-label" className="mb-1.5 flex items-center gap-2 text-sm font-medium text-zeedo-black dark:text-zeedo-white">
                   <svg className="h-4 w-4 shrink-0 text-zeedo-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                   Tipo
                 </label>
-                <select
+                <button
+                  type="button"
                   id="feedback-type"
-                  value={feedbackType}
-                  onChange={(e) => setFeedbackType(e.target.value)}
-                  className="input-field text-sm"
+                  aria-haspopup="listbox"
+                  aria-expanded={typeMenuOpen}
+                  aria-labelledby="feedback-type-label"
                   disabled={submitting || success}
+                  onClick={() => setTypeMenuOpen((o) => !o)}
+                  className="input-field flex w-full items-center justify-between gap-2 text-left text-sm text-zeedo-black dark:text-zeedo-white disabled:opacity-50"
                 >
-                  {FEEDBACK_TYPES.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  <span className="truncate">
+                    {FEEDBACK_TYPES.find((x) => x.value === feedbackType)?.label ?? feedbackType}
+                  </span>
+                  <svg
+                    className={`h-4 w-4 shrink-0 text-zeedo-orange transition-transform ${typeMenuOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {typeMenuOpen && (
+                  <ul
+                    role="listbox"
+                    aria-labelledby="feedback-type-label"
+                    className="absolute left-0 right-0 top-full z-[70] mt-1 max-h-52 overflow-auto rounded-lg border border-zeedo-orange/40 bg-zeedo-white py-1 shadow-lg dark:border-zeedo-orange/50 dark:bg-zeedo-black"
+                  >
+                    {FEEDBACK_TYPES.map((opt) => {
+                      const selected = feedbackType === opt.value;
+                      return (
+                        <li key={opt.value} role="option" aria-selected={selected}>
+                          <button
+                            type="button"
+                            className={`w-full px-3 py-2.5 text-left text-sm transition-colors ${
+                              selected
+                                ? "bg-zeedo-orange/20 font-medium text-zeedo-orange"
+                                : "text-zeedo-black hover:bg-zeedo-orange/10 dark:text-zeedo-white dark:hover:bg-zeedo-orange/15"
+                            }`}
+                            onClick={() => {
+                              setFeedbackType(opt.value);
+                              setTypeMenuOpen(false);
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
 
               <div>
