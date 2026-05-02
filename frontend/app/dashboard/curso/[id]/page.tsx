@@ -14,6 +14,19 @@ interface Lesson {
   completed?: boolean;
 }
 
+function getMuxEmbedUrl(videoUrlOrId: string): string {
+  const raw = (videoUrlOrId || "").trim();
+  if (!raw) return "";
+
+  // Allow passing just the Mux Playback ID in `video_url`
+  // (ex: "abcDEF1234" -> https://player.mux.com/abcDEF1234)
+  const looksLikeId = /^[a-zA-Z0-9_-]{8,}$/.test(raw) && !raw.includes("/") && !raw.includes(".");
+  if (looksLikeId) return `https://player.mux.com/${raw}`;
+
+  // Already a full URL (Mux player or legacy embeds)
+  return raw;
+}
+
 export default function LessonPage() {
   const params = useParams();
   const router = useRouter();
@@ -148,12 +161,12 @@ export default function LessonPage() {
       <div className="card p-0 overflow-hidden">
         <div className="relative aspect-video bg-zeedo-black">
           {lesson.video_url ? (
-            // Player do Vimeo (quando você adicionar o link)
+            // Player do Mux (aceita Playback ID ou URL completa)
             <iframe
-              src={lesson.video_url}
+              src={getMuxEmbedUrl(lesson.video_url)}
               className="absolute inset-0 w-full h-full"
               frameBorder="0"
-              allow="autoplay; fullscreen; picture-in-picture"
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
               allowFullScreen
             />
           ) : (
