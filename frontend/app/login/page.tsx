@@ -126,10 +126,10 @@ function LoginContent() {
       <div className="w-full max-w-md rounded-xl border border-zeedo-orange/20 bg-zeedo-black p-6 sm:p-8">
         {!showForgotPassword ? (
           <>
-            <h1 className="text-xl font-semibold text-white">Entrar</h1>
-            <p className="mt-1 text-sm text-white/60">
-              Google em um clique ou e-mail (ou usuário) e senha.
-            </p>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-white">Zeedo</h1>
+              <p className="mt-1.5 text-sm text-white/60">Entre na sua conta</p>
+            </div>
 
             <button
               type="button"
