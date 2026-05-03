@@ -61,11 +61,13 @@ function parseStoredStrategy(v: unknown): StrategyKey | null {
 
 type StrategyPreset = {
   label: string;
-  /** Linha curta (ex.: Stop mais longo) */
+  /** Linha curta (ex.: Stop longo) */
   tagline: string;
+  /** Segunda linha opcional (ex.: Mediano) */
+  taglineSecondary?: string;
   assertividadePct: string;
-  alvo2RR: string;
-  alvo3RR: string;
+  /** Sufixo após "Risco : Retorno " (ex.: "~1:1.2") */
+  riscoRetorno: string;
   stopMultiplier: string;
   entry1Multiplier: string;
   target1Level: string;
@@ -79,10 +81,9 @@ type StrategyPreset = {
 const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> = {
   CONSERVADOR: {
     label: "Conservador",
-    tagline: "Stop mais longo",
-    assertividadePct: "~85%",
-    alvo2RR: "0.5",
-    alvo3RR: "1.25",
+    tagline: "Stop Longo",
+    assertividadePct: "~75%",
+    riscoRetorno: "~1:1.2",
     stopMultiplier: "3.1",
     entry1Multiplier: "0.618",
     target1Level: "0.5",
@@ -94,10 +95,10 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
   },
   MEDIANO: {
     label: "Mediano",
-    tagline: "Stop em ponto médio",
+    tagline: "Entrada afastada",
+    taglineSecondary: "Menos trades ativados",
     assertividadePct: "~60%",
-    alvo2RR: "1.0",
-    alvo3RR: "2.25",
+    riscoRetorno: "~1:1.7",
     stopMultiplier: "3.1",
     entry1Multiplier: "1.8",
     target1Level: "-0.618",
@@ -111,8 +112,7 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
     label: "Agressivo",
     tagline: "Stop curto",
     assertividadePct: "~45%",
-    alvo2RR: "1.4",
-    alvo3RR: "4.5",
+    riscoRetorno: "~1:3",
     stopMultiplier: "1.62",
     entry1Multiplier: "0.618",
     target1Level: "0.5",
@@ -124,10 +124,9 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
   },
   DEGEN: {
     label: "Degen",
-    tagline: "Stop muito curto",
-    assertividadePct: "~30%",
-    alvo2RR: "2.5",
-    alvo3RR: "7.9",
+    tagline: "Stop muito curto!",
+    assertividadePct: "~40%",
+    riscoRetorno: "~1:5",
     stopMultiplier: "1.39",
     entry1Multiplier: "0.618",
     target1Level: "0.5",
@@ -828,17 +827,16 @@ export default function BotPage() {
                   <p className="text-xs text-zeedo-black/80 dark:text-zeedo-white/80">
                     {STRATEGY_PRESETS[selectedStrategy].tagline}
                   </p>
+                  {STRATEGY_PRESETS[selectedStrategy].taglineSecondary ? (
+                    <p className="text-xs text-zeedo-black/80 dark:text-zeedo-white/80">
+                      {STRATEGY_PRESETS[selectedStrategy].taglineSecondary}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
                     Assertividade Média: {STRATEGY_PRESETS[selectedStrategy].assertividadePct}
                   </p>
                   <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70">
-                    Risco Retorno Médio:
-                  </p>
-                  <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70 pl-2">
-                    Alvo 2 = {STRATEGY_PRESETS[selectedStrategy].alvo2RR}
-                  </p>
-                  <p className="text-xs text-zeedo-black/70 dark:text-zeedo-white/70 pl-2">
-                    Alvo 3 = {STRATEGY_PRESETS[selectedStrategy].alvo3RR}
+                    Risco : Retorno {STRATEGY_PRESETS[selectedStrategy].riscoRetorno}
                   </p>
                 </div>
               ) : (

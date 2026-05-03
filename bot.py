@@ -76,6 +76,16 @@ LOOKBACK_DIVERGENCE = 35
 MIN_PIVOT_DIST = 4           
 LOCAL_LOW_WINDOW = 4    #MENOR CORPO DOS ÚLTIMOS 4
 
+# Range mínimo (high-low)/low por timeframe em check_patterns; % como fração (ex.: 0,15% → 0.0015)
+MIN_CANDLE_RANGE_BY_TF = {
+    "5m": 0.0015,
+    "15m": 0.0035,
+    "30m": 0.005,
+    "1h": 0.007,
+    "4h": 0.01,
+    "1d": 0.01,
+}
+
 # ALVOS DE FIBO (customizáveis por plano Pro/Satoshi)
 FIB_LEVELS = [
     (0.618, 0.50),  # Alvo 1 (0.618) - 50%
@@ -250,13 +260,19 @@ def calculate_avg_wicks(df, window=10):
     avg_upper = upper_wicks.rolling(window).mean()
     return avg_lower, avg_upper
 
-def check_patterns(df, idx):
+def min_candle_range_for_tf(timeframe: str) -> float:
+    """(high-low)/low mínimo; TF desconhecido mantém o antigo 0,7%."""
+    if not timeframe:
+        return 0.007
+    return MIN_CANDLE_RANGE_BY_TF.get(timeframe, 0.007)
+
+def check_patterns(df, idx, timeframe: str):
     curr = df.iloc[idx]
     prev = df.iloc[idx-1]
     open_c, close_c = curr["open"], curr["close"]
     high_c, low_c = curr["high"], curr["low"]
     candle_range_pct = (high_c - low_c) / low_c
-    range_ok = candle_range_pct >= 0.007 #Candle > 0,7%
+    range_ok = candle_range_pct >= min_candle_range_for_tf(timeframe)
     body = abs(close_c - open_c)
     upper_wick = high_c - max(open_c, close_c)
     lower_wick = min(open_c, close_c) - low_c
@@ -422,7 +438,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
         is_vol_ok = curr["volume"] > vol_sma * 1.01
     if not is_vol_ok: return None
 
-    patterns = check_patterns(df, idx_curr)
+    patterns = check_patterns(df, idx_curr, timeframe)
     if not patterns: return None
 
     df_hl = df_hyperliquid
