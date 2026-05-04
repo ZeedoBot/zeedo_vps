@@ -84,10 +84,10 @@ def get_entry_tracker(symbol: Optional[str] = None) -> Dict[str, Any]:
         symbols = list(entry_tracker.keys())
         expected_fields = [
             "side", "tf", "placed_at", "signal_ts", "planned_stop",
-            "entry2_px", "entry2_qty", "entry2_placed", "tech_base", "setup_high",
-            "setup_low", "entry_px", "qty", "trade_id", "pnl_realized", "last_size",
-            "qty_entry_1", "qty_entry_2", "qty_entry_3", "third_entry_placed", "third_entry_px",
+            "tech_base", "setup_high", "setup_low", "entry_px", "qty",
+            "trade_id", "pnl_realized", "last_size", "qty_entry_1",
             "reentry_candle_ts", "setup_break_candle_ts", "breakeven_moved", "origin",
+            "strategy_preset",
         ]
         validation = {}
         for sym in symbols:
@@ -296,10 +296,10 @@ def get_schema_info() -> Dict[str, Any]:
                 "purpose": "Estado atual de cada trade (entry_tracker)",
                 "expected_fields_in_data": [
                     "side", "tf", "placed_at", "signal_ts", "planned_stop",
-                    "entry2_px", "entry2_qty", "entry2_placed", "tech_base", "setup_high",
-                    "setup_low", "entry_px", "qty", "trade_id", "pnl_realized", "last_size",
-                    "qty_entry_1", "qty_entry_2", "qty_entry_3", "third_entry_placed", "third_entry_px",
+                    "tech_base", "setup_high", "setup_low", "entry_px", "qty",
+                    "trade_id", "pnl_realized", "last_size", "qty_entry_1",
                     "reentry_candle_ts", "setup_break_candle_ts", "breakeven_moved", "origin",
+                    "strategy_preset",
                 ],
             },
             TABLE_HISTORY: {

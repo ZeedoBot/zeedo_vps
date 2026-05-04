@@ -976,7 +976,7 @@ def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
         target1_level = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
         return {
             "symbol": sym, "tf": tf, "side": sig["side"],
-            "entry_px": entry_px, "entry2_px": entry_px,
+            "entry_px": entry_px,
             "stop_real": stop_real,
             "qty": final_qty, "reason": reason, "signal_ts": sig["signal_ts"],
             "tech_base": sig.get("tech_base", 0), "setup_high": sig.get("setup_high", 0),
@@ -986,12 +986,11 @@ def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
         return None
 
 def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_orders, history_tracker, analyzed_candles, user_state_cache, all_mids_cache, storage):
-    # Expira blocked_trades cujo preço atingiu TP1 ou Stop
-    target1_level = FIB_LEVELS[0][0] if FIB_LEVELS else 0.618
+    # Expira blocked_trades: stop ou fib 0.5 (fixo), igual ao cancel de ordens pendentes
     if hasattr(storage, "expire_blocked_trades") and all_mids_cache:
-        n = storage.expire_blocked_trades(all_mids_cache, target1_level)
+        n = storage.expire_blocked_trades(all_mids_cache)
         if n > 0:
-            logging.info(f"🔄 {n} trade(s) bloqueado(s) expirado(s) (TP1/Stop atingido)")
+            logging.info(f"🔄 {n} trade(s) bloqueado(s) expirado(s) (fib 0.5 ou stop)")
 
     user_state = user_state_cache
     raw_positions = user_state.get("assetPositions", [])
@@ -1164,7 +1163,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                     )
                     btd = {
                         "symbol": sym, "tf": tf, "side": sig["side"],
-                        "entry_px": entry_px, "entry2_px": entry_px, "stop_real": stop_real,
+                        "entry_px": entry_px, "stop_real": stop_real,
                         "qty": final_qty, "reason": "limite_trades", "signal_ts": sig_ts,
                         "tech_base": sig.get("tech_base", 0), "setup_high": sig.get("setup_high", 0),
                         "setup_low": sig.get("setup_low", 0),
@@ -1207,7 +1206,6 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                         'entry_px': entry_px,
                         'qty': final_qty,
                         'qty_entry_1': qty_entry_1,
-                        'qty_entry_2': qty_entry_1,
                         'trade_id': trade_id,
                         'pnl_realized': 0.0,
                         'last_size': 0.0,
@@ -1241,24 +1239,16 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
         order_symbols = {o["coin"] for o in all_open_orders if not o["reduceOnly"]}
         now = time.time()
 
-        # Se o preço tocar no alvo 1, cancela ordens ativas não-reduce (ex.: adds manuais).
-        # Com fib do 1º alvo = 0, o nível coincide com setup_high/setup_low e disparava
-        # cancelamento indevido — nesse caso não usamos esta heurística.
-        def _cancel_level_for_preset(mem: dict) -> float:
-            """
-            Nível (fib) usado somente para a heurística de cancelar ordens pendentes ao tocar o 1º alvo.
-            Mantém comportamento uniforme: sempre 0.5, independente do preset e de ajustes em FIB_LEVELS.
-            """
-            return 0.5
+        # Ordens não-reduce pendentes (ex.: entrada limit ainda aberta): cancela ao fib 0.5
+        # (sempre 0.5 vs setup_high/setup_low + tech_base; igual para Conservador, Mediano, CUSTOM, etc.).
+        PENDING_ORDER_CANCEL_FIB = 0.5
 
         if True:
             for sym in list(entry_tracker.keys()):
                 mem = entry_tracker.get(sym, {})
                 if mem.get("alvo1_cancel_done"):
                     continue  # Já cancelou; evita repetir a cada ciclo
-                target1_fib_cancel = _cancel_level_for_preset(mem)
-                if not target1_fib_cancel or target1_fib_cancel <= 0:
-                    continue
+                target1_fib_cancel = PENDING_ORDER_CANCEL_FIB
                 tech_base = mem.get("tech_base")
                 setup_high = mem.get("setup_high")
                 setup_low = mem.get("setup_low")
@@ -1283,7 +1273,9 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     if o["coin"] == sym and not o.get("reduceOnly"):
                         try:
                             exchange.cancel(sym, o["oid"])
-                            logging.info(f"⏹️ Ordem {sym} cancelada: preço atingiu alvo 1 ({target1_fib_cancel})")
+                            logging.info(
+                                f"⏹️ Ordem {sym} cancelada: preço atingiu fib {target1_fib_cancel} (pendências)"
+                            )
                         except Exception as e:
                             logging.error(f"Erro ao cancelar ordem {sym}: {e}")
                 
@@ -1523,7 +1515,15 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     # Tem tf ou estrutura de trade do bot (entry_px, planned_stop) = não é manual
                     if stored.get("tf") or stored.get("entry_px") or stored.get("planned_stop"):
                         entry_tracker[sym] = dict(stored)
-                        entry_tracker[sym]["last_size"] = size
+                        # Se last_size no tracker ainda é 0 (ex.: acionamento via site), não copiar
+                        # o tamanho da posição aqui — isso impedia o bloco "ENTRADA CONFIRMADA" de
+                        # disparar no próximo ciclo. Só sincroniza last_size com a exchange quando
+                        # o tracker já tinha progressão de tamanho gravada.
+                        stored_ls = float(stored.get("last_size", 0) or 0)
+                        if stored_ls < 0.001:
+                            entry_tracker[sym]["last_size"] = 0.0
+                        else:
+                            entry_tracker[sym]["last_size"] = size
                         entry_tracker[sym]["entry"] = entry
                         entry_tracker[sym]["entry_px"] = entry
                         storage.save_entry_tracker(entry_tracker)

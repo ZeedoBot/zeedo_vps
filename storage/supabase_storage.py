@@ -527,7 +527,6 @@ class SupabaseStorage(StorageBase):
                 "tf": data["tf"],
                 "side": data["side"],
                 "entry_px": float(data["entry_px"]),
-                "entry2_px": float(data["entry2_px"]),
                 "stop_real": float(data["stop_real"]),
                 "qty": float(data["qty"]),
                 "reason": data["reason"],
@@ -553,15 +552,17 @@ class SupabaseStorage(StorageBase):
         except Exception as e:
             logging.error(f"Supabase save_blocked_trade: {e}", exc_info=True)
 
-    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 0.618) -> int:
-        """Remove blocked_trades expirados (preço atingiu TP1 ou Stop). Retorna quantidade removida."""
+    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 0.5) -> int:
+        """Remove blocked_trades expirados (preço atingiu fib 0.5 sintético ou Stop). `target1_level` legado, ignorado."""
         if not self._client or not all_mids:
             return 0
         try:
             uid = user_id or self._user_id
             if not uid:
                 return 0
-            r = self._client.table(TABLE_BLOCKED).select("id, symbol, side, entry_px, stop_real, tech_base, setup_high, setup_low, target1_level, created_at").eq("user_id", uid).execute()
+            r = self._client.table(TABLE_BLOCKED).select(
+                "id, symbol, side, entry_px, stop_real, tech_base, setup_high, setup_low, created_at"
+            ).eq("user_id", uid).execute()
             if not r.data:
                 return 0
             import time as _time
@@ -587,7 +588,7 @@ class SupabaseStorage(StorageBase):
                 tech = float(row.get("tech_base", 0) or 0)
                 setup_high = float(row.get("setup_high", 0) or 0)
                 setup_low = float(row.get("setup_low", 0) or 0)
-                t1 = float(row.get("target1_level", 0.618) or 0.618)
+                t1 = 0.5  # igual ao cancel de ordens pendentes no bot; não usa target1_level do preset
                 side = (row.get("side") or "long").lower()
                 expired = False
                 # Stop: sempre verifica
@@ -595,7 +596,6 @@ class SupabaseStorage(StorageBase):
                     if px <= stop:
                         expired = True
                     else:
-                        # TP1 = setup_high + (tech_base × 0.618) — alvo 1 para long
                         tp1 = setup_high + (tech * t1)
                         if px >= tp1:
                             expired = True
@@ -603,7 +603,6 @@ class SupabaseStorage(StorageBase):
                     if px >= stop:
                         expired = True
                     else:
-                        # TP1 = setup_low - (tech_base × 0.618) — alvo 1 para short
                         tp1 = setup_low - (tech * t1)
                         if px <= tp1:
                             expired = True

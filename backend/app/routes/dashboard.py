@@ -705,7 +705,6 @@ def execute_blocked_trade(
         "entry_px": entry_px,
         "qty": qty,
         "qty_entry_1": qty,
-        "qty_entry_2": qty,
         "trade_id": trade_id,
         "pnl_realized": 0.0,
         "last_size": 0.0,

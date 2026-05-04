@@ -41,7 +41,6 @@ def _get_plan_limits(supabase, user_id: str) -> dict:
         "allowed_symbols": allowed if allowed else ALL_SYMBOLS,
         "allowed_timeframes": row.get("allowed_timeframes") or ["15m"],
         "allowed_trade_modes": row.get("allowed_trade_modes") or ["BOTH"],
-        "allowed_entry2": bool(row.get("allowed_entry2", False)),
         "can_customize_targets": bool(row.get("can_customize_targets", False)),
         "can_customize_stop": bool(row.get("can_customize_stop", False)),
     }
