@@ -576,19 +576,7 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         logging.error(f"Erro Entry LIMIT: {e}")
         return None, None
 
-def place_fib_tps(
-    exchange,
-    symbol,
-    side,
-    entry_px,
-    stop_px,
-    total_qty,
-    sz_dec,
-    custom_base=None,
-    anchor_px=None,
-    deep_fib_reached=False,
-    fib_levels_override=None,
-):
+def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, deep_fib_reached=False):
     """Coloca TPs customizados. Se deep_fib_reached (Conservador após tocar -1.62), usa DEEP_FIB_LEVELS_AFTER."""
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
@@ -597,10 +585,7 @@ def place_fib_tps(
     start_px = anchor_px if anchor_px else entry_px
     is_buy_tp = False if side == "long" else True
 
-    if deep_fib_reached:
-        fib_levels = DEEP_FIB_LEVELS_AFTER
-    else:
-        fib_levels = fib_levels_override if fib_levels_override else FIB_LEVELS
+    fib_levels = DEEP_FIB_LEVELS_AFTER if deep_fib_reached else FIB_LEVELS
 
     logging.info(
         f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}"
@@ -1208,23 +1193,6 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 if res:
                     cfg_snap = storage.get_config() if hasattr(storage, "get_config") else {}
                     preset_snap = (cfg_snap.get("strategy_preset") or STRATEGY_PRESET or "").strip()
-                    # Snapshot dos alvos no momento da ordem (permite mudar estratégia sem restart do bot)
-                    fib_levels_snap = None
-                    try:
-                        t1_level = cfg_snap.get("target1_level", FIB_LEVELS[0][0] if FIB_LEVELS else 0.618)
-                        t1_pct = float(cfg_snap.get("target1_percent", 50) or 50) / 100.0
-                        levels = [(float(t1_level), float(t1_pct))]
-                        t2_level = cfg_snap.get("target2_level")
-                        t2_pct = float(cfg_snap.get("target2_percent", 0) or 0) / 100.0
-                        if t2_level is not None and float(t2_level) > 0 and t2_pct > 0:
-                            levels.append((float(t2_level), float(t2_pct)))
-                        t3_level = cfg_snap.get("target3_level")
-                        t3_pct = float(cfg_snap.get("target3_percent", 0) or 0) / 100.0
-                        if t3_level is not None and float(t3_level) > 0 and t3_pct > 0:
-                            levels.append((float(t3_level), float(t3_pct)))
-                        fib_levels_snap = [[a, b] for (a, b) in levels]
-                    except Exception:
-                        fib_levels_snap = None
                     qty_entry_1 = final_qty
                     tracker_data = {
                         'side': sig["side"],
@@ -1243,8 +1211,6 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                         'last_size': 0.0,
                         'strategy_preset': preset_snap,
                     }
-                    if fib_levels_snap:
-                        tracker_data["fib_levels"] = fib_levels_snap
                     entry_tracker[sym] = tracker_data
                     storage.save_entry_tracker(entry_tracker)
                     
@@ -1334,20 +1300,6 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 storage.save_entry_tracker(entry_tracker)
 
         all_mids = all_mids_cache
-
-        def _fib_levels_for_trade(mem: dict):
-            raw = mem.get("fib_levels")
-            if isinstance(raw, list) and raw:
-                out = []
-                for item in raw:
-                    try:
-                        a, b = item
-                        out.append((float(a), float(b)))
-                    except Exception:
-                        continue
-                if out:
-                    return out
-            return FIB_LEVELS
 
         for pos in positions:
             sym = pos["coin"]
@@ -1455,7 +1407,6 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                         exchange, sym, side, entry, None, abs(size), sz_dec,
                         custom_base=base_to_use, anchor_px=anchor,
                         deep_fib_reached=use_deep_on_first,
-                        fib_levels_override=_fib_levels_for_trade(mem_data),
                     )
                     if use_deep_on_first:
                         entry_tracker[sym]["deep_fib_rebalance_done"] = True
@@ -1477,7 +1428,7 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 target1_fib = (
                     DEEP_FIB_LEVELS_AFTER[0][0]
                     if mem_data.get("deep_fib_rebalance_done")
-                    else (_fib_levels_for_trade(mem_data)[0][0] if _fib_levels_for_trade(mem_data) else (FIB_LEVELS[0][0] if FIB_LEVELS else 0.618))
+                    else (FIB_LEVELS[0][0] if FIB_LEVELS else 0.618)
                 )
                 
                 # Usa o mesmo anchor do TP1 (setup_high/setup_low) para garantir que breakeven e TP1 sejam no mesmo preço
