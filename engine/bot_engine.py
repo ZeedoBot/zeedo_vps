@@ -43,8 +43,6 @@ class BotEngine:
             "LOCAL_LOW_WINDOW": self.config.local_low_window,
             "FIB_LEVELS": self.config.fib_levels,
             "FIB_STOP_LEVEL": self.config.fib_stop_level,
-            "FIB_DEEP_TRIGGER_LEVEL": self.config.fib_deep_trigger_level,
-            "DEEP_FIB_LEVELS_AFTER": self.config.deep_fib_levels_after,
             "STRATEGY_PRESET": self.config.strategy_preset,
             "ENTRY1_MULTIPLIER": self.config.entry1_multiplier,
             "LSR_TIMEFRAME": self.config.lsr_timeframe,

@@ -92,9 +92,6 @@ FIB_LEVELS = [
     (1.0, 0.50),    # Alvo 2 (1.0) - 50%
 ]
 FIB_STOP_LEVEL = 1.8  # Padrão: -1.8 fib (extensão stop)
-# Conservador: ao preço tocar extensão -1.62, TPs passam a estes níveis (fixos no código)
-FIB_DEEP_TRIGGER_LEVEL = 1.62
-DEEP_FIB_LEVELS_AFTER = [(0.618, 0.05), (1.5, 0.95)]
 STRATEGY_PRESET = ""  # ex.: CONSERVADOR — preenchido em load_config
 
 # Entrada 1: default (predefinida) em -0.618 para LONG e +0.618 para SHORT.
@@ -178,24 +175,6 @@ def load_config(storage):
             f"📊 Alvos: {FIB_LEVELS}, Stop: -{FIB_STOP_LEVEL}, Entrada1: -{ENTRY1_MULTIPLIER}"
             + (f" | preset={STRATEGY_PRESET!r}" if STRATEGY_PRESET else "")
         )
-
-
-def _tracker_allows_deep_fib(mem_data: dict) -> bool:
-    """Conservador: permite rebalance de TPs ao tocar extensão -1.62."""
-    p = (mem_data.get("strategy_preset") or STRATEGY_PRESET or "").strip().upper()
-    return p == "CONSERVADOR"
-
-
-def _price_hit_deep_fib_extension(side: str, curr_price: float, setup_high, setup_low, tech_base: float) -> bool:
-    if tech_base is None or tech_base <= 0 or setup_high is None or setup_low is None:
-        return False
-    lv = FIB_DEEP_TRIGGER_LEVEL
-    if side == "long":
-        deep_px = float(setup_high) - tech_base * lv
-        return curr_price <= deep_px
-    deep_px = float(setup_low) + tech_base * lv
-    return curr_price >= deep_px
-
 
 def get_precision(meta, coin):
     if not meta:
@@ -576,20 +555,18 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         logging.error(f"Erro Entry LIMIT: {e}")
         return None, None
 
-def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, deep_fib_reached=False):
-    """Coloca TPs customizados. Se deep_fib_reached (Conservador após tocar -1.62), usa DEEP_FIB_LEVELS_AFTER."""
+def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None):
+    """Coloca TPs customizados a partir de `FIB_LEVELS` (config do usuário)."""
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
 
     start_px = anchor_px if anchor_px else entry_px
     is_buy_tp = False if side == "long" else True
-
-    fib_levels = DEEP_FIB_LEVELS_AFTER if deep_fib_reached else FIB_LEVELS
+    fib_levels = FIB_LEVELS
 
     logging.info(
         f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}"
-        + (f" | Ajuste pós-fib-{FIB_DEEP_TRIGGER_LEVEL}: {fib_levels}" if deep_fib_reached else "")
     )
 
     for idx, (fib_mult, pct) in enumerate(fib_levels, start=1):
@@ -1374,43 +1351,16 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     base_to_use = abs(entry * FALLBACK_STOP_PCT)
                     anchor = entry
 
-                allow_deep = _tracker_allows_deep_fib(mem_data)
-                deep_hit = _price_hit_deep_fib_extension(side, curr_price, setup_high, setup_low, tech_base or 0)
-                apply_deep = (
-                    allow_deep
-                    and deep_hit
-                    and not mem_data.get("deep_fib_rebalance_done")
-                )
-
-                if apply_deep:
-                    logging.info(f"📐 Fib -{FIB_DEEP_TRIGGER_LEVEL} tocado em {sym}: recolocando TPs (Conservador)")
-                    for o in all_open_orders:
-                        if o["coin"] == sym and o.get("reduceOnly", False) and not is_stop_order(o):
-                            try:
-                                exchange.cancel(sym, o["oid"])
-                            except Exception as e:
-                                logging.error(f"Erro ao cancelar TP {sym}: {e}")
-                    place_fib_tps(
-                        exchange, sym, side, entry, None, abs(size), sz_dec,
-                        custom_base=base_to_use, anchor_px=anchor, deep_fib_reached=True,
-                    )
-                    entry_tracker[sym]["deep_fib_rebalance_done"] = True
-                    storage.save_entry_tracker(entry_tracker)
-                elif not has_tp:
+                if not has_tp:
                     logging.info(f"💰 Posição sem TP em {sym}. Colocando Fibs...")
                     if tech_base and setup_high and setup_low:
                         logging.info(f"📐 Fibs técnicos | Base={base_to_use:.4f} | Anchor={anchor}")
                     else:
                         logging.warning(f"⚠️ Fallback Fib para {sym}")
-                    use_deep_on_first = allow_deep and deep_hit
                     place_fib_tps(
                         exchange, sym, side, entry, None, abs(size), sz_dec,
                         custom_base=base_to_use, anchor_px=anchor,
-                        deep_fib_reached=use_deep_on_first,
                     )
-                    if use_deep_on_first:
-                        entry_tracker[sym]["deep_fib_rebalance_done"] = True
-                        storage.save_entry_tracker(entry_tracker)
 
             pnl_pct = (curr_price - entry) / entry if side == "long" else (entry - curr_price) / entry
             sl_order = next((o for o in my_orders if is_stop_order(o)), None)
@@ -1424,12 +1374,8 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 # Só move para BE se o trade estiver em lucro agora (evita BE enquanto negativo por estado "sujo")
                 is_in_profit_now = pnl_pct > 0.0002
                 
-                # Primeiro alvo ativo (após rebalance -1.8 usa o 1º alvo do perfil profundo)
-                target1_fib = (
-                    DEEP_FIB_LEVELS_AFTER[0][0]
-                    if mem_data.get("deep_fib_rebalance_done")
-                    else (FIB_LEVELS[0][0] if FIB_LEVELS else 0.618)
-                )
+                # Primeiro alvo ativo (alvo 1 configurado)
+                target1_fib = (FIB_LEVELS[0][0] if FIB_LEVELS else 0.618)
                 
                 # Usa o mesmo anchor do TP1 (setup_high/setup_low) para garantir que breakeven e TP1 sejam no mesmo preço
                 if side == "long":

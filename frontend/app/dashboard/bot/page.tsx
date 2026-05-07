@@ -90,7 +90,7 @@ const STRATEGY_PRESETS: Record<Exclude<StrategyKey, "CUSTOM">, StrategyPreset> =
     target1Percent: 5,
     target2Level: "1.6",
     target2Percent: 60,
-    target3Level: "4.0",
+    target3Level: "3.3",
     target3Percent: 35,
   },
   MEDIANO: {
