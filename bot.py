@@ -724,18 +724,16 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             tf = "-"
             trade_id = "-"
             
+            # HL: uma posição por símbolo — enquanto existir no entry_tracker, fills pertencem a esse trade
             if coin and coin in entry_tracker:
-                fill_ts = base_fill.get('time') or base_fill.get('t') or base_fill.get('timestamp') or 0
-                tracker_ts = int(entry_tracker[coin].get('placed_at', 0) * 1000)
-                try:
-                    if abs(int(fill_ts) - tracker_ts) < 86400000:
-                        tr_side = _normalize_trade_side(entry_tracker[coin].get("side"))
-                        # Tracker antigo (ex.: LONG fechado) não pode "puxar" fee/PnL de novo trade no lado oposto
-                        if not (fill_side_inf and tr_side and fill_side_inf != tr_side):
-                            tf = entry_tracker[coin].get('tf', '-')
-                            trade_id = entry_tracker[coin].get('trade_id', '-')
-                except Exception:
-                    pass
+                tr_side = _normalize_trade_side(entry_tracker[coin].get("side"))
+                if not (fill_side_inf and tr_side and fill_side_inf != tr_side):
+                    tracker_entry = entry_tracker[coin]
+                    tracker_tf = tracker_entry.get("tf")
+                    tf = tracker_tf if tracker_tf else "-"
+                    tracker_tid = tracker_entry.get("trade_id")
+                    if tracker_tid:
+                        trade_id = tracker_tid
 
             if (tf == "-" or trade_id == "-") and coin:
                 fill_ts = int(base_fill.get('time') or base_fill.get('t') or base_fill.get('timestamp') or 0)
