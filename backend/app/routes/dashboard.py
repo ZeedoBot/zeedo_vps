@@ -40,6 +40,16 @@ class CancelPendingPositionBody(BaseModel):
     symbol: str = Field(..., min_length=2, max_length=10)
 
 
+ALLOWED_TRADE_TFS = frozenset({"5m", "15m", "30m", "1h", "4h", "12h", "1d"})
+
+
+class PatchTradeGroupBody(BaseModel):
+    """Identificador do grupo no histórico (trade_id ou oid quando trade_id era '-')."""
+    group_id: str = Field(..., min_length=1, max_length=128)
+    trade_id: str = Field(..., min_length=1, max_length=128)
+    tf: str = Field(..., min_length=2, max_length=8)
+
+
 def _get_wallet_address(user_id: str) -> str | None:
     supabase = get_supabase()
     r = supabase.table("trading_accounts").select("wallet_address").eq("user_id", user_id).eq("is_active", True).limit(1).execute()
@@ -201,6 +211,68 @@ def _fetch_logs(limit: int = 80) -> list[dict]:
             return []
         logger.warning("Falha ao buscar bot_logs: %s", e)
         return []
+
+
+@router.patch("/trade-group")
+def patch_trade_group(
+    body: PatchTradeGroupBody,
+    user_id: str = Depends(get_current_user_id),
+) -> dict[str, Any]:
+    """
+    Atualiza trade_id e tf de todas as linhas do grupo (parciais com o mesmo id agrupado).
+    Permite corrigir MANUAL → id do bot e unir parciais sob o mesmo trade_id.
+    """
+    new_tf = body.tf.strip()
+    if new_tf not in ALLOWED_TRADE_TFS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"TF inválido. Use um de: {', '.join(sorted(ALLOWED_TRADE_TFS))}",
+        )
+    group_id = body.group_id.strip()
+    new_trade_id = body.trade_id.strip()
+    if not group_id or not new_trade_id:
+        raise HTTPException(status_code=400, detail="group_id e trade_id são obrigatórios.")
+
+    supabase = get_supabase()
+    # trade_id do grupo OU oid (quando o histórico agrupou por oid)
+    q = (
+        supabase.table("trades_database")
+        .update({"trade_id": new_trade_id, "tf": new_tf})
+        .eq("user_id", user_id)
+        .or_(f"trade_id.eq.{group_id},oid.eq.{group_id}")
+    )
+    try:
+        r = q.execute()
+    except Exception as e:
+        logger.error("patch_trade_group: %s", e)
+        raise HTTPException(status_code=500, detail="Não foi possível atualizar o histórico.") from e
+
+    updated = len(r.data or [])
+    if updated == 0:
+        raise HTTPException(status_code=404, detail="Nenhum fill encontrado para este grupo.")
+
+    # Se houver posição ativa no tracker com o mesmo trade_id antigo, alinha tf/id
+    try:
+        tr = supabase.table("bot_tracker").select("symbol, data").eq("user_id", user_id).execute()
+        for row in tr.data or []:
+            data = row.get("data") or {}
+            if not isinstance(data, dict):
+                continue
+            cur_tid = str(data.get("trade_id") or "")
+            if cur_tid != group_id:
+                continue
+            sym = row.get("symbol")
+            if not sym:
+                continue
+            data = {**data, "trade_id": new_trade_id, "tf": new_tf}
+            supabase.table("bot_tracker").upsert(
+                {"user_id": user_id, "symbol": sym, "data": data},
+                on_conflict="user_id,symbol",
+            ).execute()
+    except Exception as e:
+        logger.warning("patch_trade_group tracker sync: %s", e)
+
+    return {"updated": updated, "trade_id": new_trade_id, "tf": new_tf}
 
 
 @router.get("/overview")

@@ -400,6 +400,24 @@ class SupabaseStorage(StorageBase):
                 # Se o registro já existir, ele será mantido/atualizado sem criar duplicata.
                 self._client.table(TABLE_TRADES).upsert(new_trades, on_conflict="user_id,oid").execute()
                 logging.info(f"💾 {len(new_trades)} trade(s) enviados para o Supabase (idempotente)")
+                if user_id:
+                    cache = self._trades_cache.setdefault(user_id, [])
+                    idx_by_oid = {str(t.get("oid")): i for i, t in enumerate(cache) if t.get("oid")}
+                    for trade in data:
+                        oid = str(trade.get("oid") or "")
+                        if not oid:
+                            continue
+                        if oid in idx_by_oid:
+                            cache[idx_by_oid[oid]] = trade
+                        else:
+                            idx_by_oid[oid] = len(cache)
+                            cache.append(trade)
+                    for rec in new_trades:
+                        ca = rec.get("closed_at")
+                        if isinstance(ca, str) and ca:
+                            prev = self._trades_last_closed_at.get(user_id)
+                            if prev is None or ca > prev:
+                                self._trades_last_closed_at[user_id] = ca
         except Exception as e:
             logging.error(f"Supabase save_trades_db: {e}")
 

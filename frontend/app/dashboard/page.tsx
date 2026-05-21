@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { apiGet, apiPut } from "@/lib/api";
+import { apiGet, apiPatch, apiPut } from "@/lib/api";
 import {
   XAxis,
   YAxis,
@@ -15,7 +15,7 @@ import {
   AreaChart,
   Area,
 } from "recharts";
-import { IoNotificationsOutline, IoPower } from "react-icons/io5";
+import { IoCheckmark, IoNotificationsOutline, IoPencil, IoPower } from "react-icons/io5";
 
 const PERIOD_OPTIONS = [
   { value: "24h", label: "24 horas" },
@@ -26,6 +26,8 @@ const PERIOD_OPTIONS = [
   { value: "all", label: "Todo período" },
   { value: "custom", label: "Por data" },
 ] as const;
+
+const TRADE_TF_OPTIONS = ["5m", "15m", "30m", "1h", "4h", "12h", "1d"] as const;
 
 function filterTradesByPeriod<T extends { time: number }>(
   trades: T[],
@@ -158,7 +160,15 @@ function computeMetrics(trades: Trade[], balance: number) {
   };
 }
 
-type GroupedTrade = { id: string; pnl: number; side: string; tf: string; token: string };
+type GroupedTrade = {
+  id: string;
+  pnl: number;
+  side: string;
+  tf: string;
+  token: string;
+  time: number;
+  pnl_pct?: number | null;
+};
 function groupBy(arr: GroupedTrade[], key: keyof GroupedTrade) {
   const map = new Map<string, { pnl: number; qty: number }>();
   for (const t of arr) {
@@ -183,6 +193,68 @@ export default function DashboardPage() {
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [historyEditMode, setHistoryEditMode] = useState(false);
+  const [historyDrafts, setHistoryDrafts] = useState<Record<string, { tradeId: string; tf: string }>>({});
+  const [historyEditSaving, setHistoryEditSaving] = useState(false);
+
+  async function reloadOverview() {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    const ov = await apiGet<OverviewData>("/dashboard/overview", session.access_token);
+    setOverview(ov);
+  }
+
+  function defaultTf(tf: string) {
+    return TRADE_TF_OPTIONS.includes(tf as (typeof TRADE_TF_OPTIONS)[number]) ? tf : "30m";
+  }
+
+  function startHistoryEdit(groups: GroupedTrade[]) {
+    const drafts: Record<string, { tradeId: string; tf: string }> = {};
+    for (const t of groups) {
+      drafts[t.id] = { tradeId: t.id, tf: defaultTf(t.tf) };
+    }
+    setHistoryDrafts(drafts);
+    setHistoryEditMode(true);
+  }
+
+  async function finishHistoryEdit(groups: GroupedTrade[]) {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    const toSave = groups.filter((t) => {
+      const d = historyDrafts[t.id];
+      if (!d?.tradeId.trim()) return false;
+      return d.tradeId.trim() !== t.id || d.tf !== defaultTf(t.tf);
+    });
+
+    setHistoryEditSaving(true);
+    setError("");
+    try {
+      for (const t of toSave) {
+        const d = historyDrafts[t.id];
+        await apiPatch(
+          "/dashboard/trade-group",
+          { group_id: t.id, trade_id: d.tradeId.trim(), tf: d.tf },
+          session.access_token
+        );
+      }
+      setHistoryEditMode(false);
+      setHistoryDrafts({});
+      if (toSave.length > 0) await reloadOverview();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao salvar alterações.");
+    } finally {
+      setHistoryEditSaving(false);
+    }
+  }
+
+  function toggleHistoryEdit(groups: GroupedTrade[]) {
+    if (historyEditSaving) return;
+    if (historyEditMode) void finishHistoryEdit(groups);
+    else startHistoryEdit(groups);
+  }
 
   async function toggleBot() {
     const supabase = createClient();
@@ -624,48 +696,66 @@ export default function DashboardPage() {
       )}
 
       {/* Detalhamento agrupado por Trade ID */}
-      {metrics.grouped.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
-            Histórico
-          </h2>
-          <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
-            <table className="min-w-full divide-y divide-zeedo-orange/20">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
-                    Data
-                  </th>
-                  <th className="hidden sm:table-cell px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
-                    ID
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
-                    Token
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
-                    TF
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
-                    Side
-                  </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">
-                    PnL ($)
-                  </th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">
-                    PnL (%)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zeedo-orange/20">
-                {[...metrics.grouped]
-                  .sort((a, b) => b.time - a.time)
-                  .map((t) => {
-                    // Usa pnl_pct da API (baseado no saldo no momento do trade)
-                    // Se não disponível, calcula usando saldo atual (fallback para trades antigos)
-                    const pnlPct = t.pnl_pct !== undefined && t.pnl_pct !== null 
-                      ? t.pnl_pct 
-                      : (balance > 0 ? (t.pnl / balance) * 100 : 0);
-                    
+      {metrics.grouped.length > 0 && (() => {
+        const sortedGrouped = [...metrics.grouped].sort((a, b) => b.time - a.time) as GroupedTrade[];
+        const inputCls =
+          "w-full min-w-0 rounded border border-zeedo-orange/30 bg-transparent px-2 py-1 text-sm text-zeedo-black dark:text-zeedo-white";
+        return (
+          <section>
+            <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
+              Histórico
+            </h2>
+            <div className="relative overflow-x-auto rounded-lg border border-zeedo-orange/20">
+              <button
+                type="button"
+                onClick={() => toggleHistoryEdit(sortedGrouped)}
+                disabled={historyEditSaving}
+                aria-label={historyEditMode ? "Salvar edições" : "Editar ID e TF"}
+                className="absolute top-2 right-2 z-10 p-1.5 rounded-md text-zeedo-orange hover:bg-zeedo-orange/10 disabled:opacity-50"
+              >
+                {historyEditMode ? (
+                  <IoCheckmark className="w-5 h-5" />
+                ) : (
+                  <IoPencil className="w-5 h-5" />
+                )}
+              </button>
+              <table className="min-w-full divide-y divide-zeedo-orange/20">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 pr-12 text-left text-xs font-medium text-zeedo-orange uppercase">
+                      Data
+                    </th>
+                    <th
+                      className={`${historyEditMode ? "" : "hidden sm:table-cell"} px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase`}
+                    >
+                      ID
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
+                      Token
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
+                      TF
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
+                      Side
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">
+                      PnL ($)
+                    </th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-zeedo-orange uppercase">
+                      PnL (%)
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zeedo-orange/20">
+                  {sortedGrouped.map((t) => {
+                    const pnlPct =
+                      t.pnl_pct !== undefined && t.pnl_pct !== null
+                        ? t.pnl_pct
+                        : balance > 0
+                          ? (t.pnl / balance) * 100
+                          : 0;
+                    const draft = historyDrafts[t.id];
                     return (
                       <tr key={t.id}>
                         <td className="px-4 py-2 text-sm text-zeedo-black dark:text-zeedo-white">
@@ -676,24 +766,74 @@ export default function DashboardPage() {
                             minute: "2-digit",
                           })}
                         </td>
-                        <td className="hidden sm:table-cell px-4 py-2 text-sm font-mono">{t.id}</td>
+                        <td
+                          className={`${historyEditMode ? "" : "hidden sm:table-cell"} px-4 py-2 text-sm font-mono`}
+                        >
+                          {historyEditMode ? (
+                            <input
+                              type="text"
+                              value={draft?.tradeId ?? t.id}
+                              onChange={(e) =>
+                                setHistoryDrafts((prev) => ({
+                                  ...prev,
+                                  [t.id]: {
+                                    tradeId: e.target.value,
+                                    tf: prev[t.id]?.tf ?? defaultTf(t.tf),
+                                  },
+                                }))
+                              }
+                              className={`${inputCls} font-mono`}
+                            />
+                          ) : (
+                            t.id
+                          )}
+                        </td>
                         <td className="px-4 py-2 text-sm">{t.token}</td>
-                        <td className="px-4 py-2 text-sm">{t.tf}</td>
+                        <td className="px-4 py-2 text-sm">
+                          {historyEditMode ? (
+                            <select
+                              value={draft?.tf ?? defaultTf(t.tf)}
+                              onChange={(e) =>
+                                setHistoryDrafts((prev) => ({
+                                  ...prev,
+                                  [t.id]: {
+                                    tradeId: prev[t.id]?.tradeId ?? t.id,
+                                    tf: e.target.value,
+                                  },
+                                }))
+                              }
+                              className={inputCls}
+                            >
+                              {TRADE_TF_OPTIONS.map((tf) => (
+                                <option key={tf} value={tf}>
+                                  {tf}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            t.tf
+                          )}
+                        </td>
                         <td className="px-4 py-2 text-sm">{t.side}</td>
-                        <td className={`px-4 py-2 text-sm text-right ${t.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        <td
+                          className={`px-4 py-2 text-sm text-right ${t.pnl >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
                           ${t.pnl.toFixed(2)}
                         </td>
-                        <td className={`px-4 py-2 text-sm text-right ${t.pnl >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        <td
+                          className={`px-4 py-2 text-sm text-right ${t.pnl >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
                           {pnlPct !== null && pnlPct !== undefined ? pnlPct.toFixed(2) : "-"}%
                         </td>
                       </tr>
                     );
                   })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })()}
 
     </div>
   );

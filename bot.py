@@ -785,8 +785,8 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
             pnl_net = total_pnl - total_fee
             existing = existing_by_oid.get(str(oid))
             existing_num_fills = int(existing.get("num_fills", 1) or 1) if existing else 0
-            existing_pnl = float(existing.get("pnl_usd", 0) or 0) if existing else 0.0
-            is_update = bool(existing and (len(fills) > existing_num_fills or abs(existing_pnl - round(pnl_net, 6)) > 1e-9))
+            # Update só quando a HL agrega micro-fills (evita re-upsert/log por oscilação de PnL).
+            is_update = bool(existing and len(fills) > existing_num_fills)
 
             trade = entry_tracker.get(coin)
             tr_side = _normalize_trade_side(trade.get("side")) if trade else None
