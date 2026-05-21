@@ -709,7 +709,7 @@ export default function DashboardPage() {
       {metrics.grouped.length > 0 && (() => {
         const sortedGrouped = [...metrics.grouped].sort((a, b) => b.time - a.time) as GroupedTrade[];
         const inputCls =
-          "w-full min-w-0 rounded border border-zeedo-orange/30 bg-transparent px-2 py-1 text-sm text-zeedo-black dark:text-zeedo-white";
+          "input-field !rounded !px-2 !py-1 !text-sm dark:bg-zeedo-black";
         return (
           <section>
             <div className="flex items-center justify-between gap-3 mb-4">
@@ -816,7 +816,7 @@ export default function DashboardPage() {
                                   },
                                 }))
                               }
-                              className={inputCls}
+                              className="select-field"
                             >
                               <option value="-">-</option>
                               {TRADE_TF_OPTIONS.map((tf) => (

@@ -16,6 +16,23 @@ body {
   .input-field {
     @apply block w-full rounded-lg border border-zeedo-orange/30 bg-transparent px-3 py-2.5 text-zeedo-black placeholder-zeedo-black/50 focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange dark:border-zeedo-orange/40 dark:text-zeedo-white dark:placeholder-zeedo-white/50;
   }
+  .select-field {
+    @apply block w-full min-w-0 cursor-pointer rounded border border-zeedo-orange/30 bg-zeedo-black px-2 py-1 pr-8 text-sm text-zeedo-white focus:border-zeedo-orange focus:outline-none focus:ring-1 focus:ring-zeedo-orange;
+    color-scheme: dark;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.35rem center;
+    background-size: 1.1rem;
+  }
+  .select-field option {
+    background-color: #0a0a0a;
+    color: #fafafa;
+  }
+  .select-field option:checked {
+    background-color: #f97316;
+    color: #0a0a0a;
+  }
   .card {
     @apply rounded-xl border border-zeedo-orange/20 bg-transparent p-6 dark:border-zeedo-orange/20;
   }
