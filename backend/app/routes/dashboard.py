@@ -47,7 +47,7 @@ class PatchTradeGroupBody(BaseModel):
     """Identificador do grupo no histórico (trade_id ou oid quando trade_id era '-')."""
     group_id: str = Field(..., min_length=1, max_length=128)
     trade_id: str = Field(..., min_length=1, max_length=128)
-    tf: str = Field(..., min_length=2, max_length=8)
+    tf: str = Field(..., min_length=1, max_length=8)
 
 
 def _get_wallet_address(user_id: str) -> str | None:
