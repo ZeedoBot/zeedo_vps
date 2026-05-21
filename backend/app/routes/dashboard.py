@@ -40,7 +40,7 @@ class CancelPendingPositionBody(BaseModel):
     symbol: str = Field(..., min_length=2, max_length=10)
 
 
-ALLOWED_TRADE_TFS = frozenset({"5m", "15m", "30m", "1h", "4h", "12h", "1d"})
+ALLOWED_TRADE_TFS = frozenset({"-", "5m", "15m", "30m", "1h", "4h", "12h", "1d"})
 
 
 class PatchTradeGroupBody(BaseModel):

@@ -208,14 +208,16 @@ export default function DashboardPage() {
     setOverview(ov);
   }
 
-  function defaultTf(tf: string) {
-    return TRADE_TF_OPTIONS.includes(tf as (typeof TRADE_TF_OPTIONS)[number]) ? tf : "30m";
+  function editTfValue(tf: string) {
+    if (tf === "-") return "-";
+    if (TRADE_TF_OPTIONS.includes(tf as (typeof TRADE_TF_OPTIONS)[number])) return tf;
+    return "-";
   }
 
   function startHistoryEdit(groups: GroupedTrade[]) {
     const drafts: Record<string, { groupId: string; tradeId: string; tf: string }> = {};
     for (const t of groups) {
-      drafts[t.id] = { groupId: t.id, tradeId: t.id, tf: defaultTf(t.tf) };
+      drafts[t.id] = { groupId: t.id, tradeId: t.id, tf: editTfValue(t.tf) };
     }
     setHistoryDrafts(drafts);
     setHistoryError("");
@@ -230,7 +232,7 @@ export default function DashboardPage() {
     const toSave = groups.filter((t) => {
       const d = historyDrafts[t.id];
       if (!d?.tradeId.trim() || !d.groupId.trim()) return false;
-      return d.tradeId.trim() !== t.id || d.tf !== defaultTf(t.tf);
+      return d.tradeId.trim() !== t.id || d.tf !== editTfValue(t.tf);
     });
 
     setHistoryEditSaving(true);
@@ -710,16 +712,16 @@ export default function DashboardPage() {
           "w-full min-w-0 rounded border border-zeedo-orange/30 bg-transparent px-2 py-1 text-sm text-zeedo-black dark:text-zeedo-white";
         return (
           <section>
-            <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white mb-4">
-              Histórico
-            </h2>
-            <div className="relative overflow-x-auto rounded-lg border border-zeedo-orange/20">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-zeedo-black dark:text-zeedo-white">
+                Histórico
+              </h2>
               <button
                 type="button"
                 onClick={() => toggleHistoryEdit(sortedGrouped)}
                 disabled={historyEditSaving}
                 aria-label={historyEditMode ? "Salvar edições" : "Editar ID e TF"}
-                className="absolute top-2 right-2 z-10 p-1.5 rounded-md text-zeedo-orange hover:bg-zeedo-orange/10 disabled:opacity-50"
+                className="shrink-0 p-2 rounded-md text-zeedo-orange hover:bg-zeedo-orange/10 disabled:opacity-50"
               >
                 {historyEditMode ? (
                   <IoCheckmark className="w-5 h-5" />
@@ -727,10 +729,12 @@ export default function DashboardPage() {
                   <IoPencil className="w-5 h-5" />
                 )}
               </button>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-zeedo-orange/20">
               <table className="min-w-full divide-y divide-zeedo-orange/20">
                 <thead>
                   <tr>
-                    <th className="px-4 py-2 pr-12 text-left text-xs font-medium text-zeedo-orange uppercase">
+                    <th className="px-4 py-2 text-left text-xs font-medium text-zeedo-orange uppercase">
                       Data
                     </th>
                     <th
@@ -787,7 +791,7 @@ export default function DashboardPage() {
                                   [t.id]: {
                                     groupId: prev[t.id]?.groupId ?? t.id,
                                     tradeId: e.target.value,
-                                    tf: prev[t.id]?.tf ?? defaultTf(t.tf),
+                                    tf: prev[t.id]?.tf ?? editTfValue(t.tf),
                                   },
                                 }))
                               }
@@ -801,7 +805,7 @@ export default function DashboardPage() {
                         <td className="px-4 py-2 text-sm">
                           {historyEditMode ? (
                             <select
-                              value={draft?.tf ?? defaultTf(t.tf)}
+                              value={draft?.tf ?? editTfValue(t.tf)}
                               onChange={(e) =>
                                 setHistoryDrafts((prev) => ({
                                   ...prev,
@@ -814,6 +818,7 @@ export default function DashboardPage() {
                               }
                               className={inputCls}
                             >
+                              <option value="-">-</option>
                               {TRADE_TF_OPTIONS.map((tf) => (
                                 <option key={tf} value={tf}>
                                   {tf}
