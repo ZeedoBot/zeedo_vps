@@ -234,15 +234,36 @@ def patch_trade_group(
         raise HTTPException(status_code=400, detail="group_id e trade_id são obrigatórios.")
 
     supabase = get_supabase()
-    # trade_id do grupo OU oid (quando o histórico agrupou por oid)
-    q = (
-        supabase.table("trades_database")
-        .update({"trade_id": new_trade_id, "tf": new_tf})
-        .eq("user_id", user_id)
-        .or_(f"trade_id.eq.{group_id},oid.eq.{group_id}")
-    )
+    # Busca por .eq (evita .or_ com string — IDs com hífen ex. HYPE-1736 quebram o filtro PostgREST)
+    oids: set[str] = set()
     try:
-        r = q.execute()
+        for col in ("trade_id", "oid"):
+            sel = (
+                supabase.table("trades_database")
+                .select("oid")
+                .eq("user_id", user_id)
+                .eq(col, group_id)
+                .execute()
+            )
+            for row in sel.data or []:
+                oid = row.get("oid")
+                if oid is not None and str(oid).strip():
+                    oids.add(str(oid).strip())
+    except Exception as e:
+        logger.error("patch_trade_group lookup: %s", e)
+        raise HTTPException(status_code=500, detail="Não foi possível atualizar o histórico.") from e
+
+    if not oids:
+        raise HTTPException(status_code=404, detail="Nenhum fill encontrado para este grupo.")
+
+    try:
+        r = (
+            supabase.table("trades_database")
+            .update({"trade_id": new_trade_id, "tf": new_tf})
+            .eq("user_id", user_id)
+            .in_("oid", list(oids))
+            .execute()
+        )
     except Exception as e:
         logger.error("patch_trade_group: %s", e)
         raise HTTPException(status_code=500, detail="Não foi possível atualizar o histórico.") from e

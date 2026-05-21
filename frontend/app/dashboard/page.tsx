@@ -194,8 +194,11 @@ export default function DashboardPage() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [historyEditMode, setHistoryEditMode] = useState(false);
-  const [historyDrafts, setHistoryDrafts] = useState<Record<string, { tradeId: string; tf: string }>>({});
+  const [historyDrafts, setHistoryDrafts] = useState<
+    Record<string, { groupId: string; tradeId: string; tf: string }>
+  >({});
   const [historyEditSaving, setHistoryEditSaving] = useState(false);
+  const [historyError, setHistoryError] = useState("");
 
   async function reloadOverview() {
     const supabase = createClient();
@@ -210,11 +213,12 @@ export default function DashboardPage() {
   }
 
   function startHistoryEdit(groups: GroupedTrade[]) {
-    const drafts: Record<string, { tradeId: string; tf: string }> = {};
+    const drafts: Record<string, { groupId: string; tradeId: string; tf: string }> = {};
     for (const t of groups) {
-      drafts[t.id] = { tradeId: t.id, tf: defaultTf(t.tf) };
+      drafts[t.id] = { groupId: t.id, tradeId: t.id, tf: defaultTf(t.tf) };
     }
     setHistoryDrafts(drafts);
+    setHistoryError("");
     setHistoryEditMode(true);
   }
 
@@ -225,18 +229,18 @@ export default function DashboardPage() {
 
     const toSave = groups.filter((t) => {
       const d = historyDrafts[t.id];
-      if (!d?.tradeId.trim()) return false;
+      if (!d?.tradeId.trim() || !d.groupId.trim()) return false;
       return d.tradeId.trim() !== t.id || d.tf !== defaultTf(t.tf);
     });
 
     setHistoryEditSaving(true);
-    setError("");
+    setHistoryError("");
     try {
       for (const t of toSave) {
         const d = historyDrafts[t.id];
         await apiPatch(
           "/dashboard/trade-group",
-          { group_id: t.id, trade_id: d.tradeId.trim(), tf: d.tf },
+          { group_id: d.groupId.trim(), trade_id: d.tradeId.trim(), tf: d.tf },
           session.access_token
         );
       }
@@ -244,7 +248,7 @@ export default function DashboardPage() {
       setHistoryDrafts({});
       if (toSave.length > 0) await reloadOverview();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao salvar alterações.");
+      setHistoryError(err instanceof Error ? err.message : "Erro ao salvar alterações.");
     } finally {
       setHistoryEditSaving(false);
     }
@@ -309,7 +313,7 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) return <p className="text-zeedo-black/60 dark:text-zeedo-white/60">Carregando…</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (error && !overview) return <p className="text-red-500">{error}</p>;
 
   const balance = overview?.balance ?? 0;
   const trades = overview?.trades ?? [];
@@ -696,6 +700,10 @@ export default function DashboardPage() {
       )}
 
       {/* Detalhamento agrupado por Trade ID */}
+      {historyError && (
+        <p className="text-sm text-red-500">{historyError}</p>
+      )}
+
       {metrics.grouped.length > 0 && (() => {
         const sortedGrouped = [...metrics.grouped].sort((a, b) => b.time - a.time) as GroupedTrade[];
         const inputCls =
@@ -777,6 +785,7 @@ export default function DashboardPage() {
                                 setHistoryDrafts((prev) => ({
                                   ...prev,
                                   [t.id]: {
+                                    groupId: prev[t.id]?.groupId ?? t.id,
                                     tradeId: e.target.value,
                                     tf: prev[t.id]?.tf ?? defaultTf(t.tf),
                                   },
@@ -797,6 +806,7 @@ export default function DashboardPage() {
                                 setHistoryDrafts((prev) => ({
                                   ...prev,
                                   [t.id]: {
+                                    groupId: prev[t.id]?.groupId ?? t.id,
                                     tradeId: prev[t.id]?.tradeId ?? t.id,
                                     tf: e.target.value,
                                   },
