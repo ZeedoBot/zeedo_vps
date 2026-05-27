@@ -639,6 +639,10 @@ def _merge_tracker_db_into_memory(entry_tracker: dict, storage) -> None:
         logging.warning("merge_tracker_db_into_memory: %s", e)
 
 
+# Telegram: guarda último PnL notificado por OID para permitir notificar micro-fills tardios como delta.
+_tg_notified_pnl_by_oid: dict[str, float] = {}
+
+
 def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
     try:
         # Limite: só considera trades após criação da conta no Zeedo (multiusuário)
@@ -834,22 +838,31 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
                 existing_by_oid[str(oid)] = fill_safe
 
             fill_timestamp = base_fill.get('time') or base_fill.get('t') or base_fill.get('timestamp') or 0
-            # Telegram: só notifica em fills novos (evita spam ao atualizar OID)
-            if not existing and total_pnl != 0 and tg_time(fill_timestamp):
+            if total_pnl != 0 and tg_time(fill_timestamp):
                 emoji = "🤑 PARCIAL REALIZADA" if pnl_net >= 0 else "❌ STOP"
-                sign = "+" if pnl_net >= 0 else ""                
-                if trade and trade.get("tf") and not tracker_side_mismatch:
-                    tg_send(
-                        f"{emoji}\n"
-                        f"{side} {coin} {tf}\n"
-                        f"PnL: {sign}${pnl_net:.2f}"
-                    )
-                else:
-                    tg_send(
-                        f"{emoji}\n"
-                        f"{side} {coin} (Trade Manual)\n"
-                        f"PnL: {sign}${pnl_net:.2f}"
-                    )
+                sign = "+" if pnl_net >= 0 else ""
+                header = f"{side} {coin} {tf}" if (trade and trade.get("tf") and not tracker_side_mismatch) else f"{side} {coin} (Trade Manual)"
+                oid_s = str(oid)
+
+                # Novo OID: notifica normalmente (valor total atual do OID)
+                if not existing:
+                    tg_send(f"{emoji}\n{header}\nPnL: {sign}${pnl_net:.2f}")
+                    _tg_notified_pnl_by_oid[oid_s] = float(pnl_net)
+                # Update do mesmo OID (micro-fill tardio): notifica o delta como "parcial" normal (sem rótulo de update)
+                elif is_update:
+                    prev = _tg_notified_pnl_by_oid.get(oid_s)
+                    if prev is None and existing is not None:
+                        try:
+                            prev = float(existing.get("pnl_usd", 0) or 0.0)
+                        except Exception:
+                            prev = 0.0
+                    if prev is None:
+                        prev = 0.0
+                    delta = float(pnl_net) - float(prev)
+                    if abs(delta) >= 0.01:
+                        dsign = "+" if delta >= 0 else ""
+                        tg_send(f"{emoji}\n{header}\nPnL: {dsign}${delta:.2f}")
+                        _tg_notified_pnl_by_oid[oid_s] = float(pnl_net)
             
             position_still_open = positions_by_coin.get(coin, 0) != 0
             # Telegram (encerramento): só notifica na 1ª vez que o OID aparece.
