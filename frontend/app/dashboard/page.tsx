@@ -60,7 +60,17 @@ type Trade = {
   size_usd: number;
   time: number;
   pnl_pct?: number | null;
+  account_value_at_trade?: number | null;
 };
+
+function tradeAccountValue(t: Trade): number | null {
+  const av = t.account_value_at_trade;
+  if (av != null && av > 0) return av;
+  if (t.pnl_pct != null && Math.abs(t.pnl_pct) > 1e-9 && t.pnl_usd !== 0) {
+    return t.pnl_usd / (t.pnl_pct / 100);
+  }
+  return null;
+}
 
 type Position = {
   symbol: string;
@@ -92,22 +102,49 @@ type WalletStatus = { connected: boolean; wallet_address: string | null };
 type TelegramStatus = { connected: boolean };
 
 function groupTradesById(trades: Trade[]) {
-  const map = new Map<string, { pnl: number; token: string; side: string; tf: string; time: number; pnl_pct?: number | null }>();
+  const map = new Map<
+    string,
+    {
+      pnl: number;
+      token: string;
+      side: string;
+      tf: string;
+      time: number;
+      firstTime: number;
+      accountValue: number | null;
+    }
+  >();
   for (const t of trades) {
     const key = t.trade_id !== "-" ? t.trade_id : t.oid;
     const existing = map.get(key);
-    const pnl = t.pnl_usd;
+    const av = tradeAccountValue(t);
     if (!existing) {
-      map.set(key, { pnl, token: t.token, side: t.side, tf: t.tf, time: t.time, pnl_pct: t.pnl_pct });
+      map.set(key, {
+        pnl: t.pnl_usd,
+        token: t.token,
+        side: t.side,
+        tf: t.tf,
+        time: t.time,
+        firstTime: t.time,
+        accountValue: av,
+      });
     } else {
-      existing.pnl += pnl;
+      existing.pnl += t.pnl_usd;
       if (t.time > existing.time) {
         existing.time = t.time;
-        existing.pnl_pct = t.pnl_pct;
+        if (t.tf && t.tf !== "-") existing.tf = t.tf;
+      }
+      if (t.time <= existing.firstTime) {
+        existing.firstTime = t.time;
+        if (av) existing.accountValue = av;
       }
     }
   }
-  return Array.from(map.entries()).map(([id, v]) => ({ id, ...v }));
+  return Array.from(map.entries()).map(([id, v]) => {
+    const pnl_pct =
+      v.accountValue && v.accountValue > 0 ? (v.pnl / v.accountValue) * 100 : null;
+    return { id, pnl: v.pnl, token: v.token, side: v.side, tf: v.tf, time: v.time, pnl_pct };
+  });
 }
 
 function computeMetrics(trades: Trade[], balance: number) {
@@ -121,12 +158,14 @@ function computeMetrics(trades: Trade[], balance: number) {
   const avgLoss = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
   const payoff = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0;
   
-  // Calcula Lucro % Total somando os PNL % individuais de cada trade
-  // Isso garante que depósitos/saques não distorçam o resultado
-  const tradesWithPct = grouped.filter(t => t.pnl_pct !== undefined && t.pnl_pct !== null);
-  const pnlPct = tradesWithPct.length > 0 
-    ? tradesWithPct.reduce((sum, t) => sum + (t.pnl_pct || 0), 0)
-    : (balance > 0 ? (totalPnl / balance) * 100 : 0); // Fallback para trades sem pnl_pct
+  // Lucro % total: soma dos % de cada trade (não usa saldo atual — evita distorção com depósitos/saques)
+  const tradesWithPct = grouped.filter((t) => t.pnl_pct != null);
+  const pnlPct =
+    tradesWithPct.length > 0
+      ? tradesWithPct.reduce((sum, t) => sum + (t.pnl_pct || 0), 0)
+      : balance > 0
+        ? (totalPnl / balance) * 100
+        : 0;
 
   const sortedTrades = [...trades].sort((a, b) => a.time - b.time);
   const growthData: { time: number; date: string; balance: number }[] = [];
@@ -335,20 +374,8 @@ export default function DashboardPage() {
     botStatus?.status === "running" &&
     (!(botConfig?.symbols?.length ?? 0) || !(botConfig?.timeframes?.length ?? 0));
 
-  const hasDataToShow =
-    (overview?.trades?.length ?? 0) > 0 ||
-    (overview?.open_positions?.length ?? 0) > 0 ||
-    (overview?.pending_positions?.length ?? 0) > 0;
-
   return (
     <div className="space-y-8">
-      <h1 className="text-xl font-semibold text-zeedo-black dark:text-zeedo-white">
-        Dashboard
-      </h1>
-      <p className={`text-zeedo-black/60 dark:text-zeedo-white/60 -mt-4 ${hasDataToShow ? "hidden sm:block" : ""}`}>
-        Acompanhe o status do seu bot, carteira e performance em um só lugar.
-      </p>
-
       {telegramStatus && !telegramStatus.connected && (
         <div
           role="status"
@@ -762,7 +789,7 @@ export default function DashboardPage() {
                 <tbody className="divide-y divide-zeedo-orange/20">
                   {sortedGrouped.map((t) => {
                     const pnlPct =
-                      t.pnl_pct !== undefined && t.pnl_pct !== null
+                      t.pnl_pct != null
                         ? t.pnl_pct
                         : balance > 0
                           ? (t.pnl / balance) * 100

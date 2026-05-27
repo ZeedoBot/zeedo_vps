@@ -555,15 +555,15 @@ def place_trade_entry(exchange, symbol, side, qty, entry_px):
         logging.error(f"Erro Entry LIMIT: {e}")
         return None, None
 
-def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None):
-    """Coloca TPs customizados a partir de `FIB_LEVELS` (config do usuário)."""
+def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, custom_base=None, anchor_px=None, override_levels=None):
+    """Coloca TPs customizados a partir de `FIB_LEVELS` (config do usuário) ou override_levels."""
     if custom_base: fib_base_dist = custom_base
     else: fib_base_dist = abs(entry_px - stop_px)
     if fib_base_dist == 0: return
 
     start_px = anchor_px if anchor_px else entry_px
     is_buy_tp = False if side == "long" else True
-    fib_levels = FIB_LEVELS
+    fib_levels = override_levels if override_levels is not None else FIB_LEVELS
 
     logging.info(
         f"📐 Fibs {symbol}. Base Técnica: {fib_base_dist:.3f}"
@@ -1359,6 +1359,40 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                         exchange, sym, side, entry, None, abs(size), sz_dec,
                         custom_base=base_to_use, anchor_px=anchor,
                     )
+                else:
+                    # Apenas CONSERVADOR: ao tocar -1.62, ajusta alvos para TP1 0.5 (5%) e TP2 1.0 (95%).
+                    preset = str(mem_data.get("strategy_preset") or "").strip().upper()
+                    conservador_shifted = bool(mem_data.get("conservador_tp_shifted", False))
+                    if preset == "CONSERVADOR" and (not conservador_shifted) and tech_base and setup_high and setup_low:
+                        try:
+                            lvl_minus_162 = (
+                                (setup_high - (base_to_use * 1.62)) if side == "long" else (setup_low + (base_to_use * 1.62))
+                            )
+                            hit_minus_162 = (curr_price <= lvl_minus_162) if side == "long" else (curr_price >= lvl_minus_162)
+                            if hit_minus_162:
+                                # Cancela TPs atuais (reduceOnly e não-trigger)
+                                for o in my_orders:
+                                    try:
+                                        if (not o.get("isTrigger", False)) and o.get("reduceOnly", False):
+                                            exchange.cancel(sym, o["oid"])
+                                    except Exception:
+                                        pass
+                                place_fib_tps(
+                                    exchange,
+                                    sym,
+                                    side,
+                                    entry,
+                                    None,
+                                    abs(size),
+                                    sz_dec,
+                                    custom_base=base_to_use,
+                                    anchor_px=anchor,
+                                    override_levels=[(0.5, 0.05), (1.0, 0.95)],
+                                )
+                                entry_tracker[sym]["conservador_tp_shifted"] = True
+                                storage.save_entry_tracker(entry_tracker)
+                        except Exception as e:
+                            logging.warning(f"Erro ao ajustar TPs CONSERVADOR em {sym}: {e}")
 
             pnl_pct = (curr_price - entry) / entry if side == "long" else (entry - curr_price) / entry
             sl_order = next((o for o in my_orders if is_stop_order(o)), None)

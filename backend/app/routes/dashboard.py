@@ -124,6 +124,7 @@ def _fetch_trades(user_id: str) -> list[dict]:
             "tf": row.get("tf", "-"),
             "pnl_usd": pnl_usd,
             "pnl_pct": pnl_pct,
+            "account_value_at_trade": float(account_value) if account_value and account_value > 0 else None,
             "size_usd": float(row.get("size_usd", 0) or 0),
             "time": ts,
         })
