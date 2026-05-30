@@ -45,7 +45,7 @@ if [ -f "requirements.txt" ]; then
     pip install -r requirements.txt
 else
     echo -e "${YELLOW}⚠️  requirements.txt não encontrado. Instalando dependências básicas...${NC}"
-    pip install numpy pandas python-dotenv eth-account requests streamlit hyperliquid-python-sdk psutil supabase
+    pip install numpy pandas python-dotenv eth-account requests streamlit "hyperliquid-python-sdk>=0.23.0" psutil supabase
 fi
 
 # 6. Configurar Streamlit

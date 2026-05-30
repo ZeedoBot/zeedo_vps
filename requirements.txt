@@ -4,6 +4,7 @@ pandas
 python-dotenv
 eth-account
 requests
+hyperliquid-python-sdk>=0.23.0
 
 # Persistência online (modo supabase)
 supabase>=2.0.0
