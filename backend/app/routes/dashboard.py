@@ -3,6 +3,7 @@ Endpoint de overview do dashboard: saldo Hyperliquid, trades, posições e logs.
 """
 import logging
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -131,30 +132,35 @@ def _fetch_trades(user_id: str) -> list[dict]:
     return out
 
 
-def _symbols_with_open_entry_orders(wallet: str) -> tuple[bool, set[str]]:
+def _fetch_hl_open_entry_orders(wallet: str) -> tuple[bool, dict[str, list[dict]]]:
     """
-    Moedas que têm pelo menos uma ordem aberta de entrada (reduceOnly=false).
-    Retorna (sucesso?, conjunto em MAIÚSCULAS). Se sucesso=False, não confiar no conjunto.
+    Ordens de entrada abertas (reduceOnly=false) agrupadas por moeda.
+    Usa frontendOpenOrders — mesmo endpoint do bot.py (openOrders pode omitir ordens).
     """
     try:
         resp = requests.post(
             HYPERLIQUID_API,
-            json={"type": "openOrders", "user": wallet},
+            json={"type": "frontendOpenOrders", "user": wallet},
             timeout=10,
         )
         resp.raise_for_status()
         orders = resp.json() or []
-        out: set[str] = set()
+        by_coin: dict[str, list[dict]] = {}
         for order in orders:
             if bool(order.get("reduceOnly")):
                 continue
             coin = (order.get("coin") or "").upper()
             if coin:
-                out.add(coin)
-        return True, out
+                by_coin.setdefault(coin, []).append(order)
+        return True, by_coin
     except Exception as e:
-        logger.warning(f"openOrders Hyperliquid: {e}")
-        return False, set()
+        logger.warning(f"frontendOpenOrders Hyperliquid: {e}")
+        return False, {}
+
+
+def _symbols_with_open_entry_orders(wallet: str) -> tuple[bool, set[str]]:
+    ok, by_coin = _fetch_hl_open_entry_orders(wallet)
+    return ok, set(by_coin.keys())
 
 
 def _fetch_tracker(user_id: str) -> list[dict]:
@@ -331,7 +337,8 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                             "unrealizedPnl": float(pos.get("unrealizedPnl", 0) or 0),
                             "entryPx": float(pos.get("entryPx", 0) or 0),
                         }
-                orders_ok, hl_entry_open = _symbols_with_open_entry_orders(wallet)
+                orders_ok, hl_entry_by_coin = _fetch_hl_open_entry_orders(wallet)
+                hl_entry_open = set(hl_entry_by_coin.keys())
                 for t in tracker:
                     raw_sym = (t.get("symbol") or "").strip()
                     sym_u = raw_sym.upper()
@@ -354,6 +361,11 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                     # Sem posição na HL: só mostra pendente se ainda existir ordem de entrada aberta.
                     # Cancelar na UI da HL remove a ordem mas não apaga bot_tracker — limpamos órfãos aqui.
                     if orders_ok and sym_u not in hl_entry_open:
+                        placed_at = float(t.get("placed_at") or 0)
+                        if placed_at > 0 and (time.time() - placed_at) < 120:
+                            t["status"] = "pendente"
+                            pending_positions.append(t)
+                            continue
                         try:
                             supabase.table("bot_tracker").delete().eq("user_id", user_id).eq("symbol", raw_sym).execute()
                             logger.info(
@@ -366,6 +378,28 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                         continue
                     t["status"] = "pendente"
                     pending_positions.append(t)
+                if orders_ok:
+                    pending_syms = {(p.get("symbol") or "").upper() for p in pending_positions}
+                    active_syms = {(p.get("symbol") or "").upper() for p in active_positions}
+                    for sym_u, sym_orders in hl_entry_by_coin.items():
+                        if sym_u in pending_syms or sym_u in active_syms:
+                            continue
+                        o = sym_orders[0]
+                        limit_px = float(o.get("limitPx") or 0)
+                        sz = float(o.get("sz") or o.get("origSz") or 0)
+                        side_raw = o.get("side", "B")
+                        side = "LONG" if side_raw == "B" else "SHORT"
+                        usd_val = round(sz * limit_px, 0) if limit_px and sz else 0
+                        pending_positions.append({
+                            "symbol": sym_u,
+                            "tf": "-",
+                            "side": side[:5],
+                            "entry_px": limit_px,
+                            "usd_val": usd_val,
+                            "planned_stop": 0.0,
+                            "placed_at": float(o.get("timestamp") or 0) / 1000.0,
+                            "status": "pendente",
+                        })
             else:
                 for t in tracker:
                     t["status"] = "pendente"
@@ -564,7 +598,9 @@ def cancel_pending_position(
 
     symbol = body.symbol.strip().upper()
     tracker = supabase.table("bot_tracker").select("symbol").eq("user_id", user_id).eq("symbol", symbol).limit(1).execute()
-    if not tracker.data:
+    orders_ok, hl_entry_by_coin = _fetch_hl_open_entry_orders(wallet or "")
+    has_hl_entry = orders_ok and symbol in hl_entry_by_coin
+    if not tracker.data and not has_hl_entry:
         raise HTTPException(status_code=404, detail=f"Nenhum trade pendente encontrado em {symbol}.")
 
     # Garante que não há posição aberta para esse símbolo.
@@ -609,24 +645,24 @@ def cancel_pending_position(
 
     # Cancela somente ordens de entrada (reduceOnly=False) do símbolo.
     cancelled = 0
-    try:
-        ord_resp = requests.post(
-            HYPERLIQUID_API,
-            json={"type": "openOrders", "user": wallet},
-            timeout=10,
-        )
-        ord_resp.raise_for_status()
-        orders = ord_resp.json() or []
-    except requests.RequestException as e:
-        logger.warning(f"Erro Hyperliquid openOrders: {e}")
-        raise HTTPException(status_code=502, detail="Não foi possível consultar ordens abertas.")
+    orders = hl_entry_by_coin.get(symbol, []) if has_hl_entry else []
+    if not orders:
+        try:
+            ord_resp = requests.post(
+                HYPERLIQUID_API,
+                json={"type": "frontendOpenOrders", "user": wallet},
+                timeout=10,
+            )
+            ord_resp.raise_for_status()
+            orders = [
+                o for o in (ord_resp.json() or [])
+                if (o.get("coin") or "").upper() == symbol and not bool(o.get("reduceOnly"))
+            ]
+        except requests.RequestException as e:
+            logger.warning(f"Erro Hyperliquid frontendOpenOrders: {e}")
+            raise HTTPException(status_code=502, detail="Não foi possível consultar ordens abertas.")
 
     for order in orders:
-        coin = (order.get("coin") or "").upper()
-        if coin != symbol:
-            continue
-        if bool(order.get("reduceOnly")):
-            continue
         oid = order.get("oid")
         if oid is None:
             continue
