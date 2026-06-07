@@ -81,6 +81,7 @@ const BLOCKED_REASON_LABELS: Record<string, string> = {
   modo_sinal: "Modo Sinal",
   LSR: "LSR",
   symbol_ja_ativo: "Símbolo já ativo em outro TF",
+  trade_ativo_mesmo_token: "Você já possui um trade ativo nesse token",
   limite_trades: "Limite de trades",
 };
 

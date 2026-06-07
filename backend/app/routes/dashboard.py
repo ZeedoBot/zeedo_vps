@@ -154,7 +154,10 @@ def _fetch_hl_open_entry_orders(wallet: str) -> tuple[bool, dict[str, list[dict]
         for order in orders:
             if bool(order.get("reduceOnly")):
                 continue
-            coin = (order.get("coin") or "").upper()
+            coin_raw = order.get("coin") or ""
+            if is_spot_coin(coin_raw):
+                continue
+            coin = coin_raw.upper()
             if coin:
                 by_coin.setdefault(coin, []).append(order)
         return True, by_coin
@@ -349,6 +352,12 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                     sym_u = raw_sym.upper()
                     if not sym_u:
                         continue
+                    if is_spot_coin(raw_sym):
+                        try:
+                            supabase.table("bot_tracker").delete().eq("user_id", user_id).eq("symbol", raw_sym).execute()
+                        except Exception as ex:
+                            logger.warning("Falha ao remover bot_tracker spot %s: %s", raw_sym, ex)
+                        continue
                     hlp = None
                     if raw_sym in hl_positions_map:
                         hlp = hl_positions_map[raw_sym]
@@ -387,6 +396,8 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                     pending_syms = {(p.get("symbol") or "").upper() for p in pending_positions}
                     active_syms = {(p.get("symbol") or "").upper() for p in active_positions}
                     for sym_u, sym_orders in hl_entry_by_coin.items():
+                        if is_spot_coin(sym_u):
+                            continue
                         if sym_u in pending_syms or sym_u in active_syms:
                             continue
                         o = sym_orders[0]
@@ -407,15 +418,21 @@ def get_overview(user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
                         })
             else:
                 for t in tracker:
+                    if is_spot_coin(t.get("symbol")):
+                        continue
                     t["status"] = "pendente"
                     pending_positions.append(t)
         except Exception as e:
             logger.warning(f"Erro ao buscar clearinghouseState: {e}")
             for t in tracker:
+                if is_spot_coin(t.get("symbol")):
+                    continue
                 t["status"] = "pendente"
                 pending_positions.append(t)
     else:
         for t in tracker:
+            if is_spot_coin(t.get("symbol")):
+                continue
             t["status"] = "pendente"
             pending_positions.append(t)
 

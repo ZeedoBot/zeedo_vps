@@ -145,7 +145,7 @@ def tg_send(msg):
 _last_order_reject_tg_at = 0.0
 _ORDER_REJECT_TG_COOLDOWN = 3600
 _ORDER_REJECT_TG_MSG = (
-    "Atenção! Possível problema ao inserir sua ordem de algum alvo ou stop, entre na corretora e confira o erro.\n"
+    "🚨Atenção! Possível problema ao inserir sua ordem de algum alvo ou stop, entre na corretora e confira o erro.\n"
     "Obs: Observe se alguma ordem tem um valor nominal menor que $10. Na maioria dos casos o problema é esse."
 )
 
@@ -988,6 +988,7 @@ _BLOCK_REASON_LABELS = {
     "modo_sinal": "Modo Sinal",
     "LSR": "LSR",
     "symbol_ja_ativo": "Símbolo já ativo em outro TF",
+    "trade_ativo_mesmo_token": "Você já possui um trade ativo nesse token",
     "limite_trades": "Limite de trades simultâneos",
 }
 
@@ -1050,9 +1051,6 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
     if os.path.exists("bot_paused.lock"): return
     if available_exposure <= 50: return
     for sym in SYMBOLS:
-        if sym in busy_symbols:
-            continue
-
         for tf in TIMEFRAMES:
             tf_sec = get_tf_seconds(tf)
             now = int(time.time())
@@ -1164,6 +1162,28 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
                 sz_dec = get_precision(meta, sym)
                 final_qty = round_sz(total_size, sz_dec)
                 if final_qty * entry_px < 10: 
+                    analyzed_candles[candle_id] = True
+                    continue
+
+                if sym in busy_symbols:
+                    logging.info(f"[{sym} {tf}] 🚫 Trade bloqueado (trade_ativo_mesmo_token)")
+                    tg_send(
+                        f"📡 NOVO SINAL DE TRADE\n"
+                        f"🚫 TRADE BLOQUEADO\n"
+                        f"{sig['side'].upper()} {sym} | {tf}\n"
+                        f"Entrada: {entry_px:.4f}\n"
+                        f"Stop: {stop_real:.4f}\n\n"
+                        f"Motivo:\n• {_BLOCK_REASON_LABELS['trade_ativo_mesmo_token']}\n\n"
+                        f"https://app.hyperliquid.xyz/trade/{sym}"
+                    )
+                    btd = _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, "trade_ativo_mesmo_token")
+                    if btd and hasattr(storage, "save_blocked_trade"):
+                        storage.save_blocked_trade(btd)
+                    if sym not in history_tracker:
+                        history_tracker[sym] = {}
+                    history_tracker[sym][tf] = sig_ts
+                    if hasattr(storage, "save_history_tracker"):
+                        storage.save_history_tracker(history_tracker)
                     analyzed_candles[candle_id] = True
                     continue
 
