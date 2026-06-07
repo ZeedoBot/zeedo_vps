@@ -16,6 +16,7 @@ from backend.app.dependencies import get_current_user_id
 from backend.app.services.supabase_client import get_supabase
 from backend.app.config import get_settings
 from utils.hyperliquid_balance import fetch_display_account_value_usd
+from utils.hyperliquid_symbols import is_spot_coin
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 logger = logging.getLogger(__name__)
@@ -110,6 +111,10 @@ def _fetch_trades(user_id: str) -> list[dict]:
         if min_ts_ms is not None and ts > 0 and ts < min_ts_ms:
             continue
 
+        symbol = row.get("symbol", "?")
+        if is_spot_coin(symbol):
+            continue
+
         # Calcula PNL % baseado no saldo da conta no momento do trade
         pnl_usd = float(row.get("pnl_usd", 0) or 0)
         account_value = row.get("account_value_at_trade")
@@ -120,7 +125,7 @@ def _fetch_trades(user_id: str) -> list[dict]:
         out.append({
             "trade_id": row.get("trade_id", "-"),
             "oid": row.get("oid", ""),
-            "token": row.get("symbol", "?"),
+            "token": symbol,
             "side": row.get("side", "?"),
             "tf": row.get("tf", "-"),
             "pnl_usd": pnl_usd,

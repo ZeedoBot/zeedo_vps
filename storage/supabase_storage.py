@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Any
 from .base import StorageBase
+from utils.hyperliquid_symbols import is_spot_coin
 
 # Desabilita logs HTTP das bibliotecas usadas pelo Supabase
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -193,6 +194,8 @@ class SupabaseStorage(StorageBase):
                 """Remove itens fora da janela recente (por time_ms ou closed_at)."""
                 kept: list[dict] = []
                 for t in trades or []:
+                    if is_spot_coin(t.get("coin") or t.get("symbol")):
+                        continue
                     ts = t.get("time") or t.get("time_ms")
                     try:
                         ts_i = int(ts) if ts is not None else 0
@@ -264,6 +267,8 @@ class SupabaseStorage(StorageBase):
             # Converte registros da tabela para formato esperado pelo código
             fetched: list[dict] = []
             for row in rows:
+                if is_spot_coin(row.get("symbol")):
+                    continue
                 # Timestamp preferencial: time_ms (ms). Fallback: closed_at ISO.
                 ts = row.get("time_ms")
                 if ts is None or ts == 0:
@@ -336,6 +341,8 @@ class SupabaseStorage(StorageBase):
             for trade in data:
                 oid = str(trade.get("oid") or "")
                 if not oid:
+                    continue
+                if is_spot_coin(trade.get("coin") or trade.get("symbol")):
                     continue
                 # Calcula closed_at a partir do timestamp do trade
                 trade_time = trade.get("time") or trade.get("t") or trade.get("timestamp")

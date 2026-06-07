@@ -17,6 +17,7 @@ import requests
 
 from storage import get_storage
 from utils.hyperliquid_balance import fetch_display_account_value_usd
+from utils.hyperliquid_symbols import is_spot_coin
 
 load_dotenv()
 
@@ -751,6 +752,9 @@ def sync_trade_history(info, wallet, entry_tracker, history_tracker, storage):
         for fill in user_fills:
             oid = str(fill.get('oid') or fill.get('id') or "")
             if not oid:
+                continue
+            fill_coin = fill.get('coin') or fill.get('symbol') or fill.get('market')
+            if is_spot_coin(fill_coin):
                 continue
             # Ignora trades anteriores à criação da conta no Zeedo
             fill_ts = int(fill.get('time') or fill.get('t') or fill.get('timestamp') or 0)
