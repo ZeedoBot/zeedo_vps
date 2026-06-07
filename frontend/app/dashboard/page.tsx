@@ -27,7 +27,7 @@ const PERIOD_OPTIONS = [
   { value: "custom", label: "Por data" },
 ] as const;
 
-const TRADE_TF_OPTIONS = ["5m", "15m", "30m", "1h", "4h", "12h", "1d"] as const;
+const TRADE_TF_OPTIONS = ["15m", "1h", "4h", "12h", "1d", "3d", "1w", "1M"] as const;
 
 function filterTradesByPeriod<T extends { time: number }>(
   trades: T[],

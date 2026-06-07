@@ -36,7 +36,7 @@ class BotConfig:
     # Indicators
     rsi_period: int = 14
     volume_sma_period: int = 20
-    lookback_divergence: int = 35
+    lookback_divergence: int = 300
     min_pivot_dist: int = 4
     local_low_window: int = 4
     

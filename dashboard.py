@@ -204,10 +204,10 @@ with st.sidebar:
     )
 )
     DEFAULT_SYMBOLS = ["BTC", "ETH", "SOL", "AVAX", "LINK", "SUI", "HYPE", "XRP", "AAVE", "DOGE", "BNB", "ADA", "UNI", "NEAR", "DOT", "ZEC", "SEI", "ARB", "ENA"]
-    DEFAULT_TFS = ["5m", "15m", "30m", "1h", "4h", "1d"]
+    DEFAULT_TFS = ["15m", "1h", "4h", "12h", "1d", "3d", "1w", "1M"]
     
     selected_symbols = st.multiselect("Moedas:", options=DEFAULT_SYMBOLS, default=config.get("symbols", ["BTC", "ETH", "SOL", "AVAX", "LINK", "SUI", "HYPE", "XRP", "AAVE", "DOGE", "BNB", "ADA", "UNI", "NEAR", "DOT", "ZEC", "SEI", "ARB", "ENA"]))
-    selected_tfs = st.multiselect("Timeframes (Bot):", options=DEFAULT_TFS, default=config.get("timeframes", ["15m", "30m", "1h", "4h", "1d"]))
+    selected_tfs = st.multiselect("Timeframes (Bot):", options=DEFAULT_TFS, default=config.get("timeframes", ["15m", "1h", "4h", "1d"]))
     
     if st.button("💾 Salvar Config", width="stretch"):
         if save_json(

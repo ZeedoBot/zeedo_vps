@@ -72,18 +72,20 @@ MAX_POSITIONS = 2
 FALLBACK_STOP_PCT = 0.005    
 RSI_PERIOD = 14
 VOLUME_SMA_PERIOD = 20
-LOOKBACK_DIVERGENCE = 35     
-MIN_PIVOT_DIST = 4           
+LOOKBACK_DIVERGENCE = 300
+MIN_PIVOT_DIST = 4
 LOCAL_LOW_WINDOW = 4    #MENOR CORPO DOS ÚLTIMOS 4
 
 # Range mínimo (high-low)/low por timeframe em check_patterns; % como fração (ex.: 0,15% → 0.0015)
 MIN_CANDLE_RANGE_BY_TF = {
-    "5m": 0.0015,
-    "15m": 0.0035,
-    "30m": 0.005,
-    "1h": 0.007,
+    "15m": 0.005,
+    "1h": 0.008,
     "4h": 0.01,
+    "12h": 0.012,
     "1d": 0.01,
+    "3d": 0.015,
+    "1w": 0.02,
+    "1M": 0.025,
 }
 
 # ALVOS DE FIBO (customizáveis por plano Pro/Satoshi)
@@ -139,6 +141,34 @@ def tg_send(msg):
     except Exception as e:
         logging.error(f"Erro Telegram: {e}")
 
+_last_order_reject_tg_at = 0.0
+_ORDER_REJECT_TG_COOLDOWN = 3600
+_ORDER_REJECT_TG_MSG = (
+    "Atenção! Possível problema ao inserir sua ordem de algum alvo ou stop, entre na corretora e confira o erro.\n"
+    "Obs: Observe se alguma ordem tem um valor nominal menor que $10. Na maioria dos casos o problema é esse."
+)
+
+def _hl_order_error(res) -> Optional[str]:
+    if not isinstance(res, dict):
+        return None
+    if res.get("status") == "err":
+        return str(res.get("response") or res)
+    statuses = ((res.get("response") or {}).get("data") or {}).get("statuses") or []
+    for st in statuses:
+        if st.get("error"):
+            return str(st["error"])
+    return None
+
+def notify_order_reject_tg(hl_error: Optional[str] = None):
+    global _last_order_reject_tg_at
+    now = time.time()
+    if now - _last_order_reject_tg_at < _ORDER_REJECT_TG_COOLDOWN:
+        return
+    _last_order_reject_tg_at = now
+    if hl_error:
+        logging.error(f"Ordem rejeitada pela HL: {hl_error}")
+    tg_send(_ORDER_REJECT_TG_MSG)
+
 def load_config(storage):
     """Carrega config do storage (local ou Supabase) e atualiza SYMBOLS, TIMEFRAMES, TRADE_MODE, alvos e stop."""
     global SYMBOLS, TIMEFRAMES, TRADE_MODE, FIB_LEVELS, FIB_STOP_LEVEL, ENTRY1_MULTIPLIER, SIGNAL_MODE, STRATEGY_PRESET
@@ -188,12 +218,21 @@ def round_sz(num, decimals): return float(f"{num:.{decimals}f}")
 def round_px(num): return float(f"{num:.5g}")
 
 def get_tf_seconds(tf):
+    if not tf:
+        return 300
     unit = tf[-1]
     value = int(tf[:-1])
-    if unit == 'm': return value * 60
-    if unit == 'h': return value * 3600
-    if unit == 'd': return value * 86400
-    return 300 
+    if unit == 'm':
+        return value * 60
+    if unit == 'h':
+        return value * 3600
+    if unit == 'd':
+        return value * 86400
+    if unit == 'w':
+        return value * 7 * 86400
+    if unit == 'M':
+        return value * 30 * 86400
+    return 300
 
 def rsi(series, period=14):
     delta = series.diff()
@@ -211,7 +250,9 @@ def fmt_ts(ts):
 
 BINANCE_BASE_URL = "https://fapi.binance.com"
 
-def fetch_candles_binance(symbol, timeframe, limit=100):
+def fetch_candles_binance(symbol, timeframe, limit=None):
+    if limit is None:
+        limit = LOOKBACK_DIVERGENCE + 30  # mínimo efetivo: LOOKBACK + 20
     url = f"{BINANCE_BASE_URL}/fapi/v1/klines"
     params = {"symbol": f"{symbol}USDT", "interval": timeframe, "limit": limit}
     try:
@@ -414,7 +455,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     if vol_sma == 0:
         is_vol_ok = True 
     else:
-        is_vol_ok = curr["volume"] > vol_sma * 1.01
+        is_vol_ok = curr["volume"] > vol_sma * 1.1
     if not is_vol_ok: return None
 
     patterns = check_patterns(df, idx_curr, timeframe)
@@ -582,10 +623,16 @@ def place_fib_tps(exchange, symbol, side, entry_px, stop_px, total_qty, sz_dec, 
         client_oid = f"TP{idx}_{fib_mult}"
 
         try:
-            exchange.order(symbol, is_buy_tp, qty_tp, target_px, {"limit": {"tif": "Gtc"}, "clientOrderId": client_oid}, reduce_only=True)
-            logging.info(f"🎯 TP{idx} ({fib_mult}) @ {target_px}")
+            res = exchange.order(symbol, is_buy_tp, qty_tp, target_px, {"limit": {"tif": "Gtc"}, "clientOrderId": client_oid}, reduce_only=True)
+            err = _hl_order_error(res)
+            if err:
+                logging.error(f"TP {fib_mult} {symbol} rejeitado: {err}")
+                notify_order_reject_tg(err)
+            else:
+                logging.info(f"🎯 TP{idx} ({fib_mult}) @ {target_px}")
         except Exception as e:
             logging.error(f"Erro TP {fib_mult}: {e}")
+            notify_order_reject_tg(str(e))
 
 
 def _normalize_trade_side(side) -> Optional[str]:
@@ -1013,7 +1060,7 @@ def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_o
             if candle_id in analyzed_candles:
                 continue
 
-            df_binance = fetch_candles_binance(sym, tf, limit=100)
+            df_binance = fetch_candles_binance(sym, tf)
             if df_binance is None or len(df_binance) < 5:
                 continue
             if df_binance.iloc[-1]["timestamp"] + tf_sec * 1000 > now * 1000:
@@ -1348,10 +1395,18 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                 stop_px = planned_stop if planned_stop else round_px(entry * (1 - FALLBACK_STOP_PCT) if side == "long" else entry * (1 + FALLBACK_STOP_PCT))
                 
                 stop_qty = size
-                exchange.order(sym, not (side=="long"), stop_qty, stop_px, {"trigger": {"triggerPx": stop_px, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
-                if sym in entry_tracker:
-                    entry_tracker[sym]['planned_stop'] = stop_px
-                    storage.save_entry_tracker(entry_tracker)
+                try:
+                    sl_res = exchange.order(sym, not (side=="long"), stop_qty, stop_px, {"trigger": {"triggerPx": stop_px, "isMarket": True, "tpsl": "sl"}}, reduce_only=True)
+                    sl_err = _hl_order_error(sl_res)
+                    if sl_err:
+                        logging.error(f"Stop {sym} rejeitado: {sl_err}")
+                        notify_order_reject_tg(sl_err)
+                    elif sym in entry_tracker:
+                        entry_tracker[sym]['planned_stop'] = stop_px
+                        storage.save_entry_tracker(entry_tracker)
+                except Exception as e:
+                    logging.error(f"Erro Stop pânico {sym}: {e}")
+                    notify_order_reject_tg(str(e))
             
             if not is_manual:
                 sz_dec = get_precision(meta, sym)
@@ -1476,18 +1531,26 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
                     # Usa apenas a quantidade atual da posição para o novo stop
                     stop_qty = abs(size)
 
-                    exchange.order(
-                        sym,
-                        False if side == "long" else True,
-                        stop_qty,
-                        new_sl,
-                        {"trigger": {"triggerPx": new_sl, "isMarket": True, "tpsl": "sl"}},
-                        reduce_only=True,
-                    )
-                    if sym in entry_tracker:
-                        entry_tracker[sym]["planned_stop"] = new_sl
-                        entry_tracker[sym]["breakeven_moved"] = True
-                        storage.save_entry_tracker(entry_tracker)
+                    try:
+                        be_sl_res = exchange.order(
+                            sym,
+                            False if side == "long" else True,
+                            stop_qty,
+                            new_sl,
+                            {"trigger": {"triggerPx": new_sl, "isMarket": True, "tpsl": "sl"}},
+                            reduce_only=True,
+                        )
+                        be_sl_err = _hl_order_error(be_sl_res)
+                        if be_sl_err:
+                            logging.error(f"Stop breakeven {sym} rejeitado: {be_sl_err}")
+                            notify_order_reject_tg(be_sl_err)
+                        elif sym in entry_tracker:
+                            entry_tracker[sym]["planned_stop"] = new_sl
+                            entry_tracker[sym]["breakeven_moved"] = True
+                            storage.save_entry_tracker(entry_tracker)
+                    except Exception as e:
+                        logging.error(f"Erro Stop breakeven {sym}: {e}")
+                        notify_order_reject_tg(str(e))
 
             # Atualiza last_size apenas se mudou significativamente (para manter estado sincronizado)
             if sym in entry_tracker:

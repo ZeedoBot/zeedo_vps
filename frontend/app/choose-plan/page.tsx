@@ -180,7 +180,7 @@ export default function ChoosePlanPage() {
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 30m e 1h</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">1h e 4h</span>
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Modo:</span>
@@ -196,7 +196,7 @@ export default function ChoosePlanPage() {
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 30m, 1h e 4h</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 1h, 4h, 12h, 1d, 1w e 1M</span>
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
@@ -224,7 +224,7 @@ export default function ChoosePlanPage() {
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Timeframes:</span>
-                        <span className="ml-2 text-gray-600 dark:text-gray-400">5m, 15m, 30m, 1h, 4h e 1d</span>
+                        <span className="ml-2 text-gray-600 dark:text-gray-400">15m, 1h, 4h, 12h, 1d, 3d, 1w e 1M</span>
                       </div>
                       <div className="text-sm">
                         <span className="font-medium text-gray-700 dark:text-gray-300">Trades Simultâneos:</span>
