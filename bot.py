@@ -56,7 +56,7 @@ LSR_THRESHOLD_PCT = 0.5       # 0,5%
 LSR_UPDATE_INTERVAL = 1800    # 30 minutos
 
 # LSR (Long/Short Ratio) — único bloqueador "heurístico" mantido
-LSR_BLOCK_SHORT_BELOW = 1.1
+LSR_BLOCK_SHORT_BELOW = 1
 LSR_BLOCK_LONG_DEFAULT = 3.0
 LSR_BLOCK_LONG_SPECIAL_1 = 3.8
 LSR_BLOCK_LONG_SPECIAL_2 = 4.9
@@ -73,20 +73,20 @@ MAX_POSITIONS = 2
 FALLBACK_STOP_PCT = 0.005    
 RSI_PERIOD = 14
 VOLUME_SMA_PERIOD = 20
-LOOKBACK_DIVERGENCE = 300
-MIN_PIVOT_DIST = 4
-LOCAL_LOW_WINDOW = 4    #MENOR CORPO DOS ÚLTIMOS 4
+LOOKBACK_DIVERGENCE = 350
+MIN_PIVOT_DIST = 6
+LOCAL_LOW_WINDOW = 6    #MENOR CORPO DOS ÚLTIMOS 6
 
 # Range mínimo (high-low)/low por timeframe em check_patterns; % como fração (ex.: 0,15% → 0.0015)
 MIN_CANDLE_RANGE_BY_TF = {
-    "15m": 0.005,
-    "1h": 0.008,
+    "15m": 0.0055,
+    "1h": 0.01,
     "4h": 0.01,
-    "12h": 0.012,
-    "1d": 0.01,
-    "3d": 0.015,
-    "1w": 0.02,
-    "1M": 0.025,
+    "12h": 0.02,
+    "1d": 0.02,
+    "3d": 0.02,
+    "1w": 0.03,
+    "1M": 0.03,
 }
 
 # ALVOS DE FIBO (customizáveis por plano Pro/Satoshi)
