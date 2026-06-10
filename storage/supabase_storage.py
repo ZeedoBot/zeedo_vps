@@ -577,8 +577,8 @@ class SupabaseStorage(StorageBase):
         except Exception as e:
             logging.error(f"Supabase save_blocked_trade: {e}", exc_info=True)
 
-    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 0.5) -> int:
-        """Remove blocked_trades expirados (preço atingiu fib 0.5 sintético ou Stop). `target1_level` legado, ignorado."""
+    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 1.0) -> int:
+        """Remove blocked_trades expirados (preço atingiu fib 1.0 sintético ou Stop). `target1_level` legado, ignorado."""
         if not self._client or not all_mids:
             return 0
         try:
@@ -613,7 +613,7 @@ class SupabaseStorage(StorageBase):
                 tech = float(row.get("tech_base", 0) or 0)
                 setup_high = float(row.get("setup_high", 0) or 0)
                 setup_low = float(row.get("setup_low", 0) or 0)
-                t1 = 0.5  # igual ao cancel de ordens pendentes no bot; não usa target1_level do preset
+                t1 = 1.0  # igual ao cancel de ordens pendentes no bot; não usa target1_level do preset
                 side = (row.get("side") or "long").lower()
                 expired = False
                 # Stop: sempre verifica

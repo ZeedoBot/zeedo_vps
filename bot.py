@@ -1026,11 +1026,11 @@ def _build_blocked_trade_data(sig, sym, tf, meta, available_exposure, reason):
         return None
 
 def manage_risk_and_scan(info, exchange, wallet, meta, entry_tracker, all_open_orders, history_tracker, analyzed_candles, user_state_cache, all_mids_cache, storage):
-    # Expira blocked_trades: stop ou fib 0.5 (fixo), igual ao cancel de ordens pendentes
+    # Expira blocked_trades: stop ou fib 1.0 (fixo), igual ao cancel de ordens pendentes
     if hasattr(storage, "expire_blocked_trades") and all_mids_cache:
         n = storage.expire_blocked_trades(all_mids_cache)
         if n > 0:
-            logging.info(f"🔄 {n} trade(s) bloqueado(s) expirado(s) (fib 0.5 ou stop)")
+            logging.info(f"🔄 {n} trade(s) bloqueado(s) expirado(s) (fib 1.0 ou stop)")
 
     user_state = user_state_cache
     raw_positions = user_state.get("assetPositions", [])
@@ -1298,9 +1298,9 @@ def auto_manage(info, exchange, wallet, meta, entry_tracker, all_open_orders, us
         order_symbols = {o["coin"] for o in all_open_orders if not o["reduceOnly"]}
         now = time.time()
 
-        # Ordens não-reduce pendentes (ex.: entrada limit ainda aberta): cancela ao fib 0.5
-        # (sempre 0.5 vs setup_high/setup_low + tech_base; igual para Conservador, Mediano, CUSTOM, etc.).
-        PENDING_ORDER_CANCEL_FIB = 0.5
+        # Ordens não-reduce pendentes (ex.: entrada limit ainda aberta): cancela ao fib 1.0
+        # (sempre 1.0 vs setup_high/setup_low + tech_base; igual para Conservador, Mediano, CUSTOM, etc.).
+        PENDING_ORDER_CANCEL_FIB = 1.0
 
         if True:
             for sym in list(entry_tracker.keys()):

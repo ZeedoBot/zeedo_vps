@@ -75,6 +75,6 @@ class LocalStorage(StorageBase):
         """No-op: local storage não persiste blocked trades."""
         pass
 
-    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 0.5) -> int:
+    def expire_blocked_trades(self, user_id: str, all_mids: dict, target1_level: float = 1.0) -> int:
         """No-op: local storage não persiste blocked trades."""
         return 0
