@@ -48,6 +48,16 @@ def _send_welcome(chat_id: int, token: str) -> None:
 @router.post("/telegram")
 async def telegram_webhook(request: Request):
     """Recebe updates do Telegram. Em /start: salva chat_id (se payload) e envia Zeedo ON + links."""
+    # Segurança opcional: se TELEGRAM_WEBHOOK_SECRET estiver configurado, exige que o
+    # Telegram envie o mesmo valor no header (configurado via setWebhook secret_token).
+    # Sem a variável, mantém o comportamento atual (aberto), para não quebrar deploys existentes.
+    expected_secret = (get_settings().telegram_webhook_secret or "").strip()
+    if expected_secret:
+        got = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if got != expected_secret:
+            logger.warning("Webhook Telegram: secret token inválido")
+            raise HTTPException(403, "Forbidden")
+
     try:
         body = await request.json()
     except Exception:

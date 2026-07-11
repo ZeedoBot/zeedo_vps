@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     telegram_bot_token: str = ""  # Token do bot (do .env)
+    telegram_webhook_secret: str = ""  # Opcional: valida X-Telegram-Bot-Api-Secret-Token no webhook
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_basic: str = ""

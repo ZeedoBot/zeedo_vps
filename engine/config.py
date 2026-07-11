@@ -3,7 +3,7 @@ Configuração do bot como dataclass.
 Substitui variáveis globais por objeto configurável.
 """
 from dataclasses import dataclass, field
-from typing import List, Set, Tuple
+from typing import List, Tuple
 
 
 @dataclass
@@ -26,20 +26,16 @@ class BotConfig:
     # Modo Sinal: não coloca ordens; envia alerta e regista trade bloqueado.
     signal_mode: bool = False
 
-    # Risk Management
+    # Risk Management (por-usuário; vêm do banco bot_config)
     target_loss_usd: float = 5.0
     max_global_exposure: float = 5000.0
     max_single_pos_exposure: float = 2500.0
     max_positions: int = 2
-    fallback_stop_pct: float = 0.005
-    
-    # Indicators
-    rsi_period: int = 14
-    volume_sma_period: int = 20
-    lookback_divergence: int = 300
-    min_pivot_dist: int = 4
-    local_low_window: int = 4
-    
+
+    # NOTA: as constantes de estratégia (fallback_stop_pct, rsi_period, volume_sma_period,
+    # lookback_divergence, min_pivot_dist, local_low_window e os limiares LSR) têm fonte
+    # única nas globals de bot.py. Não são replicadas aqui para evitar divergência de config.
+
     # Fibonacci Targets (2+ alvos — default 2 alvos de 50% cada)
     fib_levels: List[Tuple[float, float]] = field(default_factory=lambda: [
         (0.618, 0.50),  # Alvo 1 (0.618)
@@ -50,24 +46,7 @@ class BotConfig:
     entry1_multiplier: float = 0.618
     fib_stop_level: float = 1.8
     strategy_preset: str = ""
-    
-    # LSR Binance
-    lsr_timeframe: str = "30m"
-    lsr_limit: int = 4
-    lsr_threshold_pct: float = 0.5
-    lsr_update_interval: int = 1800  # 30 minutos
-    
-    # LSR Extremo
-    lsr_block_short_below: float = 1.1
-    lsr_block_long_default: float = 3.0
-    lsr_block_long_special_1: float = 3.8
-    lsr_block_long_special_2: float = 4.9
-    lsr_special_1_symbols: Set[str] = field(default_factory=lambda: {"XRP", "BNB"})
-    lsr_special_2_symbols: Set[str] = field(default_factory=lambda: {"SOL"})
-    
-    # Strength Block
-    strength_update_interval: int = 900  # 15 minutos
-    
+
     def get_base_url(self):
         """Retorna URL base da API conforme rede."""
         from hyperliquid.utils import constants

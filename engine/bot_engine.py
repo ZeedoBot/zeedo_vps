@@ -26,7 +26,13 @@ class BotEngine:
         self.tg_send = tg_send
 
     def _config_to_overrides(self) -> dict:
-        """Converte BotConfig em dict para injetar nas globals do bot (compatibilidade)."""
+        """Converte BotConfig em dict para injetar nas globals do bot.
+
+        Injeta APENAS os parâmetros configuráveis por usuário (vindos do banco `bot_config`).
+        As constantes de estratégia (lookback, pivôs, RSI, volume, limiares LSR, fallback stop)
+        têm fonte única nas globals de `bot.py` e NÃO são sobrescritas aqui — assim, editar
+        `bot.py` vale tanto para o modo single-user quanto para o SaaS.
+        """
         return {
             "SYMBOLS": self.config.symbols,
             "TIMEFRAMES": self.config.timeframes,
@@ -35,27 +41,10 @@ class BotEngine:
             "MAX_GLOBAL_EXPOSURE": self.config.max_global_exposure,
             "MAX_SINGLE_POS_EXPOSURE": self.config.max_single_pos_exposure,
             "MAX_POSITIONS": self.config.max_positions,
-            "FALLBACK_STOP_PCT": self.config.fallback_stop_pct,
-            "RSI_PERIOD": self.config.rsi_period,
-            "VOLUME_SMA_PERIOD": self.config.volume_sma_period,
-            "LOOKBACK_DIVERGENCE": self.config.lookback_divergence,
-            "MIN_PIVOT_DIST": self.config.min_pivot_dist,
-            "LOCAL_LOW_WINDOW": self.config.local_low_window,
             "FIB_LEVELS": self.config.fib_levels,
             "FIB_STOP_LEVEL": self.config.fib_stop_level,
             "STRATEGY_PRESET": self.config.strategy_preset,
             "ENTRY1_MULTIPLIER": self.config.entry1_multiplier,
-            "LSR_TIMEFRAME": self.config.lsr_timeframe,
-            "LSR_LIMIT": self.config.lsr_limit,
-            "LSR_THRESHOLD_PCT": self.config.lsr_threshold_pct,
-            "LSR_UPDATE_INTERVAL": self.config.lsr_update_interval,
-            "LSR_BLOCK_SHORT_BELOW": self.config.lsr_block_short_below,
-            "LSR_BLOCK_LONG_DEFAULT": self.config.lsr_block_long_default,
-            "LSR_BLOCK_LONG_SPECIAL_1": self.config.lsr_block_long_special_1,
-            "LSR_BLOCK_LONG_SPECIAL_2": self.config.lsr_block_long_special_2,
-            "LSR_SPECIAL_1_SYMBOLS": self.config.lsr_special_1_symbols,
-            "LSR_SPECIAL_2_SYMBOLS": self.config.lsr_special_2_symbols,
-            "STRENGTH_UPDATE_INTERVAL": self.config.strength_update_interval,
             "SIGNAL_MODE": self.config.signal_mode,
         }
 

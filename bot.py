@@ -445,9 +445,6 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     curr = df.iloc[idx_curr]
     prev = df.iloc[idx_prev]
 
-    LOOKBACK_ENGULF = 10
-    start_engulf = max(0, idx_curr - LOOKBACK_ENGULF)
-    engulf_window = df.iloc[start_engulf:idx_curr]
     div_type, div_px, div_ts = check_divergence_at_index(df, idx_curr, symbol, timeframe)
     if not div_type:
         return None
@@ -507,9 +504,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     elif "ENGULF_BULL" in patterns:
         if div_type == "BULL":
             prev_body_low = df.iloc[idx_prev]["body_low"]
-            curr_high = curr["high"]
-            recent_high_10 = engulf_window["high"].max()
-            
+
             if prev_body_low <= local_min_window * 1.0003:
                 setup_high_hl = curr_hl["high"]
                 setup_low_hl = min(prev_hl["low"], curr_hl["low"])
@@ -556,9 +551,7 @@ def get_signal(df_binance, df_hyperliquid, symbol, timeframe):
     elif "ENGULF_BEAR" in patterns:
         if div_type == "BEAR":
             prev_body_high = df.iloc[idx_prev]["body_high"]
-            curr_low = curr["low"]
-            recent_low_10 = engulf_window["low"].min()
-            
+
             if prev_body_high >= local_max_window * 0.9997:
                 setup_high_hl = max(prev_hl["high"], curr_hl["high"])
                 setup_low_hl = curr_hl["low"]
@@ -1768,32 +1761,10 @@ def run_main_loop(info, exchange, wallet, storage, config_overrides=None):
                 last_history_sync = time.time()
 
             if time.time() - last_lsr_global_update > LSR_UPDATE_INTERVAL:
-                up, down, flat = [], [], []
-
+                # Mantém o cache de LSR aquecido (update_lsr_cache é rate-limited internamente).
                 for sym in SYMBOLS:
                     update_lsr_cache(sym)
-                    data = lsr_cache.get(sym)
-                    if not data:
-                        continue
-
-                    val = data["values"][-1]
-                    trend = data["trend"]
-                    label = f"{sym}({val:.1f})"
-
-                    if trend == "UP":
-                        up.append(label)
-                    elif trend == "DOWN":
-                        down.append(label)
-                    else:
-                        flat.append(label)
-
-                log_parts = []
-                if up:
-                    log_parts.append(f"UP: {', '.join(up)}")
-                if down:
-                    log_parts.append(f"DOWN: {', '.join(down)}")
-                if flat:
-                    log_parts.append(f"FLAT: {', '.join(flat)}")
+                last_lsr_global_update = time.time()
 
             auto_manage(info, exchange, wallet, exchange_meta, entry_tracker, all_open_orders, user_state_cache, all_mids_cache, storage)
             manage_risk_and_scan(info, exchange, wallet, exchange_meta, entry_tracker, all_open_orders, history_tracker, analyzed_candles, user_state_cache, all_mids_cache, storage)

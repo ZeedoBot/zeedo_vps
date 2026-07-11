@@ -179,7 +179,6 @@ class BotInstance:
         try:
             backend = get_storage()
             if hasattr(backend, '_client') and backend._client:
-                from storage.supabase_storage import TABLE_TRADES
                 # Busca em trading_accounts
                 r = backend._client.table("trading_accounts").select("*").eq("user_id", self.user_id).eq("is_active", True).limit(1).execute()
                 if r.data:

@@ -17,14 +17,20 @@ import requests
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://zeedo.ia.br/api")
 WEBHOOK_URL = f"{BASE_URL.rstrip('/')}/webhooks/telegram"
+# Opcional: se definido, o Telegram enviará este valor no header X-Telegram-Bot-Api-Secret-Token,
+# validado pelo backend. Deve ser o mesmo valor de TELEGRAM_WEBHOOK_SECRET no .env do backend.
+WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
 
 def main():
     if not TOKEN:
         print("Erro: TELEGRAM_BOT_TOKEN não definido no .env")
         sys.exit(1)
+    payload = {"url": WEBHOOK_URL}
+    if WEBHOOK_SECRET:
+        payload["secret_token"] = WEBHOOK_SECRET
     r = requests.post(
         f"https://api.telegram.org/bot{TOKEN}/setWebhook",
-        json={"url": WEBHOOK_URL},
+        json=payload,
         timeout=10
     )
     data = r.json()
